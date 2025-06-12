@@ -30,9 +30,9 @@ A comprehensive management system built for the **Mikha Denagil Spiritual Societ
 
 > 📌 Add actual screenshots in `/screenshots/` and replace the image links below
 
-| Dashboard | Attendance Form | Member Upload |
+| Dashboard | Attendance Form | Member Registartion |
 |-----------|------------------|----------------|
-| ![Dashboard](screenshots/dashboard.png) | ![Attendance](screenshots/attendance_form.png) | ![Upload](screenshots/upload_members.png) |
+| ![Dashboard](dashboard.png) | ![Attendance](attendance.png) | ![Upload](registartion.png) |
 
 ---
 
