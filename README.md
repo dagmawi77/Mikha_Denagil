@@ -61,3 +61,55 @@ A comprehensive management system built for the **Mikha Denagil Spiritual Societ
    ```bash
    git clone https://github.com/your-username/Mikha_Denagil.git
    cd Mikha_Denagil
+
+Set Up Virtual Environment
+
+bash
+Copy
+Edit
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+Install Dependencies
+
+bash
+Copy
+Edit
+pip install -r requirements.txt
+Set Up Oracle DB Connection
+
+Update your Flask config.py or .env file with:
+
+env
+Copy
+Edit
+ORACLE_USER=your_db_user
+ORACLE_PASSWORD=your_db_password
+ORACLE_DSN=localhost:1522/orcl2
+SECRET_KEY=your_secret_key
+Run the Application
+
+bash
+Copy
+Edit
+flask db upgrade   # If using Alembic for migrations
+flask run
+Access the System
+
+Open your browser and go to: http://127.0.0.1:5000/
+
+📂 Project Structure
+arduino
+Copy
+Edit
+mikha-denagil-society-system/
+├── app/
+│   ├── templates/
+│   ├── static/
+│   ├── routes/
+│   ├── models/
+│   └── __init__.py
+├── screenshots/
+├── config.py
+├── requirements.txt
+├── run.py
+└── README.md
