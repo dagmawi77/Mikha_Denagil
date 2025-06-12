@@ -21,7 +21,7 @@ A comprehensive management system built for the **Mikha Denagil Spiritual Societ
 - 📚 **Library Management**
 - 📆 **Holiday Selector and Calendar**
 - 📱 **Mobile App for Attendance (Android/iOS)**
-- 💧 **MEWACO (Water Cooperative) Integration**
+- 💧 **MEWACO (Contribution) Management**
 - 🏢 **Section & Medebe Management**
 
 ---
@@ -32,7 +32,7 @@ A comprehensive management system built for the **Mikha Denagil Spiritual Societ
 
 | Dashboard | Attendance Form | Member Registartion |
 |-----------|------------------|----------------|
-| ![Dashboard](dashboard.png) | ![Attendance](attendance.png) | ![Upload](registartion.png) |
+| ![Dashboard](dasbord.png) | ![Attendance](attendance.png) | ![Upload](registartion.png) |
 
 ---
 
@@ -59,5 +59,5 @@ A comprehensive management system built for the **Mikha Denagil Spiritual Societ
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-username/mikha-denagil-society-system.git
-   cd mikha-denagil-society-system
+   git clone https://github.com/your-username/Mikha_Denagil.git
+   cd Mikha_Denagil
