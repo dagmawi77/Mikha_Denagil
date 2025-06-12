@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body> 
+        <h1>Dashboard</h1>
+        <canvas id="billChart"></canvas>
+        <canvas id="paymentChart"></canvas>
+       
+    </div>
+    <script>
+        const billData = {{ bill_data | tojson }};
+        const paymentData = {{ payment_data | tojson }};
+        // Code for rendering charts using Chart.js
+    </script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+
+</html>

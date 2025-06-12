@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Routes for Role: {{ role.role_name }}</h2>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    {% for route in all_routes %}
+                    <div class="col-md-4 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   name="routes" value="{{ route[0] }}"
+                                   id="route_{{ route[0] }}"
+                                   {% if route[0] in assigned_routes %}checked{% endif %}>
+                            <label class="form-check-label" for="route_{{ route[0] }}">
+                                {{ route[1] }} <small class="text-muted">({{ route[2] }})</small>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{{ url_for('manage_roles') }}" class="btn btn-secondary">Back to Roles</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

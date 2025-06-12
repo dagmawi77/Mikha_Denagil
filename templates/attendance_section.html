@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">የአባላት(Attendance Sheet)</h2>
+
+    <!-- Section selection form -->
+    <form method="GET" action="{{ url_for('attendance') }}" class="mb-3">
+        <label for="section">Select Section:</label>
+        <select name="section" id="section" class="form-select w-auto d-inline-block">
+            <option value="">-- Select Section --</option>
+            {% for sec in section_names %}
+                <option value="{{ sec }}" {% if sec == selected_section %}selected{% endif %}>{{ sec }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">Load Members</button>
+    </form>
+
+    {% if selected_section %}
+    <form method="POST" action="{{ url_for('attendance') }}">
+        <input type="hidden" name="selected_section" value="{{ selected_section }}">
+        <div class="table-responsive" style="max-height:600px; overflow-y:auto;">
+            <table class="table table-bordered table-sm text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th>Member</th>
+                        {% for d in dates %}
+                        <th>{{ d }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                    <tr>
+                        <td class="text-start">{{ member.full_name }}</td>
+                        {% for d in dates %}
+                        {% set key = member.member_id|string + '_' + d %}
+                        <td>
+                            <select name="attendance_{{ member.member_id }}_{{ d }}" class="form-select form-select-sm">
+                                <option value="" {% if attendance_data.get(key) is none %}selected{% endif %}>--</option>
+                                <option value="Present" {% if attendance_data.get(key) == 'Present' %}selected{% endif %}>Present</option>
+                                <option value="Absent" {% if attendance_data.get(key) == 'Absent' %}selected{% endif %}>Absent</option>
+                                <option value="Sick" {% if attendance_data.get(key) == 'Sick' %}selected{% endif %}>Sick</option>
+                            </select>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center mt-3">
+            <button type="submit" class="btn btn-primary">አስገባ (Submit Attendance)</button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

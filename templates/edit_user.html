@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit User</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="POST" action="{{ url_for('edit_user', user_id=user.user_id) }}">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="payroll_number">Payroll Number</label>
+                    <input type="text" class="form-control" id="payroll_number" name="payroll_number" value="{{ user.payroll_number }}" required>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="branch">Branch</label>
+                    <select class="form-control" id="branch" name="branch" required>
+                        <option value="">Select a branch</option>
+                        {% for branch in ['Head Office', 'Arada', 'Adiss Ketema', 'Akaki', 'Megenaga', 'Mekanisa', 'Kolfe', 'Nifas Silk', 'Gulele', 'Gurdsola', 'LemiKura'] %}
+                            <option value="{{ branch }}" {% if user.branch == branch %}selected{% endif %}>{{ branch }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="role_id">Role</label>
+                    <select class="form-control" id="role_id" name="role_id" required>
+                        <option value="">Select a role</option>
+                        {% for role in roles %}
+                            <option value="{{ role.role_id }}" {% if user.role_id == role.role_id %}selected{% endif %}>{{ role.role_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary mt-3">Update User</button>
+        <a href="{{ url_for('user_management') }}" class="btn btn-secondary mt-3">Cancel</a>
+    </form>
+</div>
+{% endblock %}

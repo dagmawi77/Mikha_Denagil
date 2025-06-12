@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="20">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='plugins/pg-calendar/css/pignose.calendar.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist/css/chartist.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist-plugin-tooltips/css/chartist-plugin-tooltip.css') }}">
+    <style>
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #343a40;
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar .collapse-icon {
+            position: absolute;
+            top: 20px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .sidebar .nav-link {
+            color: #fff;
+            text-decoration: none;
+            display: block;
+            padding-top: 10px;
+            margin: 10px;
+            transition: background-color 0.3s;
+
+        }
+
+        .sidebar .nav-link.active {
+            background-color: #495057;
+        }
+
+        .content {
+            margin-left: 250px;
+            transition: margin-left 0.3s;
+        }
+
+        .content.collapsed {
+            margin-left: 80px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            /* Adjust the height to minimize the chart size */
+        }
+    </style>
+</head>
+
+<body>
+    
+{% extends "base.html" %}
+
+    {% block content %}
+
+    
+
+    
+    <!-- Content -->
+        
+        <div class="container-fluid">
+            <div class="container-fluid mt-3">
+                <div class="row">
+                    <div class="col-lg-3 col-sm-6">
+                        <div class="card gradient-1">
+                            <div class="card-body">
+                                <h3 class="card-title text-white">Number of Generated Bill</h3>
+                                <div class="d-inline-block">
+                                    <h2 class="text-white">{{ current_bill_count }}</h2>
+                                    <p class="text-white mb-0">Bill Period {{bill_period}}</p>
+                                </div>
+                                <span class="float-right display-5 opacity-5"><i class="fa fa-users"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-sm-6">
+                        <div class="card gradient-2">
+                            <div class="card-body">
+                                <h3 class="card-title text-white">Generated Amount </h3>
+                                <div class="d-inline-block">
+                                    <h3 class="text-white">{{current_month_total_bill_amnt}}</h3>
+                                    <p class="text-white mb-0">bill amnt {{current_month_bill_amnt}}</p>
+                                </div>
+                                <span class="float-right display-7 opacity-5"><i class="fa fa-money"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-sm-6">
+                        <div class="card gradient-3">
+                            <div class="card-body">
+                                <h3 class="card-title text-white">Number of Paid Bill</h3>
+                                <div class="d-inline-block">
+                                    <h2 class="text-white">{{payment_count}}</h2>
+                                    <p class="text-white mb-0">Bill Period {{payment_month}}</p>
+                                </div>
+                                <span class="float-right display-5 opacity-5"><i class="fa fa-users"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-sm-6">
+                        <div class="card gradient-4">
+                            <div class="card-body">
+                                <h3 class="card-title text-white">Paid Amount Total</h3>
+                                <div class="d-inline-block">
+                                    <h3 class="text-white">{{payment_total_bill_amnt}}</h3>
+                                    <p class="text-white mb-0">bill amount {{payment_this_month_bill_amnt}}</p>
+                                </div>
+                                <span class="float-right display-7 opacity-5"><i class="fa fa-money"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="row">
+                <!-- <div> -->
+                    <div class="col-lg-4">
+                        <div class="au-card recent-report">
+                            <div class="au-card-inner">
+                                <h2 class="title-3">Payments by Channel</h2>
+                                <div class="chart-container">
+                                    <canvas id="paymentChannelChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <!-- </div> -->
+                <div class="col-lg-8">
+                    <div class="au-card recent-report">
+                        <div class="au-card-inner">
+                            <h3 class="title-2">Sent Data by Branch</h3>
+                            <div class="chart-container">
+                                <canvas id="branch-sent-data-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="au-card recent-report">
+                        <div class="au-card-inner">
+
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+
+    </br>
+
+
+
+
+
+        <div class="card mb-4">
+            <div class="card-body" style="background-color: darkcyan;">
+                <h3 class="card-title"  ><center>Branch Status Settled</center></h3>
+                <table class="table table-bordered table-striped">
+                    <thead style="background-color: darkcyan;">
+                        <tr style="background-color: darkcyan;">
+                            <th style="background-color: darkcyan;">Branch</th>
+                            <th style="background-color: darkcyan;">Period</th>
+                            <th style="background-color: darkcyan;">Numeber Of bill</th>
+                            <th style="background-color: darkcyan;">Consumption</th>
+                            <th style="background-color: darkcyan;">Current Bill Amount</th>
+                            <th style="background-color: darkcyan;">Outstanding Bill AMount</th>
+                            <th style="background-color: darkcyan;">Total Bill Amount </th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in current_settled %}
+                        <tr>
+                            <td>{{ bill[0] }}</td>
+                            <td>{{ bill[1] }}</td>
+                            <td>{{ bill[2] }}</td>
+                            <td>{{ bill[3] }}</td>
+                            <td><b>{{ bill[4] }}</b></td>
+                            <td><b>{{ bill[5] }}</b></td></b>
+                            <td><b>{{ bill[6] }}</b></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body" style="background-color: darkcyan;">
+                <h3 class="card-title"  ><center>Branch Status Delivery</center></h3>
+                <table class="table table-bordered table-striped">
+                    <thead style="background-color: darkcyan;">
+                        <tr style="background-color: darkcyan;">
+                            <th style="background-color: darkcyan;">Branch</th>
+                            <th style="background-color: darkcyan;">Period</th>
+                            <th style="background-color: darkcyan;">Numeber Of bill</th>
+                            <th style="background-color: darkcyan;">Consumption</th>
+                            <th style="background-color: darkcyan;">Current Bill Amount</th>
+                            <th style="background-color: darkcyan;">Outstanding Bill AMount</th>
+                            <th style="background-color: darkcyan;">Total Bill Amount </th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in current_delivery %}
+                        <tr>
+                            <td>{{ bill[0] }}</td>
+                            <td>{{ bill[1] }}</td>
+                            <td>{{ bill[2] }}</td>
+                            <td>{{ bill[3] }}</td>
+                            <td><b>{{ bill[4] }}</b></td>
+                            <td><b>{{ bill[5] }}</b></td></b>
+                            <td><b>{{ bill[6] }}</b></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="card mb-4">
+            <div class="card-body" style="background-color: darkcyan;">
+                <h3 class="card-title"  ><center>Branch Status Unsettled</center></h3>
+                <table class="table table-bordered table-striped">
+                    <thead style="background-color: darkcyan;">
+                        <tr style="background-color: darkcyan;">
+                            <th style="background-color: darkcyan;">Branch</th>
+                            <th style="background-color: darkcyan;">Period</th>
+                            <th style="background-color: darkcyan;">Numeber Of bill</th>
+                            <th style="background-color: darkcyan;">Consumption</th>
+                            <th style="background-color: darkcyan;">Current Bill Amount</th>
+                            <th style="background-color: darkcyan;">Outstanding Bill AMount</th>
+                            <th style="background-color: darkcyan;">Total Bill Amount </th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in current_unsettled %}
+                        <tr>
+                            <td>{{ bill[0] }}</td>
+                            <td>{{ bill[1] }}</td>
+                            <td>{{ bill[2] }}</td>
+                            <td>{{ bill[3] }}</td>
+                            <td><b>{{ bill[4] }}</b></td>
+                            <td><b>{{ bill[5] }}</b></td></b>
+                            <td><b>{{ bill[6] }}</b></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        
+        <!-- Recent Sent Bills Table -->
+        
+    </div>
+    <div class="footer">
+        <div class="copyright">
+            <p>Copyright &copy; Designed & Developed by Dagmawi Letarik</a> 2025</p>
+        </div>
+    </div>
+
+
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar');
+            var content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+        }
+
+        // Bar Chart for Sent Data by Branch
+        var ctxBranchSentData = document.getElementById('branch-sent-data-chart').getContext('2d');
+        new Chart(ctxBranchSentData, {
+            type: 'bar',
+            data: {
+                labels: {{ branch_labels | tojson }},
+            datasets: [{
+                label: 'Number of Sent Bills',
+                data: {{ number_sent_data | tojson }},
+            backgroundColor: '#FFCE56',
+            stack: 'Stack 1',
+                },
+            {
+                label: 'Total Amount Sent',
+                data: {{ total_amount_sent_data | tojson }},
+            backgroundColor: '#4BC0C0',
+            stack: 'Stack 1',
+                },
+            {
+                label: 'Outstanding Amount',
+                data: {{ outstanding_amount | tojson }},
+            backgroundColor: '#45265',
+            stack: 'Stack 3',
+                },
+            {
+                label: 'Current Bill amount',
+                data: {{ this_month_bill_amnt | tojson }},
+            backgroundColor: '#FF1156',
+            stack: 'Stack 4',
+                }
+
+        ]
+            },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true
+                },
+                y: {
+                    stacked: true
+                }
+            }
+        }
+        });
+        const ctx = document.getElementById('paymentChannelChart').getContext('2d');
+        const paymentChannelChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: {{ channel_labels| safe }},
+        datasets: [{
+            label: 'Payments by Channel',
+            data: {{ channel_amounts| safe }},
+            backgroundColor: [
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 206, 86, 0.2)',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(255, 159, 64, 0.2)'
+        ],
+            borderColor: [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+        ],
+            borderWidth: 1
+                }]
+            },
+        options: {
+            responsive: true,
+                plugins: {
+                legend: {
+                    position: 'top',
+                    },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw;
+                            return `${label}: ${value.toLocaleString()}`;
+                        }
+                    }
+                }
+            }
+        }
+        });
+    </script>
+
+{% endblock %}
+</body>
+
+</html>

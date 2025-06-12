@@ -1,0 +1,8 @@
+<svg viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <path id="wave" d="M 0 25 Q 15 5 30 25 T 60 25 T 90 25 T 120 25 V 30 H 0 Z"/>
+  </defs>
+  <use xlink:href="#wave" x="0" y="0" fill="rgba(2, 117, 216, 0.6)"/>
+  <use xlink:href="#wave" x="0" y="3" fill="rgba(2, 117, 216, 0.4)"/>
+  <use xlink:href="#wave" x="0" y="6" fill="rgba(2, 117, 216, 0.2)"/>
+</svg>

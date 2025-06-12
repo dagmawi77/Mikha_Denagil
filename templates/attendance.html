@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">የአባላት ቅጽበት (Attendance Sheet)</h2>
+
+    <form method="POST" action="{{ url_for('attendance') }}">
+        <div class="row">
+            <!-- Left side: Members grouped by Section -->
+            <div class="col-md-6" style="max-height: 600px; overflow-y: auto; border-right: 1px solid #ddd;">
+                {% for section in sections %}
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white">
+                        {{ section.name }}
+                    </div>
+                    <div class="card-body p-2">
+                        <ul class="list-group list-group-flush">
+                            {% for member in section.members %}
+                            <li class="list-group-item small">{{ member.full_name }} (ID: {{ member.member_id }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Right side: Attendance Dates and dropdowns -->
+            <div class="col-md-6" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-bordered table-sm text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Member</th>
+                            {% for d in dates %}
+                            <th>{{ d }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for section in sections %}
+                            {% for member in section.members %}
+                            <tr>
+                                <td class="text-start">{{ member.full_name }}</td>
+                                {% for d in dates %}
+                                {% set key = member.member_id|string + '_' + d %}
+                                <td>
+                                    <select name="attendance_{{ member.member_id }}_{{ d }}" class="form-select form-select-sm">
+                                        <option value="" {% if attendance_data.get(key) is none %}selected{% endif %}>--</option>
+                                        <option value="Present" {% if attendance_data.get(key) == 'Present' %}selected{% endif %}>Present</option>
+                                        <option value="Absent" {% if attendance_data.get(key) == 'Absent' %}selected{% endif %}>Absent</option>
+                                    </select>
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <button type="submit" class="btn btn-primary">አስገባ (Submit Attendance)</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

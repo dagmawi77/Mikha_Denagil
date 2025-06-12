@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='plugins/pg-calendar/css/pignose.calendar.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist/css/chartist.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist-plugin-tooltips/css/chartist-plugin-tooltip.css') }}">
+    <style>
+        /* Debug Info */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        /* Layout */
+        .content {
+            margin-left: 250px;
+            transition: all 0.3s ease;
+            padding: 15px;
+        }
+        .content.collapsed {
+            margin-left: 80px;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #343a40;
+            color: #fff;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar .collapse-icon {
+            position: absolute;
+            top: 20px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .sidebar .nav-link {
+            color: #fff;
+            text-decoration: none;
+            display: block;
+            padding: 10px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link.active {
+            background-color: #495057;
+        }
+        
+        /* Charts */
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            transition: all 0.3s ease;
+        }
+        .chart-wrapper {
+            position: relative;
+            min-height: 300px;
+        }
+        
+        /* Animations */
+        .counter {
+            transition: all 0.5s ease-out;
+            display: inline-block;
+        }
+        .counter-update {
+            animation: pulse 0.8s ease-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .table-row-update {
+            animation: highlight 1.2s ease-out;
+        }
+        @keyframes highlight {
+            0% { background-color: rgba(255, 255, 0, 0.3); }
+            100% { background-color: transparent; }
+        }
+        
+        /* Tables */
+        .compact-table {
+            font-size: 0.9rem;
+        }
+        .compact-table th, 
+        .compact-table td {
+            padding: 0.5rem;
+        }
+        .no-data {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        /* Cards */
+        .card-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        /* .card-body {
+            padding: 1rem;
+        } */
+        
+        /* Darkcyan tables */
+        .darkcyan-table {
+            background-color: darkcyan;
+        }
+        .darkcyan-table thead th {
+            background-color: darkcyan;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    {% extends "base.html" %}
+
+    {% block content %}
+
+
+        <div class="container-fluid">
+            <div class="row g-2">
+                <!-- Cards Row -->
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card gradient-1 h-80">
+                        <div class="card-body">
+                            <h1 class="card-title text-white"><strong>የአባላት ብዛት</strong></h1>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="text-white counter mb-0" id="current-bill-count">{{ current_bill_count }}</h2>
+                                    <h6 class="text-white d-block mt-2">
+                                        <mark><strong></strong> <span id="bill-period">{{bill_period}}</span></mark>
+                                    </h6>
+                                </div>
+                                <!-- <i class="fa fa-users opacity-5 fs-2"></i> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card gradient-2 h-80">
+                        <div class="card-body">
+                            <h3 class="card-title text-white">ማህከላዊያን ክፍል</h3>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="text-white counter mb-0" id="current-month-total-bill-amnt">{{current_month_total_bill_amnt}}</h3>
+                                    <h6 class="text-white d-block mt-2">
+                                        <mark> <strong>ክፍል:</strong> <span id="current-month-bill-amnt">{{current_month_bill_amnt}}</span></mark>
+                                    </h6>
+                                </div>
+                                <!-- <i class="fa fa-money opacity-5 fs-4"></i> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card gradient-3 h-80">
+                        <div class="card-body">
+                            <h1 class="card-title text-white"><strong><b>የሕፃናት ክፍል</b></strong></h1>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="text-white counter mb-0" id="payment-count">{{payment_count}}</h2>
+                                    <h6 class="text-white d-block mt-2">
+                                        <mark><strong>ክፍል:</strong> <span id="payment-month">{{payment_month}}</span></mark>
+                                    </h6>
+                                </div>
+                                <!-- <i class="fa fa-check-circle opacity-5 fs-4"></i> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="col-lg-3 col-sm-6">
+                    <div class="card gradient-4 h-80">
+                        <div class="card-body">
+                            <h3 class="card-title text-white">ወጣት ክፍል</h3>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h2 class="text-white counter mb-0" id="payment-total-bill-amnt">{{payment_total_bill_amnt}}</h3>
+                                    <h6 class="text-white d-block mt-2">
+                                        <mark><strong>ክፍል:</strong> <span id="payment-this-month-bill-amnt">{{payment_this_month_bill_amnt}}</span></mark>
+                                    </h6>
+                                </div>
+                                <!-- <i class="fa fa-money-bill-wave opacity-5 fs-4"></i> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+
+            <!-- Charts Row -->
+            <div class="row mt-3 g-2">
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h4 class="card-title mb-3">አባላት በክፍል</h4>
+                            <div class="chart-wrapper">
+                                <div class="chart-container">
+                                    <canvas id="paymentChannelChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-8">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h4 class="card-title mb-3">የአባላት ግራፍ በፃታ</h4>
+                            <div class="chart-wrapper">
+                                <div class="chart-container">
+                                    <canvas id="branch-sent-data-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Status Tables -->
+            <div class="row mt-3 g-2">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body darkcyan-table">
+                            <h4 class="card-title text-white mb-3"><center>አጠቃላይ ሪፖርት</center></h4>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ክፍል</th>
+                                            <th>ወንድ</th>
+                                            <th>ሴት</th>
+                                            <th>ያላገባ</th>
+                                            <th>ያገባ</th>
+                                            <th>በሥራ ላይ</th>
+                                            <th>ስራ የለኝም</th>
+                                            <th>በመፈለግ ላይ</th>
+                                            <th>ተማሪ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="settledTableBody">
+                                        {% for bill in current_settled %}
+                                        <tr>
+                                            <td><b>{{ bill[0] }}</b></td>
+                                            <td>{{ bill[1] }}</td>
+                                            <td>{{ bill[2] }}</td>
+                                            <td>{{ bill[3] }}</td>
+                                            <td><b>{{ bill[4] }}</b></td>
+                                            <td><b>{{ bill[5] }}</b></td>
+                                            <td><b>{{ bill[6] }}</b></td>
+                                            <td><b>{{ bill[7] }}</b></td>
+                                            <td><b>{{ bill[8] }}</b></td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="9" class="no-data">No data available</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    <div class="footer">
+        <div class="copyright">
+            <p>Copyright &copy; Designed & Developed by Dagmawi Letarik 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let branchSentDataChart;
+        let paymentChannelChart;
+        let isUpdating = false;
+        let updateInterval;
+        let lastData = {};
+        
+        // Toggle sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+            
+            // Resize charts after transition
+            setTimeout(() => {
+                if (branchSentDataChart) branchSentDataChart.resize();
+                if (paymentChannelChart) paymentChannelChart.resize();
+            }, 300);
+        }
+
+        // Enhanced number formatter
+        function formatNumber(value) {
+            if (value === null || value === undefined) return '0';
+            if (typeof value === 'string') {
+                if (value.includes(',')) return value;
+                value = parseFloat(value);
+            }
+            return value.toLocaleString('en-US');
+        }
+
+        // Improved counter animation
+        function animateValue(id, newValue) {
+            const element = document.getElementById(id);
+            if (!element || newValue === undefined || newValue === null) return;
+            
+            const formattedValue = formatNumber(newValue);
+            const currentText = element.textContent.trim();
+            
+            if (currentText === formattedValue) return;
+            
+            element.classList.remove('counter-update');
+            void element.offsetWidth;
+            
+            element.classList.add('counter-update');
+            element.textContent = formattedValue;
+        }
+
+        // Table updater with null checks
+        function updateTable(tableId, rows) {
+            const tbody = document.getElementById(tableId);
+            if (!tbody) return;
+            
+            if (!rows || !Array.isArray(rows) || rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No data available</td></tr>`;
+                return;
+            }
+            
+            let newRowsHTML = '';
+            rows.forEach(row => {
+                if (!row || row.length < 7) return;
+                
+                newRowsHTML += `
+                <tr class="table-row-update">
+                    <td>${row[0] || 'N/A'}</td>
+                    <td>${row[1] || 'N/A'}</td>
+                    <td>${row[2] || '0'}</td>
+                    <td>${row[3] || '0'}</td>
+                    <td><b>${formatNumber(row[4])}</b></td>
+                    <td><b>${formatNumber(row[5])}</b></td>
+                    <td><b>${formatNumber(row[6])}</b></td>
+                </tr>`;
+            });
+            
+            if (tbody.innerHTML !== newRowsHTML) {
+                tbody.innerHTML = newRowsHTML;
+            }
+        }
+
+        // Data fetcher with validation
+        async function fetchData() {
+            if (isUpdating) return;
+            isUpdating = true;
+            
+            try {
+                const response = await fetch('/dashboard-data');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                lastData = data;
+                console.log('Data received:', data);
+                
+                // Update Paid Bills/Amount
+                if (data.payment_count !== undefined) {
+                    animateValue('payment-count', data.payment_count);
+                }
+                if (data.payment_total_bill_amnt !== undefined) {
+                    animateValue('payment-total-bill-amnt', data.payment_total_bill_amnt);
+                }
+                if (data.payment_month !== undefined) {
+                    document.getElementById('payment-month').textContent = data.payment_month;
+                }
+                if (data.payment_this_month_bill_amnt !== undefined) {
+                    document.getElementById('payment-this-month-bill-amnt').textContent = formatNumber(data.payment_this_month_bill_amnt);
+                }
+                
+                // Update other counters
+                if (data.current_bill_count !== undefined) {
+                    animateValue('current-bill-count', data.current_bill_count);
+                }
+                if (data.bill_period !== undefined) {
+                    document.getElementById('bill-period').textContent = data.bill_period;
+                }
+                if (data.current_month_total_bill_amnt !== undefined) {
+                    animateValue('current-month-total-bill-amnt', data.current_month_total_bill_amnt);
+                }
+                if (data.current_month_bill_amnt !== undefined) {
+                    document.getElementById('current-month-bill-amnt').textContent = formatNumber(data.current_month_bill_amnt);
+                }
+                
+                // Update tables
+                updateTable('settledTableBody', data.current_settled || []);
+                updateTable('deliveryTableBody', data.current_delivery || []);
+                updateTable('unsettledTableBody', data.current_unsettled || []);
+                
+                // Update charts
+                if (data.branch_labels && data.number_sent_data) {
+                    updateCharts(data);
+                }
+                
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+                updateTable('settledTableBody', []);
+                updateTable('deliveryTableBody', []);
+                updateTable('unsettledTableBody', []);
+            } finally {
+                isUpdating = false;
+            }
+        }
+
+        // Chart updater
+        function updateCharts(data) {
+            // Branch Sent Data Chart
+            const branchCtx = document.getElementById('branch-sent-data-chart');
+            if (!branchSentDataChart) {
+                branchSentDataChart = new Chart(branchCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.branch_labels,
+                        datasets: [
+                            {
+                                label: 'ወንድ',
+                                data: data.number_sent_data,
+                                backgroundColor: '#FFCE56',
+                                stack: 'Stack 1'
+                            },
+                            {
+                                label: 'ሴት',
+                                data: data.total_amount_sent_data,
+                                backgroundColor: '#4BC0C0',
+                                stack: 'Stack 1'
+                            },
+                            {
+                                label: 'Outstanding Amount',
+                                data: data.outstanding_amount,
+                                backgroundColor: '#45265',
+                                stack: 'Stack 3'
+                            },
+                            {
+                                label: 'Current Bill amount',
+                                data: data.this_month_bill_amnt,
+                                backgroundColor: '#FF1156',
+                                stack: 'Stack 4'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true }
+                        },
+                        animation: {
+                            duration: 1000,
+                            onComplete: () => {
+                                if (this.resize) this.resize();
+                            }
+                        }
+                    }
+                });
+            } else {
+                branchSentDataChart.data.labels = data.branch_labels;
+                branchSentDataChart.data.datasets[0].data = data.number_sent_data;
+                branchSentDataChart.data.datasets[1].data = data.total_amount_sent_data;
+                branchSentDataChart.data.datasets[2].data = data.outstanding_amount;
+                branchSentDataChart.data.datasets[3].data = data.this_month_bill_amnt;
+                branchSentDataChart.update();
+            }
+
+            // Payment Channel Chart
+            const paymentCtx = document.getElementById('paymentChannelChart');
+            if (!paymentChannelChart) {
+                paymentChannelChart = new Chart(paymentCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: data.channel_labels,
+                        datasets: [{
+                            data: data.channel_amounts,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.label}: ${context.raw.toLocaleString()}`
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 1000,
+                            onComplete: () => {
+                                if (this.resize) this.resize();
+                            }
+                        }
+                    }
+                });
+            } else {
+                paymentChannelChart.data.labels = data.channel_labels;
+                paymentChannelChart.data.datasets[0].data = data.channel_amounts;
+                paymentChannelChart.update();
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize charts with template data
+            branchSentDataChart = new Chart(
+                document.getElementById('branch-sent-data-chart'),
+                {
+                    type: 'bar',
+                    data: {
+                        labels: {{ branch_labels | tojson }},
+                        datasets: [
+                            {
+                                label: 'ወንድ',
+                                data: {{ number_sent_data | tojson }},
+                                backgroundColor: '#FFCE56',
+                                stack: 'Stack 1'
+                            },
+                            {
+                                label: 'ሴት',
+                                data: {{ total_amount_sent_data | tojson }},
+                                backgroundColor: '#4BC0C0',
+                                stack: 'Stack 1'
+                            },
+                            {
+                                label: '',
+                                data: {{ outstanding_amount | tojson }},
+                                backgroundColor: '#45265',
+                                stack: 'Stack 3'
+                            },
+                            {
+                                label: '',
+                                data: {{ this_month_bill_amnt | tojson }},
+                                backgroundColor: '#FF1156',
+                                stack: 'Stack 4'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true }
+                        }
+                    }
+                }
+            );
+
+            paymentChannelChart = new Chart(
+                document.getElementById('paymentChannelChart'),
+                {
+                    type: 'pie',
+                    data: {
+                        labels: {{ channel_labels | tojson }},
+                        datasets: [{
+                            data: {{ channel_amounts | tojson }},
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.label}: ${context.raw.toLocaleString()}`
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+
+            // Start periodic updates (every 20 seconds)
+            updateInterval = setInterval(fetchData, 20000);
+            
+            // Initial data fetch
+            fetchData();
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(updateInterval);
+        });
+    </script>
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Bulk Payment Processing</h2>
+
+    {% if batch_result %}
+    <div class="alert alert-info mt-4">
+        <h5 class="alert-heading">Batch Processing Summary</h5>
+        <ul>
+            <li><strong>Batch ID:</strong> {{ batch_result.batch_id }}</li>
+            <li><strong>Processed:</strong> {{ batch_result.batch_size }}</li>
+            <li><strong>Successful:</strong> {{ batch_result.success_count }}</li>
+            <li><strong>Failed:</strong> {{ batch_result.failure_count }}</li>
+            <li><strong>Status:</strong> {{ batch_result.status }}</li>
+            {% if batch_result.error_message %}
+            <li><strong>Error:</strong> {{ batch_result.error_message }}</li>
+            {% endif %}
+        </ul>
+        {% if batch_result.failure_count > 0 %}
+        <a href="{{ url_for('bulk_payment_results', batch_id=batch_result.batch_id) }}" 
+           class="btn btn-warning mt-2">
+            View Failed Payments
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('bulk_payments') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="batch_size" class="form-label">Batch Size</label>
+                        <input type="number" class="form-control" id="batch_size" 
+                               name="batch_size" value="100" min="1" max="1000">
+                        <div class="form-text">
+                            Number of payments to process at once (1-1000)
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="max_retries" class="form-label">Max Retries</label>
+                        <input type="number" class="form-control" id="max_retries" 
+                               name="max_retries" value="3" min="0" max="10">
+                        <div class="form-text">
+                            Number of retry attempts for failed payments
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Process Payments</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h4>Processing Details</h4>
+        <ul>
+            <li>Processes payments from the <code>payment_unsent</code> table</li>
+            <li>Validates each payment against business rules</li>
+            <li>Successful payments are moved to the <code>payment</code> table</li>
+            <li>Failed payments are logged in <code>payment_failed_log</code></li>
+            <li>Each batch is tracked with a unique Batch ID</li>
+        </ul>
+
+        <div class="alert alert-warning mt-3">
+            <h5>Validation Rules</h5>
+            <ul>
+                <li>BillKey must exist in the system</li>
+                <li>BankTxnRef must be unique</li>
+                <li>Bill must not be already paid</li>
+                <li>Payment amount must match bill amount exactly</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

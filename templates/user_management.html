@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>User Management</h2>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Create User Form -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Create New User</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('create_user') }}">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="payroll_number">Payroll Number</label>
+                            <input type="text" class="form-control" id="payroll_number" name="payroll_number" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="branch">Branch</label>
+                            <select class="form-control" id="branch" name="branch" required>
+                                <option value="">Select a branch</option>
+                                <option value="Head Office">Head Office</option>
+                                <option value="Arada Branch">Arada Branch</option>
+                                <option value="Addis Ketema">Addis Ketema</option>
+                                <option value="Akaki">Akaki</option>
+                                <option value="Mekanissa">Mekanissa</option>
+                                <option value="Gurd Shola">Gurd Shola</option>
+                                <option value="Gullele">Gullele</option>
+                                <option value="Megenagna">Megenagna</option>
+                                <option value="Nifas Silk">Nifas Silk</option>
+                                <option value="Kolefe">Kolefe</option>
+                                <option value="Lemi Kura">Lemi Kura</option>
+                                <!-- Other branch options -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+               
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <!-- In your user_management.html -->
+<div class="form-group">
+    <label for="role_id">Role</label>
+    <select class="form-control" id="role_id" name="role_id" required>
+        <option value="">Select a role</option>
+        {% for role in roles %}
+            <!-- <option value="{{ role[0] }}">{{ role[1] }}</option> -->
+            <option value="{{ role[0] }}">{{ role[1] }}</option>
+        {% endfor %}
+    </select>
+</div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary mt-3">Create User</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Existing Users</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Payroll Number</th>
+                            <th>Branch</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+<tr>
+    <td>{{ user.USERNAME }}</td>
+    <td>{{ user.PAYROLL_NUMBER }}</td>
+    <td>{{ user.BRANCH }}</td>
+    <td>{{ user.ROLE_NAME }}</td>
+    <td>
+        <a href="{{ url_for('edit_user', user_id=user.USER_ID) }}" class="btn btn-sm btn-primary">Edit</a>
+        <form method="POST" action="{{ url_for('delete_user', user_id=user.USER_ID) }}" style="display: inline;">
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

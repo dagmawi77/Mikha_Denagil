@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Upload Member Registration CSV</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('upload_member_registration') }}" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="file" class="form-label">Select CSV file</label>
+            <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+
+    <hr>
+
+    <h5>CSV must include columns:</h5>
+    <ul>
+        <li><code>full_name</code></li>
+        <li><code>father_of_repentance</code></li>
+        <li><code>mother_name</code></li>
+        <li><code>parish</code></li>
+        <li><code>christian_name</code></li>
+        <li><code>age_of_birth</code></li>
+        <li><code>subcity</code></li>
+        <li><code>woreda</code></li>
+        <li><code>house_number</code></li>
+        <li><code>special_place</code></li>
+        <li><code>phone</code></li>
+        <li><code>leving</code></li>
+        <li><code>work_status</code></li>
+        <li><code>email</code></li>
+        <li><code>member_year</code></li>
+        <li><code>education</code></li>
+        <li><code>rank</code></li>
+        <li><code>education_status</code></li>
+        <li><code>work</code></li>
+        <li><code>student</code></li>
+        <li><code>career</code></li>
+        <li><code>marital_status</code></li>
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>አባል ምዝገባ (Member Registration)</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST">
+        <input type="hidden" name="id" id="id" value="{{ member_data['id'] if member_data else '' }}">
+        <div class="row">
+            <div class="col-md-6">
+                <label>ሙሉ ስም (Full Name)</label>
+                <input class="form-control" name="full_name" value="{{ member_data['full_name'] if member_data else '' }}">
+                <label>ፃታ (Gender)</label>
+                <select class="form-control" name="gender">  ፃታ
+                    <option value="">ፃታ</option>
+                    <option {% if member_data and member_data['gender'] == 'ወንድ' %}selected{% endif %}>ወንድ</option>
+                    <option {% if member_data and member_data['gender'] == 'ሴት' %}selected{% endif %}>ሴት</option>
+
+                 </select>
+                <label>የንስሀ አባት ስም (Father of Repentance)</label>
+                <input class="form-control" name="father_of_repentance" value="{{ member_data['father_of_repentance'] if member_data else '' }}">
+
+                <label>የእናት ስም (Mother Name)</label>
+                <input class="form-control" name="mother_name" value="{{ member_data['mother_name'] if member_data else '' }}">
+
+                <label>የሚያገለግሉበት ደብር (Parish)</label>
+                <input class="form-control" name="parish" value="{{ member_data['parish'] if member_data else '' }}">
+
+                <label>ክርስትና ስም (Christian Name)</label>
+                <input class="form-control" name="christian_name" value="{{ member_data['christian_name'] if member_data else '' }}">
+
+                <label>የትውልድ ዘመን (Age of Birth)</label>
+                <input class="form-control" type = 'date' name="age_of_birth" value="{{ member_data['age_of_birth'] if member_data else '' }}">
+
+                <label>ክ/ከተማ (Subcity)</label>
+                <select class="form-control" name="subcity">
+                    <option value="">Select Subcity</option>
+                    <option {% if member_data and member_data['subcity'] == 'ልደታ' %}selected{% endif %}>ልደታ</option>
+                    <option {% if member_data and member_data['subcity'] == 'አዲስ ከተማ' %}selected{% endif %}>አዲስ ከተማ</option>
+                    <option {% if member_data and member_data['subcity'] == 'ጉለሌ' %}selected{% endif %}>ጉለሌ</option>
+                    <option {% if member_data and member_data['subcity'] == 'ቂርቆስ' %}selected{% endif %}>ቂርቆስ</option>
+
+                </select>
+
+                <label>ወረዳ (Woreda)</label>
+                  <select class="form-control" name="woreda">
+                    <option value="">Select woreda</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 1' %}selected{% endif %}>ወረዳ 1</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 2' %}selected{% endif %}>ወረዳ 2</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 3' %}selected{% endif %}>ወረዳ 3</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 4' %}selected{% endif %}>ወረዳ 4</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 5' %}selected{% endif %}>ወረዳ 5</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 6' %}selected{% endif %}>ወረዳ 6</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 7' %}selected{% endif %}>ወረዳ 7</option> 
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 8' %}selected{% endif %}>ወረዳ 8</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 9' %}selected{% endif %}>ወረዳ 9</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 10' %}selected{% endif %}>ወረዳ 10</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 11' %}selected{% endif %}>ወረዳ 11</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 12' %}selected{% endif %}>ወረዳ 12</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 13' %}selected{% endif %}>ወረዳ 13</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 14' %}selected{% endif %}>ወረዳ 14</option>
+                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 15' %}selected{% endif %}>ወረዳ 15</option>
+            
+
+                </select>
+                <!-- <input class="form-control" name="woreda" value="{{ member_data['woreda'] if member_data else '' }}"> -->
+
+                <label>የቤት ቁጥር (House Number)</label>
+                <input class="form-control" type="number" name="house_number" value="{{ member_data['house_number'] if member_data else '' }}">
+
+                <label>ልዩ ቦታ (Special Place)</label>
+                <input class="form-control" name="special_place" value="{{ member_data['special_place'] if member_data else '' }}">
+
+                <label>ስልክ የእጅ (Phone)</label>
+                <input class="form-control" type="number" name="phone" value="{{ member_data['phone'] if member_data else '' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label>የመኖሪያ (Living)</label>
+                <input class="form-control" name="leving" value="{{ member_data['leving'] if member_data else '' }}">
+
+                <label>የስራ ሁኔታ (Work Status)</label>
+                <select class="form-control" name="work_status">
+                    <option value="">Select Status</option>
+                    <option {% if member_data and member_data['work_status'] == 'በሥራ ላይ' %}selected{% endif %}>በሥራ ላይ</option>
+                    <option {% if member_data and member_data['work_status'] == 'ስራ የለኝም' %}selected{% endif %}>ስራ የለኝም</option>
+                    <option {% if member_data and member_data['work_status'] == 'ስራ በመፈለግ ላይ' %}selected{% endif %}>ስራ በመፈለግ ላይ</option>
+                    <option {% if member_data and member_data['work_status'] == 'ተማሪ' %}selected{% endif %}>ተማሪ</option>
+                    <option {% if member_data and member_data['work_status'] == 'ሌላ' %}selected{% endif %}>ሌላ</option>
+
+                    
+                </select>
+
+                <label>ኢሜይል (Email)</label>
+                <input class="form-control" type="email" name="email" value="{{ member_data['email'] if member_data else '' }}">
+
+                <label>አባል የሆኑበት ዓ.ም (Member Year)</label>
+                <input class="form-control" name="member_year" value="{{ member_data['member_year'] if member_data else '' }}">
+
+                <label>መንፈሳዊ ትምህርት (Spiritual Education)</label>
+                <input class="form-control" name="spiritual_education" value="{{ member_data['spiritual_education'] if member_data else '' }}">
+
+                <label>ደረጃ (Rank)</label>
+                <input class="form-control" name="rank" value="{{ member_data['rank'] if member_data else '' }}">
+
+                <label>የትምህርት_ደረጃ(education_status)</label>
+                <select class="form-control" name="education_status">
+                    <option value="">Select Education Status</option>
+                    <option {% if member_data and member_data['education_status'] == 'ማስተርስ' %}selected{% endif %}>ማስተርስ</option>
+                    <option {% if member_data and member_data['education_status'] == 'ዲግሪ' %}selected{% endif %}>ዲግሪ</option>
+                    <option {% if member_data and member_data['education_status'] == 'ዲፕሎማ' %}selected{% endif %}>ዲፕሎማ</option>
+                    <option {% if member_data and member_data['education_status'] == '1ኛ ደረጃ ' %}selected{% endif %}>1ኛ ደረጃ</option>
+                    <option {% if member_data and member_data['education_status'] == '1ኛ ደረጃ' %}selected{% endif %}>2ኛ ደረጃ</option>
+
+                </select>
+                <label>ስራ (Work)</label>
+                <input class="form-control" name="work" value="{{ member_data['work'] if member_data else '' }}">
+
+                <label>ተማሪ (Student)</label>
+                <input class="form-control" name="student" value="{{ member_data['student'] if member_data else '' }}">
+
+                <label>ሙያ (Career)</label>
+                <input class="form-control" name="career" value="{{ member_data['career'] if member_data else '' }}">
+
+                <label>የጋብቻ ሁኔታ (Marital Status)</label>
+                <select class="form-control" name="marital_status">
+                    <option value="">Marital Status</option>
+                    <option {% if member_data and member_data['marital_status'] == 'ያገባ' %}selected{% endif %}>ያገባ</option>
+                    <option {% if member_data and member_data['marital_status'] == 'ያላገባ' %}selected{% endif %}>ያላገባ</option>
+                    <option {% if member_data and member_data['marital_status'] == 'የተፋታ' %}selected{% endif %}>የተፋታ</option>
+
+
+                    
+                </select>
+
+                <label for="">የሚገለግሉበት ክፍል</label>
+                 <select class="form-control" name="section_name">የሚገለግሉበት ክፍል
+                    <option value="">የሚገለግሉበት ክፍል</option>
+                    <option {% if member_data and member_data['section_name'] == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
+                    <option {% if member_data and member_data['section_name'] == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
+                    <option {% if member_data and member_data['section_name'] == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
+                    <option {% if member_data and member_data['section_name'] == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
+
+
+                 </select>
+                <!-- <input class="form-control" name="section_name" value="{{ member_data['section_name'] if member_data else '' }}"> -->
+                            
+
+
+                <!-- <input class="form-control" name="marital_status" value="{{ member_data['marital_status'] if member_data else '' }}"> -->
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ url_for('manage_members') }}" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+
+    <hr>
+    <h3>Last 10 Members</h3>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Father's Name</th>
+                <th>Mother's Name</th>
+                <th>Parish</th>
+                <th>Christian Name</th>
+                <th>Age of Birth</th>
+                <th>Subcity</th>
+                <th>Woreda</th>
+                <th>section_name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in members %}
+            <tr>
+                <td>{{ member.id }}</td>
+                <td>{{ member.full_name }}</td>
+                <td>{{ member.father_of_repentance }}</td>
+                <td>{{ member.mother_name }}</td>
+                <td>{{ member.parish }}</td>
+                <td>{{ member.christian_name }}</td>
+                <td>{{ member.age_of_birth }}</td>
+                <td>{{ member.subcity }}</td>
+                <td>{{ member.woreda }}</td>
+                <td>{{member.section_name}}</td>
+                <td>
+                    <a href="{{ url_for('manage_members', edit=member.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                    <a href="{{ url_for('manage_members', delete=member.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this member?');">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
