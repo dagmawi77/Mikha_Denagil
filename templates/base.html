@@ -171,39 +171,58 @@
                         <ul class="clearfix">
                             
                             <li class="icons dropdown d-none d-md-flex">
-                                <a href="javascript:void(0)" class="log-user"  data-toggle="dropdown">
-                                    <span>English</span>  <i class="fa fa-angle-down f-s-14" aria-hidden="true"></i>
+                                <a href="javascript:void(0)" class="log-user" data-toggle="dropdown" style="color: white !important;">
+                                    <i class="icon-globe" style="color: white !important;"></i>
+                                    <span style="color: white !important;">
+                                        {% if lang == 'en' %}English{% else %}አማርኛ{% endif %}
+                                    </span>
+                                    <i class="fa fa-angle-down f-s-14" aria-hidden="true" style="color: white !important;"></i>
                                 </a>
-                                <div class="drop-down dropdown-language animated fadeIn  dropdown-menu">
+                                <div class="drop-down dropdown-language animated fadeIn dropdown-menu">
                                     <div class="dropdown-content-body">
                                         <ul>
-                                            <li><a href="javascript:void()">English</a></li>
+                                            <li>
+                                                <a href="{{ url_for('set_language', lang='am') }}" style="color: #2c3e50 !important;">
+                                                    <i class="icon-flag" style="color: #14860C !important;"></i> 
+                                                    <span style="color: #2c3e50 !important;">አማርኛ (Amharic)</span>
+                                                    {% if lang == 'am' %}
+                                                        <i class="icon-check" style="color: #14860C !important; float: right;"></i>
+                                                    {% endif %}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ url_for('set_language', lang='en') }}" style="color: #2c3e50 !important;">
+                                                    <i class="icon-flag" style="color: #007bff !important;"></i> 
+                                                    <span style="color: #2c3e50 !important;">English</span>
+                                                    {% if lang == 'en' %}
+                                                        <i class="icon-check" style="color: #14860C !important; float: right;"></i>
+                                                    {% endif %}
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </li>
                             <li class="icons dropdown">
-                                <div class="user-img c-pointer position-relative"   data-toggle="dropdown">
+                                <div class="user-img c-pointer position-relative" data-toggle="dropdown">
                                     <span class="activity active"></span>
-                                    <img src="images/user/1.png" height="40" width="40" alt="">
+                                    <img src="{{ url_for('static', filename='images/avatar/profile.jpg') }}" height="40" width="40" alt="">
                                 </div>
                                 <div class="drop-down dropdown-profile animated fadeIn dropdown-menu">
                                     <div class="dropdown-content-body">
                                         <ul>
                                             <li>
-                                                <a href="app-profile.html"><i class="icon-user"></i> <span>Profile</span></a>
-                                            </li>
-                                            <!-- <li>
-                                                <a href="javascript:void()">
-                                                    <i class="icon-envelope-open"></i> <span>Inbox</span> <div class="badge gradient-3 badge-pill gradient-1">3</div>
+                                                <a href="javascript:void()" style="color: #2c3e50 !important;">
+                                                    <i class="icon-user" style="color: #14860C !important;"></i> 
+                                                    <span style="color: #2c3e50 !important;">{{ t('profile') }}</span>
                                                 </a>
                                             </li>
-                                            
-                                            <hr class="my-2"> -->
-                                            <!-- <li>
-                                                <a href="page-lock.html"><i class="icon-lock"></i> <span>Lock Screen</span></a>
-                                            </li> -->
-                                            <li><a href="{{ url_for('logout') }}"><i class="icon-key"></i> <span>Logout</span></a></li>
+                                            <li>
+                                                <a href="{{ url_for('logout') }}" style="color: #2c3e50 !important;">
+                                                    <i class="icon-key" style="color: #dc3545 !important;"></i> 
+                                                    <span style="color: #2c3e50 !important;">{{ t('logout') }}</span>
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
@@ -224,81 +243,121 @@
                     <ul class="metismenu" id="menu">
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-speedometer menu-icon"></i><span class="nav-text">Dashboard</span>
+                                <i class="icon-speedometer menu-icon"></i><span class="nav-text">{{ t('dashboard') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('navigation')}}">Dashboard</a></li>
-                                <!-- <li><a href="./index-2.html">Home 2</a></li> -->
+                                <li><a href="{{url_for('navigation')}}">{{ t('dashboard') }}</a></li>
                             </ul>
                         </li>
 
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-speedometer menu-icon"></i><span class="nav-text">አባላት ማስተዳደሪያ ማስተዳደሪያ</span>
+                                <i class="icon-speedometer menu-icon"></i><span class="nav-text">{{ t('member_management') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('manage_members')}}">አባላት መመዝገቢያ</a></li>
-                                <li><a href="{{url_for('member_report')}}">የአባላት ሪፖርት</a></li>
-                                <li><a href="{{url_for('upload_member_registration')}}">አባላት Upload ማድረጊያ</a></li>
-                                <li><a href="{{url_for('attendance')}}">አባላት (Attendance)</a></li>
+                                <li><a href="{{url_for('manage_members')}}">{{ t('member_registration') }}</a></li>
+                                <li><a href="{{url_for('member_report')}}">{{ t('member_report') }}</a></li>
+                                <li><a href="{{url_for('upload_member_registration')}}">{{ t('bulk_upload') }}</a></li>
+                                <li><a href="{{url_for('attendance')}}">{{ t('attendance') }}</a></li>
                             </ul>
                         </li>
                         <li class="mega-menu mega-menu-sm">
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-note menu-icon"></i><span class="nav-text">ረፖርት</span>
+                                <i class="icon-note menu-icon"></i><span class="nav-text">{{ t('reports') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('attendance_report')}}">የአቴንዳንስ ሪፖርት</a></li>
+                                <li><a href="{{url_for('attendance_report')}}">{{ t('attendance_report') }}</a></li>
                             </ul>
                         </li>
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-book-open menu-icon"></i><span class="nav-text">መፅሀፍት ቤት - Library</span>
+                                <i class="icon-book-open menu-icon"></i><span class="nav-text">{{ t('library') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('manage_books')}}">መፅሀፍት መመዝገቢያ</a></li>
-                                <li><a href="{{url_for('borrow_management')}}">መዋስ አስተዳደር</a></li>
-                                <li><a href="{{url_for('book_report')}}">መፅሀፍት ሪፖርት</a></li>
-                                <li><a href="{{url_for('borrow_report')}}">መዋስ ሪፖርት</a></li>
+                                <li><a href="{{url_for('manage_books')}}">{{ t('book_registration') }}</a></li>
+                                <li><a href="{{url_for('borrow_management')}}">{{ t('borrow_management') }}</a></li>
+                                <li><a href="{{url_for('book_report')}}">{{ t('book_report') }}</a></li>
+                                <li><a href="{{url_for('borrow_report')}}">{{ t('borrow_report') }}</a></li>
                             </ul>
                         </li>
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-wallet menu-icon"></i><span class="nav-text">መዋጮ - MEWACO</span>
+                                <i class="icon-wallet menu-icon"></i><span class="nav-text">{{ t('mewaco') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('mewaco_types')}}">የመዋጮ አይነቶች</a></li>
-                                <li><a href="{{url_for('monthly_contributions')}}">የወር መዋጮ አሰባሰብ</a></li>
-                                <li><a href="{{url_for('contribution_report_monthly')}}">የወር መዋጮ ሪፖርት</a></li>
-                                <li><a href="{{url_for('member_contribution_summary')}}">የአባላት መዋጮ ማጠቃለያ</a></li>
+                                <li><a href="{{url_for('mewaco_types')}}">{{ t('contribution_types') }}</a></li>
+                                <li><a href="{{url_for('monthly_contributions')}}">{{ t('monthly_contribution') }}</a></li>
+                                <li><a href="{{url_for('contribution_report_monthly')}}">{{ t('monthly_report') }}</a></li>
+                                <li><a href="{{url_for('member_contribution_summary')}}">{{ t('member_contribution') }}</a></li>
                             </ul>
                         </li>
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-layers menu-icon"></i><span class="nav-text">ምድብ - Section & Medebe</span>
+                                <i class="icon-layers menu-icon"></i><span class="nav-text">{{ t('section_medebe') }}</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('medebe_management')}}">ምድብ አስተዳደር</a></li>
-                                <li><a href="{{url_for('member_medebe_assignment')}}">የአባላት ምድብ መመደቢያ</a></li>
-                                <li><a href="{{url_for('medebe_report')}}">የምድብ ሪፖርት</a></li>
-                                <li><a href="{{url_for('member_medebe_report')}}">የአባላት ምድብ ሪፖርት</a></li>
+                                <li><a href="{{url_for('medebe_management')}}">{{ t('medebe_management') }}</a></li>
+                                <li><a href="{{url_for('member_medebe_assignment')}}">{{ t('member_assignment') }}</a></li>
+                                <li><a href="{{url_for('medebe_report')}}">{{ t('medebe_report') }}</a></li>
+                                <li><a href="{{url_for('member_medebe_report')}}">{{ t('member_medebe_report') }}</a></li>
                             </ul>
                         </li>
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-user menu-icon"></i><span class="nav-text">User Managment</span>
+                                <i class="icon-briefcase menu-icon"></i><span class="nav-text">Inventory / የእቃ አስተዳደር</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('user_management')}}">user management</a></li>
-                                <li><a href="{{ url_for('manage_roles') }}">Manage Roles</a></li>
-                                <li><a href="{{ url_for('manage_routes') }}">Manage Routes</a></li>
-
-
+                                <li><a href="{{url_for('manage_inventory')}}">Inventory Items / የእቃ መዝገብ</a></li>
+                                <li><a href="{{url_for('inventory_transactions')}}">Transactions / እንቅስቃሴ</a></li>
+                                <li><a href="{{url_for('inventory_stock_report')}}">Stock Report / የእቃ ሪፖርት</a></li>
+                                <li><a href="{{url_for('inventory_movement_report')}}">Movement Report / የእንቅስቃሴ ሪፖርት</a></li>
                             </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-home menu-icon"></i><span class="nav-text">Fixed Assets / የቋሚ እቃ</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('manage_fixed_assets')}}">Asset Register / የእቃ መዝገብ</a></li>
+                                <li><a href="{{url_for('asset_movements')}}">Asset Movement / እንቅስቃሴ</a></li>
+                                <li><a href="{{url_for('asset_register_report')}}">Register Report / የመዝገብ ሪፖርት</a></li>
+                                <li><a href="{{url_for('asset_movement_report')}}">Movement Report / የእንቅስቃሴ ሪፖርት</a></li>
+                                <li><a href="{{url_for('asset_depreciation_report')}}">Depreciation Report / የግምት ሪፖርት</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-organization menu-icon"></i><span class="nav-text">Organization / አደረጃጀት</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('manage_departments')}}">Departments / መምሪያዎች</a></li>
+                                <li><a href="{{url_for('manage_positions')}}">Positions / የሥራ መደቦች</a></li>
+                                <li><a href="{{url_for('assign_member_positions')}}">Assign Positions / መደብ መመደቢያ</a></li>
+                                <li><a href="{{url_for('organizational_chart')}}">Org Chart / አደረጃጀት ገበታ</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-user menu-icon"></i><span class="nav-text">{{ t('user_management') }}</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('user_management')}}">{{ t('user_management') }}</a></li>
+                                <li><a href="{{ url_for('manage_roles') }}">{{ t('manage_roles') }}</a></li>
+                                <li><a href="{{ url_for('manage_routes') }}">{{ t('manage_routes') }}</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a href="{{url_for('member_accounts')}}">
+                                <i class="icon-lock menu-icon"></i><span class="nav-text">Member Accounts / የአባላት መለያዎች</span>
+                            </a>
                         </li>
                         
                         
@@ -356,11 +415,23 @@
                 headerContent.style.background = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
             }
             
-            // Force white text on all menu items
+            // Force white text on sidebar menu items only
             const menuItems = document.querySelectorAll('.metismenu, .metismenu *, .metismenu a, .metismenu li, .metismenu ul, .nav-text, .menu-icon');
             menuItems.forEach(item => {
                 item.style.color = '#ffffff';
                 item.style.background = 'transparent';
+            });
+            
+            // Keep dropdown menus readable (dark text on white background)
+            const dropdowns = document.querySelectorAll('.dropdown-menu, .drop-down, .dropdown-content-body');
+            dropdowns.forEach(dropdown => {
+                dropdown.style.background = '#ffffff';
+                dropdown.style.color = '#2c3e50';
+            });
+            
+            const dropdownLinks = document.querySelectorAll('.dropdown-menu a, .drop-down a, .dropdown-content-body a, .dropdown-content-body span, .dropdown-content-body i');
+            dropdownLinks.forEach(link => {
+                link.style.color = '#2c3e50';
             });
         });
     </script>
@@ -383,13 +454,32 @@
             background: linear-gradient(135deg, #14860C 0%, #106b09 100%) !important;
         }
         
-        /* Header text white */
-        body .header *,
-        body .header-content *,
-        body .header a,
-        body .header span,
-        body .header i {
+        /* Header text white - but not dropdowns */
+        body .header-left,
+        body .header-right > ul > li > a,
+        body .header-right > ul > li > span,
+        body .header .log-user,
+        body .header .log-user span,
+        body .header .hamburger,
+        body .header .hamburger * {
             color: #ffffff !important;
+        }
+        
+        /* Keep dropdown menus readable */
+        body .dropdown-menu,
+        body .dropdown-menu *,
+        body .drop-down,
+        body .drop-down *,
+        body .dropdown-content-body,
+        body .dropdown-content-body * {
+            color: #2c3e50 !important;
+            background: #ffffff !important;
+        }
+        
+        body .dropdown-menu a:hover,
+        body .drop-down a:hover {
+            background: #f8f9fa !important;
+            color: #14860C !important;
         }
         
         body .metismenu,

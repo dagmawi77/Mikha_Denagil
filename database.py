@@ -123,16 +123,51 @@ def initialize_rbac_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """)
         
-        # Create role_routes junction table
+        # Create role_routes junction table with CRUD permissions
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS role_routes (
                 role_id INT NOT NULL,
                 route_id INT NOT NULL,
+                can_create TINYINT(1) DEFAULT 0,
+                can_read TINYINT(1) DEFAULT 1,
+                can_update TINYINT(1) DEFAULT 0,
+                can_delete TINYINT(1) DEFAULT 0,
+                can_approve TINYINT(1) DEFAULT 0,
+                can_export TINYINT(1) DEFAULT 0,
                 PRIMARY KEY (role_id, route_id),
                 FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE,
                 FOREIGN KEY (route_id) REFERENCES routes(route_id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """)
+        
+        # Add CRUD permission columns to existing role_routes table if they don't exist
+        crud_columns = [
+            ('can_create', 'TINYINT(1) DEFAULT 0'),
+            ('can_read', 'TINYINT(1) DEFAULT 1'),
+            ('can_update', 'TINYINT(1) DEFAULT 0'),
+            ('can_delete', 'TINYINT(1) DEFAULT 0'),
+            ('can_approve', 'TINYINT(1) DEFAULT 0'),
+            ('can_export', 'TINYINT(1) DEFAULT 0')
+        ]
+        
+        for column_name, column_def in crud_columns:
+            try:
+                cursor.execute(f"""
+                    SELECT COUNT(*) 
+                    FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = %s
+                    AND TABLE_NAME = 'role_routes' 
+                    AND COLUMN_NAME = %s
+                """, (Config.DB_NAME, column_name))
+                
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute(f"""
+                        ALTER TABLE role_routes 
+                        ADD COLUMN {column_name} {column_def}
+                    """)
+                    print(f"✓ Added {column_name} column to role_routes table")
+            except Exception as e:
+                print(f"⚠ Warning: Could not add {column_name} column: {e}")
         
         # Check if aawsa_user table exists and add role_id column if needed
         cursor.execute("""
@@ -279,9 +314,318 @@ def initialize_rbac_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Member to Medebe assignments'
         """)
         
+        # Create inventory_items table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                item_name VARCHAR(255) NOT NULL COMMENT 'Item name/የእቃ ስም',
+                category VARCHAR(100) NOT NULL COMMENT 'Category (Stationery, Electronics, etc.)',
+                quantity INT NOT NULL DEFAULT 0 COMMENT 'Current quantity/አሁን ያለው መጠን',
+                unit VARCHAR(50) NOT NULL COMMENT 'Unit (pieces, boxes, liters, etc.)',
+                location VARCHAR(255) COMMENT 'Storage location/የማከማቻ ቦታ',
+                supplier VARCHAR(255) COMMENT 'Supplier name/አቅራቢ',
+                purchase_date DATE COMMENT 'Purchase date/የግዢ ቀን',
+                unit_price DECIMAL(10,2) COMMENT 'Price per unit',
+                min_stock_level INT DEFAULT 10 COMMENT 'Minimum stock alert level',
+                description TEXT COMMENT 'Item description/መግለጫ',
+                status VARCHAR(50) DEFAULT 'Active' COMMENT 'Active/Inactive/Discontinued',
+                created_by VARCHAR(50) COMMENT 'User who created',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_category (category),
+                INDEX idx_location (location),
+                INDEX idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Inventory items/የእቃ መዝገብ'
+        """)
+        
+        # Create inventory_transactions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS inventory_transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                item_id INT NOT NULL COMMENT 'Reference to inventory item',
+                transaction_type VARCHAR(50) NOT NULL COMMENT 'Incoming/Outgoing/Adjustment',
+                quantity INT NOT NULL COMMENT 'Quantity moved',
+                transaction_date DATE NOT NULL COMMENT 'Transaction date',
+                reference_number VARCHAR(100) COMMENT 'Invoice/Receipt number',
+                responsible_user VARCHAR(100) COMMENT 'User responsible for transaction',
+                recipient VARCHAR(255) COMMENT 'Who received (for outgoing)',
+                purpose VARCHAR(255) COMMENT 'Purpose of transaction',
+                notes TEXT COMMENT 'Additional notes',
+                previous_quantity INT COMMENT 'Quantity before transaction',
+                new_quantity INT COMMENT 'Quantity after transaction',
+                created_by VARCHAR(50) COMMENT 'User who recorded',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (item_id) REFERENCES inventory_items(id) ON DELETE CASCADE,
+                INDEX idx_item (item_id),
+                INDEX idx_type (transaction_type),
+                INDEX idx_date (transaction_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Inventory transactions/የእቃ እንቅስቃሴ'
+        """)
+        
+        # Create fixed_assets table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fixed_assets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                asset_name VARCHAR(255) NOT NULL COMMENT 'Asset name/የእቃ ስም',
+                category VARCHAR(100) NOT NULL COMMENT 'Furniture, Electronics, Vehicle, etc.',
+                purchase_date DATE NOT NULL COMMENT 'Purchase date/የግዢ ቀን',
+                purchase_cost DECIMAL(15,2) NOT NULL COMMENT 'Purchase cost in Birr',
+                current_location VARCHAR(255) COMMENT 'Current location/አሁን ያለበት ቦታ',
+                condition_status VARCHAR(50) DEFAULT 'Good' COMMENT 'Good, Fair, Poor',
+                assigned_department VARCHAR(100) COMMENT 'Department/section assigned to',
+                assigned_user VARCHAR(100) COMMENT 'Specific user assigned to',
+                serial_number VARCHAR(100) COMMENT 'Serial number or asset tag',
+                useful_life_years INT DEFAULT 5 COMMENT 'Expected useful life in years',
+                depreciation_method VARCHAR(50) DEFAULT 'Straight-Line' COMMENT 'Straight-Line, Declining, etc.',
+                salvage_value DECIMAL(15,2) DEFAULT 0 COMMENT 'Estimated salvage value',
+                accumulated_depreciation DECIMAL(15,2) DEFAULT 0 COMMENT 'Total depreciation',
+                book_value DECIMAL(15,2) COMMENT 'Current book value',
+                description TEXT COMMENT 'Asset description',
+                status VARCHAR(50) DEFAULT 'Active' COMMENT 'Active, Disposed, Under Repair',
+                disposal_date DATE COMMENT 'Date disposed if applicable',
+                disposal_method VARCHAR(100) COMMENT 'Sold, Donated, Scrapped',
+                disposal_value DECIMAL(15,2) COMMENT 'Disposal/sale value',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_category (category),
+                INDEX idx_location (current_location),
+                INDEX idx_department (assigned_department),
+                INDEX idx_status (status),
+                INDEX idx_serial (serial_number)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Fixed assets register/የቋሚ እቃ መዝገብ'
+        """)
+        
+        # Create asset_movements table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS asset_movements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                asset_id INT NOT NULL COMMENT 'Reference to fixed asset',
+                movement_type VARCHAR(50) NOT NULL COMMENT 'Assignment, Relocation, Repair, Disposal',
+                movement_date DATE NOT NULL COMMENT 'Movement date',
+                from_location VARCHAR(255) COMMENT 'Previous location',
+                to_location VARCHAR(255) COMMENT 'New location',
+                from_department VARCHAR(100) COMMENT 'Previous department',
+                to_department VARCHAR(100) COMMENT 'New department',
+                from_user VARCHAR(100) COMMENT 'Previous user',
+                to_user VARCHAR(100) COMMENT 'New user',
+                responsible_person VARCHAR(100) COMMENT 'Person responsible for movement',
+                condition_before VARCHAR(50) COMMENT 'Condition before movement',
+                condition_after VARCHAR(50) COMMENT 'Condition after movement',
+                repair_cost DECIMAL(10,2) COMMENT 'Cost if repair movement',
+                remarks TEXT COMMENT 'Movement remarks/notes',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (asset_id) REFERENCES fixed_assets(id) ON DELETE CASCADE,
+                INDEX idx_asset (asset_id),
+                INDEX idx_type (movement_type),
+                INDEX idx_date (movement_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Asset movement history/የእቃ እንቅስቃሴ ታሪክ'
+        """)
+        
+        # Create departments table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS departments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                department_name VARCHAR(255) NOT NULL COMMENT 'Department name/የመምሪያ ስም',
+                department_code VARCHAR(50) UNIQUE COMMENT 'Department code',
+                parent_department_id INT COMMENT 'For hierarchical structure',
+                head_member_id INT COMMENT 'Department head (member reference)',
+                description TEXT COMMENT 'Department description',
+                status VARCHAR(50) DEFAULT 'Active' COMMENT 'Active/Inactive',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (head_member_id) REFERENCES member_registration(id) ON DELETE SET NULL,
+                FOREIGN KEY (parent_department_id) REFERENCES departments(id) ON DELETE SET NULL,
+                INDEX idx_dept_name (department_name),
+                INDEX idx_dept_code (department_code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Organization departments/መምሪያዎች'
+        """)
+        
+        # Create positions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS position_templates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                template_name VARCHAR(255) NOT NULL COMMENT 'Template name',
+                category VARCHAR(100) COMMENT 'Template category (Ministry, Administrative, etc.)',
+                position_title VARCHAR(255) NOT NULL COMMENT 'Position title',
+                position_level VARCHAR(50) COMMENT 'Executive, Manager, Staff, etc.',
+                responsibilities TEXT COMMENT 'Job responsibilities',
+                position_type VARCHAR(50) DEFAULT 'Regular' COMMENT 'Regular, Temporary, Contract, Volunteer',
+                is_leadership TINYINT(1) DEFAULT 0 COMMENT 'Is this a leadership position?',
+                max_holders INT DEFAULT 1 COMMENT 'Maximum number of people who can hold this position',
+                min_experience_years INT DEFAULT 0 COMMENT 'Minimum experience required',
+                required_skills TEXT COMMENT 'Required skills and qualifications',
+                description TEXT COMMENT 'Template description',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Is template active?',
+                usage_count INT DEFAULT 0 COMMENT 'How many times this template was used',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_category (category),
+                INDEX idx_level (position_level),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Position templates for quick creation'
+        """)
+        
+        # Add new columns to positions table if they don't exist
+        try:
+            cursor.execute("ALTER TABLE positions ADD COLUMN reporting_to INT COMMENT 'Reports to position ID'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN position_type VARCHAR(50) DEFAULT 'Regular' COMMENT 'Regular, Temporary, Contract, Volunteer'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN is_leadership TINYINT(1) DEFAULT 0 COMMENT 'Is this a leadership position?'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN max_holders INT DEFAULT 1 COMMENT 'Maximum number of people who can hold this position'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN min_experience_years INT DEFAULT 0 COMMENT 'Minimum experience required'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN required_skills TEXT COMMENT 'Required skills and qualifications'")
+            cursor.execute("ALTER TABLE positions ADD COLUMN salary_range VARCHAR(100) COMMENT 'Salary range if applicable'")
+            cursor.execute("ALTER TABLE positions ADD FOREIGN KEY (reporting_to) REFERENCES positions(id) ON DELETE SET NULL")
+            cursor.execute("ALTER TABLE positions ADD INDEX idx_reporting (reporting_to)")
+            cursor.execute("ALTER TABLE positions ADD INDEX idx_type (position_type)")
+            print("✓ Enhanced positions table with new columns")
+        except Exception as e:
+            # Columns might already exist
+            pass
+        
+        # Create positions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS positions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                position_title VARCHAR(255) NOT NULL COMMENT 'Position title/የሥራ መደብ',
+                department_id INT COMMENT 'Department this position belongs to',
+                position_level VARCHAR(50) COMMENT 'Executive, Manager, Staff, etc.',
+                responsibilities TEXT COMMENT 'Job responsibilities',
+                reporting_to INT COMMENT 'Reports to position ID',
+                position_type VARCHAR(50) DEFAULT 'Regular' COMMENT 'Regular, Temporary, Contract, Volunteer',
+                is_leadership TINYINT(1) DEFAULT 0 COMMENT 'Is this a leadership position?',
+                max_holders INT DEFAULT 1 COMMENT 'Maximum number of people who can hold this position',
+                min_experience_years INT DEFAULT 0 COMMENT 'Minimum experience required',
+                required_skills TEXT COMMENT 'Required skills and qualifications',
+                salary_range VARCHAR(100) COMMENT 'Salary range if applicable',
+                status VARCHAR(50) DEFAULT 'Active' COMMENT 'Active/Inactive',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+                FOREIGN KEY (reporting_to) REFERENCES positions(id) ON DELETE SET NULL,
+                INDEX idx_position (position_title),
+                INDEX idx_department (department_id),
+                INDEX idx_level (position_level),
+                INDEX idx_status (status),
+                INDEX idx_reporting (reporting_to),
+                INDEX idx_type (position_type)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Job positions/የሥራ መደቦች'
+        """)
+        
+        # Create member_positions table (member-position assignment)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS member_positions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL COMMENT 'Member reference',
+                position_id INT NOT NULL COMMENT 'Position reference',
+                department_id INT NOT NULL COMMENT 'Department reference',
+                start_date DATE NOT NULL COMMENT 'Position start date',
+                end_date DATE COMMENT 'Position end date (null if current)',
+                is_current TINYINT(1) DEFAULT 1 COMMENT 'Is this the current position?',
+                appointment_type VARCHAR(50) COMMENT 'Elected, Appointed, Volunteer',
+                notes TEXT COMMENT 'Additional notes',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES member_registration(id) ON DELETE CASCADE,
+                FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE CASCADE,
+                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+                INDEX idx_member (member_id),
+                INDEX idx_position (position_id),
+                INDEX idx_department (department_id),
+                INDEX idx_current (is_current)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Member position assignments/የአባላት የሥራ መደብ'
+        """)
+        
+        # Create department_head_history table to track department leadership changes
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS department_head_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                department_id INT NOT NULL COMMENT 'Department reference',
+                member_id INT NOT NULL COMMENT 'Department head member reference',
+                start_date DATE NOT NULL COMMENT 'Leadership start date',
+                end_date DATE COMMENT 'Leadership end date (null if current)',
+                is_current TINYINT(1) DEFAULT 1 COMMENT 'Is this the current head?',
+                appointment_reason TEXT COMMENT 'Reason for appointment',
+                termination_reason TEXT COMMENT 'Reason for end of leadership',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES member_registration(id) ON DELETE CASCADE,
+                INDEX idx_department (department_id),
+                INDEX idx_member (member_id),
+                INDEX idx_current (is_current),
+                INDEX idx_dates (start_date, end_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Department head history/የመምሪያ ኃላፊ ታሪክ'
+        """)
+        
+        # Create member_accounts table for member portal/mobile app access
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS member_accounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_id INT NOT NULL UNIQUE COMMENT 'Member reference',
+                username VARCHAR(50) NOT NULL UNIQUE COMMENT 'Login username',
+                password_hash VARCHAR(255) NOT NULL COMMENT 'Hashed password',
+                email VARCHAR(255) COMMENT 'Email address',
+                phone VARCHAR(20) COMMENT 'Phone number',
+                account_status VARCHAR(20) DEFAULT 'Active' COMMENT 'Active, Suspended, Inactive',
+                is_verified TINYINT(1) DEFAULT 0 COMMENT 'Email/phone verified',
+                last_login TIMESTAMP NULL COMMENT 'Last login timestamp',
+                login_attempts INT DEFAULT 0 COMMENT 'Failed login attempts',
+                locked_until TIMESTAMP NULL COMMENT 'Account locked until',
+                password_reset_token VARCHAR(100) COMMENT 'Password reset token',
+                password_reset_expires TIMESTAMP NULL COMMENT 'Token expiry',
+                mobile_device_token TEXT COMMENT 'Firebase/push notification token',
+                mobile_platform VARCHAR(20) COMMENT 'iOS, Android, etc',
+                app_version VARCHAR(20) COMMENT 'Mobile app version',
+                permissions TEXT COMMENT 'JSON array of member permissions',
+                profile_photo_url VARCHAR(500) COMMENT 'Profile photo URL',
+                created_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (member_id) REFERENCES member_registration(id) ON DELETE CASCADE,
+                INDEX idx_username (username),
+                INDEX idx_member (member_id),
+                INDEX idx_status (account_status),
+                INDEX idx_email (email),
+                INDEX idx_phone (phone),
+                INDEX idx_reset_token (password_reset_token)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Member portal accounts/የአባላት መለያዎች'
+        """)
+        
+        # Create member_login_history table for security auditing
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS member_login_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_account_id INT NOT NULL COMMENT 'Member account reference',
+                login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Login timestamp',
+                logout_time TIMESTAMP NULL COMMENT 'Logout timestamp',
+                ip_address VARCHAR(50) COMMENT 'Login IP address',
+                device_info TEXT COMMENT 'Device information',
+                platform VARCHAR(50) COMMENT 'Web, iOS, Android',
+                app_version VARCHAR(20) COMMENT 'App version used',
+                location VARCHAR(255) COMMENT 'Login location',
+                status VARCHAR(20) DEFAULT 'Success' COMMENT 'Success, Failed, Locked',
+                failure_reason VARCHAR(255) COMMENT 'Reason for failure',
+                session_duration INT COMMENT 'Session duration in seconds',
+                FOREIGN KEY (member_account_id) REFERENCES member_accounts(id) ON DELETE CASCADE,
+                INDEX idx_member_account (member_account_id),
+                INDEX idx_login_time (login_time),
+                INDEX idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Member login history/የአባላት መግቢያ ታሪክ'
+        """)
+        
         conn.commit()
         print("✓ RBAC tables initialized/verified successfully")
         print("✓ Library tables initialized/verified successfully")
+        print("✓ Inventory tables initialized/verified successfully")
+        print("✓ Fixed Assets tables initialized/verified successfully")
+        print("✓ Department & Position tables initialized/verified successfully")
         return True
     except Exception as e:
         conn.rollback()
@@ -343,7 +687,20 @@ def initialize_default_roles_and_routes():
             ('Medebe Management', 'medebe_management', 'Manage sub-sections (medebe)'),
             ('Member Medebe Assignment', 'member_medebe_assignment', 'Assign members to medebe'),
             ('Medebe Report', 'medebe_report', 'View medebe statistics and reports'),
-            ('Member Medebe Report', 'member_medebe_report', 'View member medebe assignments')
+            ('Member Medebe Report', 'member_medebe_report', 'View member medebe assignments'),
+            ('Inventory Management', 'manage_inventory', 'Manage inventory items'),
+            ('Inventory Transactions', 'inventory_transactions', 'Record stock movements'),
+            ('Inventory Stock Report', 'inventory_stock_report', 'View current stock levels'),
+            ('Inventory Movement Report', 'inventory_movement_report', 'View stock transaction history'),
+            ('Fixed Asset Register', 'manage_fixed_assets', 'Manage fixed assets register'),
+            ('Asset Movement', 'asset_movements', 'Track asset assignments and relocations'),
+            ('Asset Register Report', 'asset_register_report', 'View all assets with current status'),
+            ('Asset Movement Report', 'asset_movement_report', 'View asset movement history'),
+            ('Asset Depreciation Report', 'asset_depreciation_report', 'View asset depreciation analysis'),
+            ('Department Management', 'manage_departments', 'Manage organizational departments'),
+            ('Position Management', 'manage_positions', 'Manage job positions'),
+            ('Member Position Assignment', 'assign_member_positions', 'Assign members to positions'),
+            ('Organizational Chart', 'organizational_chart', 'View org structure and positions')
         ]
         
         for route_name, endpoint, description in default_routes:
@@ -493,6 +850,49 @@ def initialize_default_roles_and_routes():
                 """, medebe)
             
             print("✓ Sample medebe (sub-sections) inserted successfully")
+        
+        # Insert sample position templates if table is empty
+        cursor.execute("SELECT COUNT(*) FROM position_templates")
+        template_count = cursor.fetchone()[0]
+        
+        if template_count == 0:
+            sample_templates = [
+                ('Ministry Leadership', 'Ministry', 'Pastor', 'Executive', 'Lead spiritual services, provide pastoral care, oversee church operations', 'Regular', 1, 1, 5, 'Theology degree, pastoral experience, leadership skills', 'Spiritual leader of the congregation', 'ADMIN001'),
+                ('Ministry Leadership', 'Ministry', 'Assistant Pastor', 'Manager', 'Assist pastor, lead specific ministries, provide pastoral support', 'Regular', 1, 1, 3, 'Theology background, ministry experience, communication skills', 'Support pastor in ministry duties', 'ADMIN001'),
+                ('Ministry Leadership', 'Ministry', 'Youth Pastor', 'Manager', 'Lead youth ministry, organize youth activities, mentor young people', 'Regular', 1, 1, 2, 'Youth ministry experience, counseling skills, energetic personality', 'Dedicated youth ministry leader', 'ADMIN001'),
+                ('Administrative', 'Administrative', 'Church Secretary', 'Staff', 'Handle correspondence, maintain records, assist with administrative tasks', 'Regular', 0, 1, 1, 'Administrative skills, computer literacy, organization', 'Administrative support role', 'ADMIN001'),
+                ('Administrative', 'Administrative', 'Treasurer', 'Manager', 'Manage church finances, prepare budgets, handle financial records', 'Regular', 1, 1, 2, 'Accounting knowledge, financial management, integrity', 'Financial management role', 'ADMIN001'),
+                ('Administrative', 'Administrative', 'Assistant Treasurer', 'Staff', 'Assist treasurer, handle daily financial transactions', 'Regular', 0, 1, 1, 'Basic accounting, attention to detail, honesty', 'Financial support role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Sunday School Teacher', 'Staff', 'Teach Sunday school classes, prepare lessons, mentor children', 'Regular', 0, 5, 1, 'Teaching skills, patience, biblical knowledge', 'Children education ministry', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Worship Leader', 'Staff', 'Lead worship services, coordinate music ministry, train musicians', 'Regular', 0, 1, 2, 'Musical ability, leadership skills, worship experience', 'Music and worship ministry', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Choir Director', 'Staff', 'Direct choir, organize musical performances, train singers', 'Regular', 0, 1, 2, 'Musical training, conducting skills, organizational ability', 'Choir leadership role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Deacon', 'Manager', 'Serve congregation, assist with church services, provide spiritual support', 'Regular', 1, 3, 2, 'Spiritual maturity, servant heart, leadership qualities', 'Spiritual service role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Elder', 'Manager', 'Provide spiritual guidance, participate in church governance, mentor members', 'Regular', 1, 3, 3, 'Spiritual maturity, wisdom, leadership experience', 'Spiritual leadership role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Evangelist', 'Staff', 'Conduct evangelistic activities, outreach programs, share gospel', 'Regular', 0, 2, 2, 'Evangelistic passion, communication skills, biblical knowledge', 'Outreach ministry role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Mission Coordinator', 'Manager', 'Coordinate mission activities, organize outreach programs, manage volunteers', 'Regular', 1, 1, 2, 'Organizational skills, passion for missions, leadership', 'Mission ministry coordination', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Women Ministry Leader', 'Manager', 'Lead women ministry, organize women activities, provide spiritual support', 'Regular', 1, 1, 2, 'Leadership skills, women ministry experience, empathy', 'Women ministry leadership', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Men Ministry Leader', 'Manager', 'Lead men ministry, organize men activities, provide spiritual support', 'Regular', 1, 1, 2, 'Leadership skills, men ministry experience, mentorship', 'Men ministry leadership', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Children Ministry Leader', 'Manager', 'Lead children ministry, organize children activities, coordinate teachers', 'Regular', 1, 1, 2, 'Children ministry experience, patience, organizational skills', 'Children ministry leadership', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Youth Ministry Leader', 'Manager', 'Lead youth ministry, organize youth activities, mentor young people', 'Regular', 1, 1, 2, 'Youth ministry experience, mentorship skills, energy', 'Youth ministry leadership', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Prayer Ministry Leader', 'Staff', 'Lead prayer meetings, coordinate prayer activities, encourage prayer life', 'Regular', 0, 1, 1, 'Prayer life, spiritual maturity, organizational skills', 'Prayer ministry leadership', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Hospitality Coordinator', 'Staff', 'Coordinate hospitality, manage church events, welcome visitors', 'Regular', 0, 1, 1, 'Hospitality skills, organization, friendly personality', 'Hospitality and events coordination', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Usher', 'Volunteer', 'Welcome members and visitors, assist with seating, maintain order', 'Volunteer', 0, 5, 0, 'Friendly personality, helpful attitude, punctuality', 'Service and hospitality role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Sound Technician', 'Staff', 'Operate sound equipment, maintain audio systems, support worship', 'Regular', 0, 1, 1, 'Technical skills, audio equipment knowledge, reliability', 'Technical support role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Security Coordinator', 'Staff', 'Ensure church security, coordinate safety measures, manage security team', 'Regular', 0, 1, 2, 'Security awareness, leadership skills, responsibility', 'Security and safety role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Maintenance Coordinator', 'Staff', 'Coordinate church maintenance, manage facilities, oversee repairs', 'Regular', 0, 1, 2, 'Maintenance skills, organizational ability, responsibility', 'Facilities management role', 'ADMIN001'),
+                ('Ministry', 'Ministry', 'Library Coordinator', 'Staff', 'Manage church library, organize books, assist members with resources', 'Regular', 0, 1, 1, 'Organizational skills, book knowledge, helpful attitude', 'Library management role', 'ADMIN001')
+            ]
+            
+            for template in sample_templates:
+                cursor.execute("""
+                    INSERT INTO position_templates (
+                        template_name, category, position_title, position_level, 
+                        responsibilities, position_type, is_leadership, max_holders, 
+                        min_experience_years, required_skills, description, created_by
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, template)
+            
+            print("✓ Sample position templates inserted successfully")
         
         conn.commit()
         print("✓ Default roles and routes initialized successfully")

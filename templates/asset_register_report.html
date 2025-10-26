@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .report-container { background: #f8f9fa; min-height: 100vh; padding: 30px; }
+    .page-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+    .page-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid #14860C; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #2c3e50; }
+    .stat-card .label { font-size: 14px; color: #6c757d; font-weight: 600; }
+    .modern-card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); margin-bottom: 30px; }
+    .modern-card .card-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 20px 30px; }
+    .modern-card .card-body { padding: 30px; }
+    .professional-table thead th { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white !important; padding: 12px; font-weight: 600; font-size: 13px; }
+    .professional-table tbody td { padding: 12px; border-bottom: 1px solid #e9ecef; }
+    .form-control { border: 2px solid #e9ecef; border-radius: 8px; padding: 10px; }
+    .condition-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .condition-good { background: #d4edda; color: #155724; }
+    .condition-fair { background: #fff3cd; color: #856404; }
+    .condition-poor { background: #f8d7da; color: #721c24; }
+</style>
+
+<div class="report-container">
+    <div class="page-header">
+        <h2><i class="icon-graph"></i> Asset Register Report / የቋሚ እቃ ሪፖርት</h2>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label">Total Assets</div>
+            <div class="value">{{ summary[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Purchase Cost</div>
+            <div class="value" style="font-size: 20px;">{{ '{:,.0f}'.format(summary[1] or 0) }} Birr</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Book Value</div>
+            <div class="value" style="font-size: 20px;">{{ '{:,.0f}'.format(summary[2] or 0) }} Birr</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Active</div>
+            <div class="value">{{ summary[4] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Disposed</div>
+            <div class="value" style="color: #dc3545;">{{ summary[5] or 0 }}</div>
+        </div>
+    </div>
+    
+    <div class="modern-card">
+        <div class="card-header"><h4><i class="icon-filter"></i> Filters</h4></div>
+        <div class="card-body">
+            <form method="GET" class="row">
+                <div class="col-md-4">
+                    <select class="form-control" name="category">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat }}" {% if cat == category_filter %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-control" name="department">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                            <option value="{{ dept }}" {% if dept == department_filter %}selected{% endif %}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-control" name="condition">
+                        <option value="">All Conditions</option>
+                        <option value="Good" {% if condition_filter == 'Good' %}selected{% endif %}>Good</option>
+                        <option value="Fair" {% if condition_filter == 'Fair' %}selected{% endif %}>Fair</option>
+                        <option value="Poor" {% if condition_filter == 'Poor' %}selected{% endif %}>Poor</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-record" style="width: 100%;"><i class="icon-magnifier"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modern-card">
+        <div class="card-header"><h4><i class="icon-list"></i> Asset Register ({{ assets|length }})</h4></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Asset Name</th>
+                            <th>Category</th>
+                            <th>Serial #</th>
+                            <th>Purchase Date</th>
+                            <th>Age</th>
+                            <th>Cost</th>
+                            <th>Book Value</th>
+                            <th>Location</th>
+                            <th>Department</th>
+                            <th>Assigned To</th>
+                            <th>Condition</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in assets %}
+                        <tr>
+                            <td><strong>{{ asset[1] }}</strong></td>
+                            <td>{{ asset[2] }}</td>
+                            <td>{{ asset[9] or '-' }}</td>
+                            <td>{{ asset[3] }}</td>
+                            <td>{{ asset[12] }} yrs</td>
+                            <td>{{ '{:,.2f}'.format(asset[4]) }}</td>
+                            <td>{{ '{:,.2f}'.format(asset[10]) if asset[10] else '-' }}</td>
+                            <td>{{ asset[5] or '-' }}</td>
+                            <td>{{ asset[7] or '-' }}</td>
+                            <td>{{ asset[8] or '-' }}</td>
+                            <td><span class="condition-badge condition-{{ asset[6]|lower }}">{{ asset[6] }}</span></td>
+                            <td>{{ asset[11] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

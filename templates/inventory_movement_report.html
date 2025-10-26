@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .report-container { background: #f8f9fa; min-height: 100vh; padding: 30px; }
+    .page-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3); }
+    .page-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .stat-card.incoming { border-left: 4px solid #28a745; }
+    .stat-card.outgoing { border-left: 4px solid #dc3545; }
+    .stat-card.total { border-left: 4px solid #14860C; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #2c3e50; }
+    .stat-card .label { font-size: 14px; color: #6c757d; font-weight: 600; text-transform: uppercase; }
+    .modern-card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); margin-bottom: 30px; }
+    .modern-card .card-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 20px 30px; }
+    .modern-card .card-header h4 { margin: 0; font-size: 20px; font-weight: 600; }
+    .modern-card .card-body { padding: 30px; }
+    .professional-table thead th { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white !important; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; }
+    .professional-table tbody td { padding: 12px; border-bottom: 1px solid #e9ecef; font-size: 14px; }
+    .professional-table tbody tr:hover { background: #f8f9fa; }
+    .transaction-type { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .type-incoming { background: #d4edda; color: #155724; }
+    .type-outgoing { background: #f8d7da; color: #721c24; }
+    .type-adjustment { background: #fff3cd; color: #856404; }
+    .form-control { border: 2px solid #e9ecef; border-radius: 8px; padding: 10px 15px; }
+</style>
+
+<div class="report-container">
+    <div class="page-header">
+        <h2><i class="icon-graph"></i> Inventory Movement Report</h2>
+        <p>Track all stock transactions and movements</p>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card total">
+            <div class="label">Total Transactions</div>
+            <div class="value">{{ summary[0] or 0 }}</div>
+        </div>
+        <div class="stat-card incoming">
+            <div class="label">Total Incoming</div>
+            <div class="value">{{ summary[1] or 0 }}</div>
+        </div>
+        <div class="stat-card outgoing">
+            <div class="label">Total Outgoing</div>
+            <div class="value">{{ summary[2] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Adjustments</div>
+            <div class="value">{{ summary[3] or 0 }}</div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-filter"></i> Filters</h4>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row">
+                <div class="col-md-3">
+                    <label>Item</label>
+                    <select class="form-control" name="item">
+                        <option value="">All Items</option>
+                        {% for item in items %}
+                            <option value="{{ item[0] }}" {% if item[0]|string == item_filter %}selected{% endif %}>{{ item[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Type</label>
+                    <select class="form-control" name="type">
+                        <option value="">All Types</option>
+                        <option value="Incoming" {% if type_filter == 'Incoming' %}selected{% endif %}>Incoming</option>
+                        <option value="Outgoing" {% if type_filter == 'Outgoing' %}selected{% endif %}>Outgoing</option>
+                        <option value="Adjustment" {% if type_filter == 'Adjustment' %}selected{% endif %}>Adjustment</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>From Date</label>
+                    <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label>To Date</label>
+                    <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-create" style="width: 100%;">
+                        <i class="icon-magnifier"></i> Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-list"></i> Transaction History ({{ transactions|length }})</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Type</th>
+                            <th>Qty</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Ref #</th>
+                            <th>Responsible</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trans in transactions %}
+                        <tr>
+                            <td>{{ trans[5] }}</td>
+                            <td><strong>{{ trans[1] }}</strong></td>
+                            <td>{{ trans[2] }}</td>
+                            <td>
+                                <span class="transaction-type type-{{ trans[3]|lower }}">
+                                    {{ trans[3] }}
+                                </span>
+                            </td>
+                            <td><strong>{{ trans[4] }}</strong></td>
+                            <td>{{ trans[10] }}</td>
+                            <td><strong>{{ trans[11] }}</strong></td>
+                            <td>{{ trans[6] or '-' }}</td>
+                            <td>{{ trans[7] or '-' }}</td>
+                            <td>{{ trans[9] or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not transactions %}
+            <div class="text-center py-5">
+                <i class="icon-shuffle" style="font-size: 60px; color: #ccc;"></i>
+                <p class="text-muted mt-3">No transactions found for selected filters.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -95,3 +95,147 @@ def hash_password(password):
     """
     return generate_password_hash(password)
 
+def check_permission(endpoint, permission_type='read'):
+    """
+    Check if current user has specific permission for an endpoint.
+    
+    Args:
+        endpoint: The route endpoint (e.g., 'manage_members')
+        permission_type: Type of permission ('create', 'read', 'update', 'delete', 'approve', 'export')
+    
+    Returns:
+        Boolean indicating if user has permission
+    """
+    if 'role' not in session:
+        return False
+    
+    # Super Admin has all permissions
+    if session.get('role') == 'Super Admin':
+        return True
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True)
+        
+        permission_column = f'can_{permission_type}'
+        
+        cursor.execute(f"""
+            SELECT rr.{permission_column}
+            FROM roles r
+            JOIN role_routes rr ON r.role_id = rr.role_id
+            JOIN routes rt ON rr.route_id = rt.route_id
+            WHERE r.role_name = %s AND rt.endpoint = %s
+        """, (session['role'], endpoint))
+        
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        return bool(result[0]) if result else False
+    except Exception as e:
+        print(f"Error checking permission: {e}")
+        return False
+
+def permission_required(endpoint, permission_type='read'):
+    """
+    Decorator to require specific CRUD permission for a route.
+    
+    Usage: 
+        @permission_required('manage_members', 'create')
+        @permission_required('manage_members', 'update')
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'payroll_number' not in session:
+                flash('Please login to access this page', 'warning')
+                return redirect(url_for('login'))
+            
+            if not check_permission(endpoint, permission_type):
+                flash(f'Access denied. You do not have {permission_type} permission for this action.', 'danger')
+                return redirect(url_for('navigation'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_user_permissions(endpoint):
+    """
+    Get all CRUD permissions for current user on a specific endpoint.
+    
+    Returns dictionary with permission flags:
+    {
+        'can_create': True/False,
+        'can_read': True/False,
+        'can_update': True/False,
+        'can_delete': True/False,
+        'can_approve': True/False,
+        'can_export': True/False
+    }
+    """
+    if 'role' not in session:
+        return {
+            'can_create': False,
+            'can_read': False,
+            'can_update': False,
+            'can_delete': False,
+            'can_approve': False,
+            'can_export': False
+        }
+    
+    # Super Admin has all permissions
+    if session.get('role') == 'Super Admin':
+        return {
+            'can_create': True,
+            'can_read': True,
+            'can_update': True,
+            'can_delete': True,
+            'can_approve': True,
+            'can_export': True
+        }
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True)
+        
+        cursor.execute("""
+            SELECT rr.can_create, rr.can_read, rr.can_update, rr.can_delete, rr.can_approve, rr.can_export
+            FROM roles r
+            JOIN role_routes rr ON r.role_id = rr.role_id
+            JOIN routes rt ON rr.route_id = rt.route_id
+            WHERE r.role_name = %s AND rt.endpoint = %s
+        """, (session['role'], endpoint))
+        
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if result:
+            return {
+                'can_create': bool(result[0]),
+                'can_read': bool(result[1]),
+                'can_update': bool(result[2]),
+                'can_delete': bool(result[3]),
+                'can_approve': bool(result[4]),
+                'can_export': bool(result[5])
+            }
+        else:
+            return {
+                'can_create': False,
+                'can_read': False,
+                'can_update': False,
+                'can_delete': False,
+                'can_approve': False,
+                'can_export': False
+            }
+    except Exception as e:
+        print(f"Error getting user permissions: {e}")
+        return {
+            'can_create': False,
+            'can_read': False,
+            'can_update': False,
+            'can_delete': False,
+            'can_approve': False,
+            'can_export': False
+        }
+

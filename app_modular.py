@@ -5,6 +5,7 @@ Main entry point - imports from modules
 # Standard library imports
 import csv
 import io
+from io import BytesIO, StringIO
 from datetime import datetime, date, timedelta
 from math import ceil
 
@@ -43,10 +44,37 @@ from auth import (
     hash_password
 )
 from utils import get_last_10_weeks_weekends, get_members
+from translations import get_text, TRANSLATIONS
+from mobile_api import mobile_api
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Register Mobile API Blueprint
+app.register_blueprint(mobile_api)
 app.config.from_object(Config)
+
+# ========================================
+# LANGUAGE SUPPORT
+# ========================================
+
+@app.context_processor
+def inject_language():
+    """Inject language and translation function into all templates"""
+    current_lang = session.get('lang', 'am')  # Default to Amharic
+    return {
+        'lang': current_lang,
+        't': lambda key: get_text(key, current_lang),
+        'get_text': lambda key, lang=None: get_text(key, lang or current_lang)
+    }
+
+@app.route('/set_language/<lang>')
+def set_language(lang):
+    """Set user's preferred language"""
+    if lang in ['am', 'en']:
+        session['lang'] = lang
+        flash(f'Language changed to {"Amharic (አማርኛ)" if lang == "am" else "English"}', 'success')
+    return redirect(request.referrer or url_for('navigation'))
 
 # ========================================
 # SESSION MANAGEMENT
@@ -643,48 +671,456 @@ def member_report():
 @app.route('/upload_member_registration', methods=['GET', 'POST'])
 @login_required
 def upload_member_registration():
-    """Upload member registrations from CSV file"""
+    """Upload member registrations from CSV/Excel file with validation"""
     if request.method == 'POST':
         file = request.files.get('file')
-        if not file or not file.filename.endswith('.csv'):
-            flash("Please upload a valid CSV file.", "warning")
+        if not file or file.filename == '':
+            flash("Please select a file to upload.", "warning")
+            return redirect(url_for('upload_member_registration'))
+        
+        # Check file extension
+        filename = file.filename.lower()
+        if not (filename.endswith('.csv') or filename.endswith('.xlsx') or filename.endswith('.xls')):
+            flash("Please upload a CSV or Excel file (.csv, .xlsx, .xls)", "warning")
             return redirect(url_for('upload_member_registration'))
 
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_input = csv.DictReader(stream)
-
-        conn = get_db_connection()
-        cursor = conn.cursor(buffered=True)
-
         try:
-            for row in csv_input:
-                cursor.execute("""
-                    INSERT INTO member_registration (
-                        full_name, father_of_repentance, mother_name, parish, christian_name,
-                        age_of_birth, subcity, woreda, house_number, special_place,
-                        phone, leving, work_status, email, member_year,
-                        education, `rank`, education_status, work, student,
-                        career, marital_status
-                    ) VALUES (
-                        %(full_name)s, %(father_of_repentance)s, %(mother_name)s, %(parish)s, %(christian_name)s,
-                        %(age_of_birth)s, %(subcity)s, %(woreda)s, %(house_number)s, %(special_place)s,
-                        %(phone)s, %(leving)s, %(work_status)s, %(email)s, %(member_year)s,
-                        %(education)s, %(rank)s, %(education_status)s, %(work)s, %(student)s,
-                        %(career)s, %(marital_status)s
-                    )
-                """, row)
+            # Read file with pandas
+            if filename.endswith('.csv'):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+            
+            # Validate required columns
+            required_columns = ['full_name', 'phone', 'section_name', 'gender']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                flash(f"Missing required columns: {', '.join(missing_columns)}", "danger")
+                return redirect(url_for('upload_member_registration'))
+            
+            conn = get_db_connection()
+            cursor = conn.cursor(buffered=True)
+            
+            # Track results
+            success_count = 0
+            duplicate_count = 0
+            error_count = 0
+            duplicates = []
+            errors = []
+            
+            for index, row in df.iterrows():
+                row_num = index + 2  # Excel row number (1-indexed + header)
+                
+                try:
+                    full_name = str(row.get('full_name', '')).strip()
+                    phone = str(row.get('phone', '')).strip()
+                    
+                    # Validate required fields
+                    if not full_name or full_name == 'nan':
+                        errors.append(f"Row {row_num}: Missing full name")
+                        error_count += 1
+                        continue
+                    
+                    # Check for duplicates by phone or full name
+                    cursor.execute("""
+                        SELECT id, full_name, phone FROM member_registration 
+                        WHERE phone = %s OR full_name = %s
+                    """, (phone if phone and phone != 'nan' else None, full_name))
+                    
+                    existing = cursor.fetchone()
+                    if existing:
+                        duplicates.append({
+                            'row': row_num,
+                            'name': full_name,
+                            'phone': phone if phone and phone != 'nan' else 'N/A',
+                            'existing_name': existing[1],
+                            'existing_phone': existing[2] or 'N/A'
+                        })
+                        duplicate_count += 1
+                        continue
+                    
+                    # Prepare data with defaults
+                    data = {
+                        'full_name': full_name,
+                        'father_of_repentance': str(row.get('father_of_repentance', '')).strip() if pd.notna(row.get('father_of_repentance')) else None,
+                        'mother_name': str(row.get('mother_name', '')).strip() if pd.notna(row.get('mother_name')) else None,
+                        'parish': str(row.get('parish', '')).strip() if pd.notna(row.get('parish')) else None,
+                        'christian_name': str(row.get('christian_name', '')).strip() if pd.notna(row.get('christian_name')) else None,
+                        'age_of_birth': row.get('age_of_birth') if pd.notna(row.get('age_of_birth')) else None,
+                        'subcity': str(row.get('subcity', '')).strip() if pd.notna(row.get('subcity')) else None,
+                        'woreda': str(row.get('woreda', '')).strip() if pd.notna(row.get('woreda')) else None,
+                        'house_number': str(row.get('house_number', '')).strip() if pd.notna(row.get('house_number')) else None,
+                        'special_place': str(row.get('special_place', '')).strip() if pd.notna(row.get('special_place')) else None,
+                        'phone': phone if phone and phone != 'nan' else None,
+                        'leving': str(row.get('leving', '')).strip() if pd.notna(row.get('leving')) else None,
+                        'work_status': str(row.get('work_status', '')).strip() if pd.notna(row.get('work_status')) else None,
+                        'email': str(row.get('email', '')).strip() if pd.notna(row.get('email')) else None,
+                        'member_year': row.get('member_year') if pd.notna(row.get('member_year')) else None,
+                        'education': str(row.get('education', '')).strip() if pd.notna(row.get('education')) else None,
+                        'rank': str(row.get('rank', '')).strip() if pd.notna(row.get('rank')) else None,
+                        'education_status': str(row.get('education_status', '')).strip() if pd.notna(row.get('education_status')) else None,
+                        'work': str(row.get('work', '')).strip() if pd.notna(row.get('work')) else None,
+                        'student': str(row.get('student', '')).strip() if pd.notna(row.get('student')) else None,
+                        'career': str(row.get('career', '')).strip() if pd.notna(row.get('career')) else None,
+                        'marital_status': str(row.get('marital_status', '')).strip() if pd.notna(row.get('marital_status')) else None,
+                        'section_name': str(row.get('section_name', '')).strip() if pd.notna(row.get('section_name')) else None,
+                        'gender': str(row.get('gender', '')).strip() if pd.notna(row.get('gender')) else None
+                    }
+                    
+                    # Insert member
+                    cursor.execute("""
+                        INSERT INTO member_registration (
+                            full_name, father_of_repentance, mother_name, parish, christian_name,
+                            age_of_birth, subcity, woreda, house_number, special_place,
+                            phone, leving, work_status, email, member_year,
+                            education, `rank`, education_status, work, student,
+                            career, marital_status, section_name, gender
+                        ) VALUES (
+                            %(full_name)s, %(father_of_repentance)s, %(mother_name)s, %(parish)s, %(christian_name)s,
+                            %(age_of_birth)s, %(subcity)s, %(woreda)s, %(house_number)s, %(special_place)s,
+                            %(phone)s, %(leving)s, %(work_status)s, %(email)s, %(member_year)s,
+                            %(education)s, %(rank)s, %(education_status)s, %(work)s, %(student)s,
+                            %(career)s, %(marital_status)s, %(section_name)s, %(gender)s
+                        )
+                    """, data)
+                    success_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    error_count += 1
+                    continue
+            
             conn.commit()
-            flash("Member registration data uploaded successfully!", "success")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Failed to upload data: {str(e)}", "danger")
-        finally:
             cursor.close()
             conn.close()
+            
+            # Return results page with details
+            return render_template('upload_member_registration.html',
+                                 upload_complete=True,
+                                 success_count=success_count,
+                                 duplicate_count=duplicate_count,
+                                 error_count=error_count,
+                                 total_rows=len(df),
+                                 duplicates=duplicates,
+                                 errors=errors)
+            
+        except Exception as e:
+            flash(f"Failed to process file: {str(e)}", "danger")
+            return redirect(url_for('upload_member_registration'))
 
-        return redirect(url_for('upload_member_registration'))
+    return render_template('upload_member_registration.html', upload_complete=False)
 
-    return render_template('upload_member_registration.html')
+@app.route('/download_member_template')
+@login_required
+def download_member_template():
+    """Download Excel template with dropdowns for member upload"""
+    from openpyxl import Workbook
+    from openpyxl.worksheet.datavalidation import DataValidation
+    from openpyxl.styles import Font, PatternFill, Alignment
+    
+    # Create workbook with hidden reference sheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Members"
+    
+    # Create a hidden sheet for dropdown values
+    ws_ref = wb.create_sheet("DropdownValues")
+    ws_ref.sheet_state = 'hidden'
+    
+    # Add dropdown value lists to hidden sheet
+    section_values = ['የሕፃናት ክፍል', 'ወጣት ክፍል', 'ማህከላዊያን ክፍል', 'ወላጅ ክፍል']
+    gender_values = ['ወንድ', 'ሴት']
+    work_values = ['በሥራ ላይ', 'ስራ የለኝም', 'በመፈለግ ላይ', 'ተማሪ']
+    marital_values = ['ያገባ', 'ያላገባ', 'ያላገባች', 'የፈታ', 'የፈታች']
+    subcity_values = ['Addis Ketema', 'Akaki Kality', 'Arada', 'Bole', 'Gullele', 
+                      'Kirkos', 'Kolfe Keranio', 'Lemi Kura', 'Lideta', 'Nifas Silk-Lafto', 'Yeka']
+    education_status_values = ['Elementary', 'High School', 'Diploma', 'Degree', 'Masters', 'PhD', 'Other']
+    student_values = ['Yes', 'No']
+    leving_values = ['ያገባ', 'ያላገባ', 'ያላገባች', 'የፈታ', 'የፈታች']
+    
+    # Write values to hidden sheet (each column)
+    for i, val in enumerate(section_values, 1):
+        ws_ref.cell(row=i, column=1, value=val)
+    for i, val in enumerate(gender_values, 1):
+        ws_ref.cell(row=i, column=2, value=val)
+    for i, val in enumerate(work_values, 1):
+        ws_ref.cell(row=i, column=3, value=val)
+    for i, val in enumerate(marital_values, 1):
+        ws_ref.cell(row=i, column=4, value=val)
+    for i, val in enumerate(subcity_values, 1):
+        ws_ref.cell(row=i, column=5, value=val)
+    for i, val in enumerate(education_status_values, 1):
+        ws_ref.cell(row=i, column=6, value=val)
+    for i, val in enumerate(student_values, 1):
+        ws_ref.cell(row=i, column=7, value=val)
+    for i, val in enumerate(leving_values, 1):
+        ws_ref.cell(row=i, column=8, value=val)
+    
+    # Define columns in order
+    columns = [
+        'full_name', 'father_of_repentance', 'mother_name', 'parish', 'christian_name',
+        'age_of_birth', 'subcity', 'woreda', 'house_number', 'special_place',
+        'phone', 'leving', 'work_status', 'email', 'member_year',
+        'education', 'rank', 'education_status', 'work', 'student',
+        'career', 'marital_status', 'section_name', 'gender'
+    ]
+    
+    # Write headers with formatting
+    header_fill = PatternFill(start_color="14860C", end_color="14860C", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    
+    for col_idx, col_name in enumerate(columns, 1):
+        cell = ws.cell(row=1, column=col_idx, value=col_name)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        # Auto-adjust column width
+        ws.column_dimensions[cell.column_letter].width = 18
+    
+    # Add instruction row
+    instruction_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    instructions = [
+        'REQUIRED', 'Optional', 'Optional', 'Optional', 'Optional',
+        'YYYY-MM-DD', 'Use dropdown ↓', 'Optional', 'Optional', 'Optional',
+        'REQUIRED', 'Use dropdown ↓', 'Use dropdown ↓', 'Optional', 'Year',
+        'Optional', 'Optional', 'Use dropdown ↓', 'Optional', 'Use dropdown ↓',
+        'Optional', 'Use dropdown ↓', 'Use dropdown ↓', 'Use dropdown ↓'
+    ]
+    
+    for col_idx, instruction in enumerate(instructions, 1):
+        cell = ws.cell(row=2, column=col_idx, value=instruction)
+        cell.fill = instruction_fill
+        cell.font = Font(italic=True, size=9)
+        cell.alignment = Alignment(horizontal='center')
+    
+    # Add example data rows
+    example_data = [
+        ['John Doe', 'Father Name', 'Mother Name', 'St. Mary', 'Giorgis',
+         '1990-01-01', 'Addis Ketema', '01', '123', 'Near Church',
+         '0911234567', 'ያገባ', 'በሥራ ላይ', 'john@example.com', 2020,
+         'University', 'Deacon', 'Graduate', 'Engineer', 'No',
+         'Software', 'ያገባ', 'የሕፃናት ክፍል', 'ወንድ'],
+        ['Jane Smith', 'Father Name', 'Mother Name', 'St. George', 'Mariam',
+         '1992-05-15', 'Bole', '02', '456', 'Behind School',
+         '0922345678', 'ያላገባ', 'ስራ የለኝም', 'jane@example.com', 2021,
+         'High School', 'None', 'Student', 'Teacher', 'Yes',
+         'Education', 'ያላገባች', 'ወጣት ክ�ፍል', 'ሴት']
+    ]
+    
+    for row_idx, row_data in enumerate(example_data, 3):
+        for col_idx, value in enumerate(row_data, 1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
+    
+    # Find column indices for dropdowns
+    section_col = columns.index('section_name') + 1  # 23
+    gender_col = columns.index('gender') + 1  # 24
+    work_col = columns.index('work_status') + 1  # 13
+    marital_col = columns.index('marital_status') + 1  # 22
+    subcity_col = columns.index('subcity') + 1  # 7
+    education_status_col = columns.index('education_status') + 1  # 18
+    student_col = columns.index('student') + 1  # 20
+    leving_col = columns.index('leving') + 1  # 12
+    
+    # Convert column index to letter
+    from openpyxl.utils import get_column_letter
+    
+    section_letter = get_column_letter(section_col)
+    gender_letter = get_column_letter(gender_col)
+    work_letter = get_column_letter(work_col)
+    marital_letter = get_column_letter(marital_col)
+    subcity_letter = get_column_letter(subcity_col)
+    education_status_letter = get_column_letter(education_status_col)
+    student_letter = get_column_letter(student_col)
+    leving_letter = get_column_letter(leving_col)
+    
+    # Add data validation (dropdowns) using hidden sheet reference
+    # Section Name dropdown
+    section_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$A$1:$A$4',
+        allow_blank=True
+    )
+    section_dv.error = 'Options: የሕፃናት ክፍል, ወጣት ክፍል, ማህከላዊያን ክፍል, ወላጅ ክፍል'
+    section_dv.errorTitle = 'Invalid Section'
+    section_dv.prompt = 'Click dropdown arrow to select'
+    section_dv.promptTitle = 'Select Section'
+    ws.add_data_validation(section_dv)
+    section_dv.add(f'{section_letter}3:{section_letter}1000')
+    
+    # Gender dropdown
+    gender_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$B$1:$B$2',
+        allow_blank=True
+    )
+    gender_dv.error = 'Options: ወንድ, ሴት'
+    gender_dv.errorTitle = 'Invalid Gender'
+    gender_dv.prompt = 'Click dropdown arrow to select'
+    gender_dv.promptTitle = 'Select Gender'
+    ws.add_data_validation(gender_dv)
+    gender_dv.add(f'{gender_letter}3:{gender_letter}1000')
+    
+    # Work Status dropdown
+    work_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$C$1:$C$4',
+        allow_blank=True
+    )
+    work_dv.error = 'Options: በሥራ ላይ, ስራ የለኝም, በመፈለግ ላይ, ተማሪ'
+    work_dv.errorTitle = 'Invalid Work Status'
+    work_dv.prompt = 'Click dropdown arrow to select'
+    work_dv.promptTitle = 'Select Work Status'
+    ws.add_data_validation(work_dv)
+    work_dv.add(f'{work_letter}3:{work_letter}1000')
+    
+    # Marital Status dropdown
+    marital_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$D$1:$D$5',
+        allow_blank=True
+    )
+    marital_dv.error = 'Options: ያገባ, ያላገባ, ያላገባች, የፈታ, የፈታች'
+    marital_dv.errorTitle = 'Invalid Marital Status'
+    marital_dv.prompt = 'Click dropdown arrow to select'
+    marital_dv.promptTitle = 'Select Marital Status'
+    ws.add_data_validation(marital_dv)
+    marital_dv.add(f'{marital_letter}3:{marital_letter}1000')
+    
+    # Subcity dropdown
+    subcity_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$E$1:$E$11',
+        allow_blank=True
+    )
+    subcity_dv.error = 'Select from: Addis Ketema, Akaki Kality, Arada, Bole, Gullele, Kirkos, Kolfe Keranio, Lemi Kura, Lideta, Nifas Silk-Lafto, Yeka'
+    subcity_dv.errorTitle = 'Invalid Subcity'
+    subcity_dv.prompt = 'Select Addis Ababa subcity'
+    subcity_dv.promptTitle = 'Subcity'
+    ws.add_data_validation(subcity_dv)
+    subcity_dv.add(f'{subcity_letter}3:{subcity_letter}1000')
+    
+    # Education Status dropdown
+    education_status_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$F$1:$F$7',
+        allow_blank=True
+    )
+    education_status_dv.error = 'Options: Elementary, High School, Diploma, Degree, Masters, PhD, Other'
+    education_status_dv.errorTitle = 'Invalid Education Status'
+    education_status_dv.prompt = 'Select education level'
+    education_status_dv.promptTitle = 'Education Status'
+    ws.add_data_validation(education_status_dv)
+    education_status_dv.add(f'{education_status_letter}3:{education_status_letter}1000')
+    
+    # Student dropdown
+    student_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$G$1:$G$2',
+        allow_blank=True
+    )
+    student_dv.error = 'Options: Yes, No'
+    student_dv.errorTitle = 'Invalid Value'
+    student_dv.prompt = 'Is the person a student?'
+    student_dv.promptTitle = 'Student'
+    ws.add_data_validation(student_dv)
+    student_dv.add(f'{student_letter}3:{student_letter}1000')
+    
+    # Leving dropdown (living status)
+    leving_dv = DataValidation(
+        type="list",
+        formula1='DropdownValues!$H$1:$H$5',
+        allow_blank=True
+    )
+    leving_dv.error = 'Options: ያገባ, ያላገባ, ያላገባች, የፈታ, የፈታች'
+    leving_dv.errorTitle = 'Invalid Living Status'
+    leving_dv.prompt = 'Select living status'
+    leving_dv.promptTitle = 'Living Status'
+    ws.add_data_validation(leving_dv)
+    leving_dv.add(f'{leving_letter}3:{leving_letter}1000')
+    
+    # Freeze first row (header)
+    ws.freeze_panes = 'A2'
+    
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='member_upload_template.xlsx'
+    )
+
+@app.route('/download_member_template_csv')
+@login_required
+def download_member_template_csv():
+    """Download CSV template with instructions for member upload"""
+    # Create CSV with example data and comments
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Write header row
+    writer.writerow([
+        'full_name', 'father_of_repentance', 'mother_name', 'parish', 'christian_name',
+        'age_of_birth', 'subcity', 'woreda', 'house_number', 'special_place',
+        'phone', 'leving', 'work_status', 'email', 'member_year',
+        'education', 'rank', 'education_status', 'work', 'student',
+        'career', 'marital_status', 'section_name', 'gender'
+    ])
+    
+    # Write instructions row
+    writer.writerow([
+        'REQUIRED', 'Optional', 'Optional', 'Optional', 'Optional',
+        'YYYY-MM-DD', 'Optional', 'Optional', 'Optional', 'Optional',
+        'REQUIRED', 'Optional', 'See values below', 'Optional', 'Year',
+        'Optional', 'Optional', 'Optional', 'Optional', 'Yes/No',
+        'Optional', 'See values below', 'REQUIRED - See values', 'REQUIRED - ወንድ or ሴት'
+    ])
+    
+    # Write example data rows
+    writer.writerow([
+        'John Doe', 'Father Name', 'Mother Name', 'St. Mary', 'Giorgis',
+        '1990-01-01', 'Addis Ketema', '01', '123', 'Near Church',
+        '0911234567', 'ያገባ', 'በሥራ ላይ', 'john@example.com', '2020',
+        'University', 'Deacon', 'Graduate', 'Engineer', 'No',
+        'Software', 'ያገባ', 'የሕፃናት ክፍል', 'ወንድ'
+    ])
+    
+    writer.writerow([
+        'Jane Smith', 'Father Name', 'Mother Name', 'St. George', 'Mariam',
+        '1992-05-15', 'Bole', '02', '456', 'Behind School',
+        '0922345678', 'ያላገባ', 'ስራ የለኝም', 'jane@example.com', '2021',
+        'High School', 'None', 'Student', 'Teacher', 'Yes',
+        'Education', 'ያላገባች', 'ወጣት ክፍል', 'ሴት'
+    ])
+    
+    # Add blank rows for separation
+    writer.writerow([])
+    writer.writerow([])
+    
+    # Add valid values reference
+    writer.writerow(['*** VALID VALUES FOR DROPDOWN FIELDS ***'])
+    writer.writerow([])
+    writer.writerow(['section_name (ክፍል):', 'የሕፃናት ክፍል', 'ወጣት ክፍል', 'ማህከላዊያን ክፍል', 'ወላጅ ክፍል'])
+    writer.writerow(['gender (ፆታ):', 'ወንድ', 'ሴት'])
+    writer.writerow(['work_status (የስራ ሁኔታ):', 'በሥራ ላይ', 'ስራ የለኝም', 'በመፈለግ ላይ', 'ተማሪ'])
+    writer.writerow(['marital_status (የትዳር ሁኔታ):', 'ያገባ', 'ያላገባ', 'ያላገባች', 'የፈታ', 'የፈታች'])
+    writer.writerow([])
+    writer.writerow(['*** IMPORTANT ***'])
+    writer.writerow(['1. Delete the instruction rows and example rows before uploading'])
+    writer.writerow(['2. Delete this reference section before uploading'])
+    writer.writerow(['3. Use exact values from the lists above (copy-paste recommended)'])
+    writer.writerow(['4. Required fields: full_name, phone, section_name, gender'])
+    
+    output.seek(0)
+    
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=member_upload_template.csv'}
+    )
 
 # ========================================
 # ATTENDANCE ROUTES  
@@ -1186,10 +1622,19 @@ def manage_roles():
     cursor.execute("SELECT role_id, role_name, description FROM roles ORDER BY role_name")
     roles = []
     for row in cursor.fetchall():
+        role_id = row[0]
+        
+        # Get assigned routes count for each role
+        cursor.execute("""
+            SELECT COUNT(*) FROM role_routes WHERE role_id = %s
+        """, (role_id,))
+        routes_count = cursor.fetchone()[0]
+        
         roles.append({
-            'role_id': row[0],
+            'role_id': role_id,
             'role_name': row[1],
-            'description': row[2]
+            'description': row[2],
+            'routes_count': routes_count
         })
     
     cursor.close()
@@ -1249,34 +1694,42 @@ def delete_role(role_id):
 @login_required
 @role_required('Super Admin')
 def manage_role_routes(role_id):
-    """Manage routes for a specific role"""
+    """Manage routes and CRUD permissions for a specific role"""
     conn = get_db_connection()
     cursor = conn.cursor(buffered=True)
     
     if request.method == 'POST':
-        # Get selected routes from form
+        # Get all routes and their permissions from form
         selected_routes = request.form.getlist('routes')
         
         try:
             # Delete existing role-route mappings
-            cursor.execute("DELETE FROM role_routes WHERE role_id = %(role_id)s", {'role_id': role_id})
+            cursor.execute("DELETE FROM role_routes WHERE role_id = %s", (role_id,))
             
-            # Insert new mappings
+            # Insert new mappings with CRUD permissions
             for route_id in selected_routes:
-                cursor.execute(
-                    "INSERT INTO role_routes (role_id, route_id) VALUES (%(role_id)s, %(route_id)s)",
-                    {'role_id': role_id, 'route_id': route_id}
-                )
+                can_create = 1 if f'can_create_{route_id}' in request.form else 0
+                can_read = 1 if f'can_read_{route_id}' in request.form else 0
+                can_update = 1 if f'can_update_{route_id}' in request.form else 0
+                can_delete = 1 if f'can_delete_{route_id}' in request.form else 0
+                can_approve = 1 if f'can_approve_{route_id}' in request.form else 0
+                can_export = 1 if f'can_export_{route_id}' in request.form else 0
+                
+                cursor.execute("""
+                    INSERT INTO role_routes 
+                    (role_id, route_id, can_create, can_read, can_update, can_delete, can_approve, can_export)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (role_id, route_id, can_create, can_read, can_update, can_delete, can_approve, can_export))
             
             conn.commit()
-            flash('Role permissions updated successfully', 'success')
+            flash('Role permissions updated successfully with CRUD controls', 'success')
             return redirect(url_for('manage_roles'))
         except Exception as e:
             conn.rollback()
             flash(f'Error updating permissions: {str(e)}', 'danger')
     
     # Get role info
-    cursor.execute("SELECT role_name FROM roles WHERE role_id = %(role_id)s", {'role_id': role_id})
+    cursor.execute("SELECT role_name FROM roles WHERE role_id = %s", (role_id,))
     role = cursor.fetchone()
     if not role:
         flash('Role not found', 'danger')
@@ -1288,11 +1741,25 @@ def manage_role_routes(role_id):
     cursor.execute("SELECT route_id, route_name, description FROM routes ORDER BY route_name")
     all_routes = [{'route_id': r[0], 'route_name': r[1], 'description': r[2]} for r in cursor.fetchall()]
     
-    # Get current role routes
+    # Get current role routes with CRUD permissions
     cursor.execute("""
-        SELECT route_id FROM role_routes WHERE role_id = %(role_id)s
-    """, {'role_id': role_id})
-    assigned_route_ids = [r[0] for r in cursor.fetchall()]
+        SELECT route_id, can_create, can_read, can_update, can_delete, can_approve, can_export
+        FROM role_routes 
+        WHERE role_id = %s
+    """, (role_id,))
+    
+    route_permissions = {}
+    for row in cursor.fetchall():
+        route_permissions[row[0]] = {
+            'can_create': bool(row[1]),
+            'can_read': bool(row[2]),
+            'can_update': bool(row[3]),
+            'can_delete': bool(row[4]),
+            'can_approve': bool(row[5]),
+            'can_export': bool(row[6])
+        }
+    
+    assigned_route_ids = list(route_permissions.keys())
     
     cursor.close()
     conn.close()
@@ -1301,13 +1768,14 @@ def manage_role_routes(role_id):
                          role_id=role_id, 
                          role_name=role_name, 
                          all_routes=all_routes, 
-                         assigned_route_ids=assigned_route_ids)
+                         assigned_route_ids=assigned_route_ids,
+                         route_permissions=route_permissions)
 
 @app.route('/routes', methods=['GET', 'POST'])
 @login_required
 @role_required('Super Admin')
 def manage_routes():
-    """Manage application routes"""
+    """Manage application routes/endpoints"""
     conn = get_db_connection()
     cursor = conn.cursor(buffered=True)
     
@@ -1319,29 +1787,1807 @@ def manage_routes():
         try:
             cursor.execute("""
                 INSERT INTO routes (route_name, endpoint, description)
-                VALUES (%(route_name)s, %(endpoint)s, %(description)s)
-            """, {'route_name': route_name, 'endpoint': endpoint, 'description': description})
+                VALUES (%s, %s, %s)
+            """, (route_name, endpoint, description))
             conn.commit()
-            flash('Route created successfully', 'success')
+            flash('Endpoint created successfully', 'success')
         except Exception as e:
             conn.rollback()
-            flash(f'Error creating route: {str(e)}', 'danger')
+            flash(f'Error creating endpoint: {str(e)}', 'danger')
     
-    # Get all routes
-    cursor.execute("SELECT route_id, route_name, endpoint, description FROM routes ORDER BY route_name")
+    # Get all routes with usage count
+    cursor.execute("""
+        SELECT r.route_id, r.route_name, r.endpoint, r.description,
+               COUNT(rr.role_id) as usage_count
+        FROM routes r
+        LEFT JOIN role_routes rr ON r.route_id = rr.route_id
+        GROUP BY r.route_id, r.route_name, r.endpoint, r.description
+        ORDER BY r.route_name
+    """)
+    
     routes = []
     for row in cursor.fetchall():
         routes.append({
             'route_id': row[0],
             'route_name': row[1],
             'endpoint': row[2],
-            'description': row[3]
+            'description': row[3],
+            'usage_count': row[4]
         })
     
     cursor.close()
     conn.close()
     
     return render_template('manage_routes.html', routes=routes)
+
+@app.route('/routes/delete/<int:route_id>', methods=['POST'])
+@login_required
+@role_required('Super Admin')
+def delete_route(route_id):
+    """Delete a route/endpoint"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        # Check if route is in use
+        cursor.execute("SELECT COUNT(*) FROM role_routes WHERE route_id = %s", (route_id,))
+        usage_count = cursor.fetchone()[0]
+        
+        if usage_count > 0:
+            flash(f'Cannot delete endpoint: It is assigned to {usage_count} role(s). Remove assignments first.', 'warning')
+        else:
+            cursor.execute("DELETE FROM routes WHERE route_id = %s", (route_id,))
+            conn.commit()
+            flash('Endpoint deleted successfully', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error deleting endpoint: {str(e)}', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('manage_routes'))
+
+# ========================================
+# INVENTORY MANAGEMENT ROUTES
+# ========================================
+
+@app.route('/manage_inventory', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Inventory Manager')
+def manage_inventory():
+    """Manage inventory items - CRUD operations"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get search and filter parameters
+    search = request.args.get('search', '')
+    category_filter = request.args.get('category', '')
+    location_filter = request.args.get('location', '')
+    status_filter = request.args.get('status', 'Active')
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                data = {
+                    'item_name': request.form.get('item_name'),
+                    'category': request.form.get('category'),
+                    'quantity': int(request.form.get('quantity', 0)),
+                    'unit': request.form.get('unit'),
+                    'location': request.form.get('location'),
+                    'supplier': request.form.get('supplier'),
+                    'purchase_date': request.form.get('purchase_date') or None,
+                    'unit_price': float(request.form.get('unit_price', 0)) if request.form.get('unit_price') else None,
+                    'min_stock_level': int(request.form.get('min_stock_level', 10)),
+                    'description': request.form.get('description'),
+                    'created_by': session.get('username', 'Unknown')
+                }
+                
+                cursor.execute("""
+                    INSERT INTO inventory_items (
+                        item_name, category, quantity, unit, location, supplier,
+                        purchase_date, unit_price, min_stock_level, description, created_by
+                    ) VALUES (
+                        %(item_name)s, %(category)s, %(quantity)s, %(unit)s, %(location)s, %(supplier)s,
+                        %(purchase_date)s, %(unit_price)s, %(min_stock_level)s, %(description)s, %(created_by)s
+                    )
+                """, data)
+                conn.commit()
+                flash('Inventory item added successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error adding item: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                item_id = request.form.get('item_id')
+                data = {
+                    'id': item_id,
+                    'item_name': request.form.get('item_name'),
+                    'category': request.form.get('category'),
+                    'unit': request.form.get('unit'),
+                    'location': request.form.get('location'),
+                    'supplier': request.form.get('supplier'),
+                    'purchase_date': request.form.get('purchase_date') or None,
+                    'unit_price': float(request.form.get('unit_price', 0)) if request.form.get('unit_price') else None,
+                    'min_stock_level': int(request.form.get('min_stock_level', 10)),
+                    'description': request.form.get('description'),
+                    'status': request.form.get('status')
+                }
+                
+                cursor.execute("""
+                    UPDATE inventory_items SET
+                        item_name = %(item_name)s,
+                        category = %(category)s,
+                        unit = %(unit)s,
+                        location = %(location)s,
+                        supplier = %(supplier)s,
+                        purchase_date = %(purchase_date)s,
+                        unit_price = %(unit_price)s,
+                        min_stock_level = %(min_stock_level)s,
+                        description = %(description)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, data)
+                conn.commit()
+                flash('Inventory item updated successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating item: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                item_id = request.form.get('item_id')
+                cursor.execute("DELETE FROM inventory_items WHERE id = %s", (item_id,))
+                conn.commit()
+                flash('Inventory item deleted successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting item: {str(e)}', 'danger')
+        
+        return redirect(url_for('manage_inventory'))
+    
+    # Build query with filters
+    query = """
+        SELECT id, item_name, category, quantity, unit, location, supplier,
+               purchase_date, unit_price, min_stock_level, description, status,
+               created_at
+        FROM inventory_items
+        WHERE 1=1
+    """
+    params = []
+    
+    if search:
+        query += " AND (item_name LIKE %s OR description LIKE %s OR supplier LIKE %s)"
+        search_term = f'%{search}%'
+        params.extend([search_term, search_term, search_term])
+    
+    if category_filter:
+        query += " AND category = %s"
+        params.append(category_filter)
+    
+    if location_filter:
+        query += " AND location = %s"
+        params.append(location_filter)
+    
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY item_name"
+    
+    cursor.execute(query, params)
+    items = cursor.fetchall()
+    
+    # Get unique categories and locations for filters
+    cursor.execute("SELECT DISTINCT category FROM inventory_items ORDER BY category")
+    categories = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT location FROM inventory_items WHERE location IS NOT NULL ORDER BY location")
+    locations = [row[0] for row in cursor.fetchall()]
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_items,
+            SUM(quantity) as total_quantity,
+            COUNT(CASE WHEN quantity <= min_stock_level THEN 1 END) as low_stock_count,
+            COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock_count
+        FROM inventory_items
+        WHERE status = 'Active'
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_inventory.html',
+                         items=items,
+                         categories=categories,
+                         locations=locations,
+                         stats=stats,
+                         search=search,
+                         category_filter=category_filter,
+                         location_filter=location_filter,
+                         status_filter=status_filter)
+
+@app.route('/inventory_transactions', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Inventory Manager')
+def inventory_transactions():
+    """Record and view inventory transactions"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        try:
+            item_id = int(request.form.get('item_id'))
+            transaction_type = request.form.get('transaction_type')
+            quantity = int(request.form.get('quantity'))
+            transaction_date = request.form.get('transaction_date')
+            reference_number = request.form.get('reference_number')
+            responsible_user = request.form.get('responsible_user')
+            recipient = request.form.get('recipient')
+            purpose = request.form.get('purpose')
+            notes = request.form.get('notes')
+            
+            # Get current quantity
+            cursor.execute("SELECT quantity, item_name FROM inventory_items WHERE id = %s", (item_id,))
+            result = cursor.fetchone()
+            if not result:
+                flash('Item not found', 'danger')
+                return redirect(url_for('inventory_transactions'))
+            
+            current_qty = result[0]
+            item_name = result[1]
+            
+            # Calculate new quantity based on transaction type
+            if transaction_type == 'Incoming':
+                new_qty = current_qty + quantity
+            elif transaction_type == 'Outgoing':
+                if quantity > current_qty:
+                    flash(f'Insufficient stock! Available: {current_qty}, Requested: {quantity}', 'danger')
+                    return redirect(url_for('inventory_transactions'))
+                new_qty = current_qty - quantity
+            elif transaction_type == 'Adjustment':
+                # Adjustment can be positive or negative
+                adjustment_type = request.form.get('adjustment_direction', 'increase')
+                if adjustment_type == 'decrease':
+                    quantity = -quantity
+                new_qty = current_qty + quantity
+                if new_qty < 0:
+                    new_qty = 0
+            else:
+                flash('Invalid transaction type', 'danger')
+                return redirect(url_for('inventory_transactions'))
+            
+            # Record transaction
+            cursor.execute("""
+                INSERT INTO inventory_transactions (
+                    item_id, transaction_type, quantity, transaction_date,
+                    reference_number, responsible_user, recipient, purpose, notes,
+                    previous_quantity, new_quantity, created_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (item_id, transaction_type, abs(quantity), transaction_date,
+                  reference_number, responsible_user, recipient, purpose, notes,
+                  current_qty, new_qty, session.get('username', 'Unknown')))
+            
+            # Update item quantity
+            cursor.execute("UPDATE inventory_items SET quantity = %s WHERE id = %s", (new_qty, item_id))
+            
+            conn.commit()
+            flash(f'Transaction recorded: {item_name} quantity updated from {current_qty} to {new_qty}', 'success')
+        except Exception as e:
+            conn.rollback()
+            flash(f'Error recording transaction: {str(e)}', 'danger')
+        
+        return redirect(url_for('inventory_transactions'))
+    
+    # Get all active inventory items for dropdown
+    cursor.execute("""
+        SELECT id, item_name, category, quantity, unit 
+        FROM inventory_items 
+        WHERE status = 'Active'
+        ORDER BY item_name
+    """)
+    items = cursor.fetchall()
+    
+    # Get recent transactions
+    cursor.execute("""
+        SELECT t.id, i.item_name, t.transaction_type, t.quantity, t.transaction_date,
+               t.reference_number, t.responsible_user, t.recipient, t.purpose,
+               t.previous_quantity, t.new_quantity, t.created_at
+        FROM inventory_transactions t
+        JOIN inventory_items i ON t.item_id = i.id
+        ORDER BY t.transaction_date DESC, t.created_at DESC
+        LIMIT 50
+    """)
+    transactions = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_transactions,
+            COUNT(CASE WHEN transaction_type = 'Incoming' THEN 1 END) as incoming_count,
+            COUNT(CASE WHEN transaction_type = 'Outgoing' THEN 1 END) as outgoing_count,
+            COUNT(CASE WHEN transaction_type = 'Adjustment' THEN 1 END) as adjustment_count
+        FROM inventory_transactions
+        WHERE transaction_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('inventory_transactions.html',
+                         items=items,
+                         transactions=transactions,
+                         stats=stats)
+
+@app.route('/inventory_stock_report')
+@login_required
+def inventory_stock_report():
+    """Inventory stock report with low stock alerts"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get filters
+    category_filter = request.args.get('category', '')
+    location_filter = request.args.get('location', '')
+    stock_alert = request.args.get('alert', '')  # low/out/all
+    
+    # Build query
+    query = """
+        SELECT id, item_name, category, quantity, unit, location, supplier,
+               purchase_date, unit_price, min_stock_level, status,
+               CASE 
+                   WHEN quantity = 0 THEN 'Out of Stock'
+                   WHEN quantity <= min_stock_level THEN 'Low Stock'
+                   ELSE 'In Stock'
+               END as stock_status
+        FROM inventory_items
+        WHERE 1=1
+    """
+    params = []
+    
+    if category_filter:
+        query += " AND category = %s"
+        params.append(category_filter)
+    
+    if location_filter:
+        query += " AND location = %s"
+        params.append(location_filter)
+    
+    if stock_alert == 'low':
+        query += " AND quantity <= min_stock_level AND quantity > 0"
+    elif stock_alert == 'out':
+        query += " AND quantity = 0"
+    
+    query += " ORDER BY item_name"
+    
+    cursor.execute(query, params)
+    items = cursor.fetchall()
+    
+    # Get categories and locations
+    cursor.execute("SELECT DISTINCT category FROM inventory_items ORDER BY category")
+    categories = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT location FROM inventory_items WHERE location IS NOT NULL ORDER BY location")
+    locations = [row[0] for row in cursor.fetchall()]
+    
+    # Get summary statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_items,
+            SUM(quantity) as total_quantity,
+            COUNT(CASE WHEN quantity <= min_stock_level AND quantity > 0 THEN 1 END) as low_stock,
+            COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock,
+            SUM(CASE WHEN unit_price IS NOT NULL THEN quantity * unit_price ELSE 0 END) as total_value
+        FROM inventory_items
+        WHERE status = 'Active'
+    """)
+    summary = cursor.fetchone()
+    
+    # Get category-wise breakdown
+    cursor.execute("""
+        SELECT category, COUNT(*) as item_count, SUM(quantity) as total_qty
+        FROM inventory_items
+        WHERE status = 'Active'
+        GROUP BY category
+        ORDER BY category
+    """)
+    category_stats = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('inventory_stock_report.html',
+                         items=items,
+                         categories=categories,
+                         locations=locations,
+                         summary=summary,
+                         category_stats=category_stats,
+                         category_filter=category_filter,
+                         location_filter=location_filter,
+                         stock_alert=stock_alert)
+
+@app.route('/inventory_movement_report')
+@login_required
+def inventory_movement_report():
+    """Inventory movement/transaction history report"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get filters
+    item_filter = request.args.get('item', '')
+    type_filter = request.args.get('type', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    
+    # Build query
+    query = """
+        SELECT t.id, i.item_name, i.category, t.transaction_type, t.quantity,
+               t.transaction_date, t.reference_number, t.responsible_user,
+               t.recipient, t.purpose, t.previous_quantity, t.new_quantity,
+               t.notes, t.created_at
+        FROM inventory_transactions t
+        JOIN inventory_items i ON t.item_id = i.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if item_filter:
+        query += " AND t.item_id = %s"
+        params.append(item_filter)
+    
+    if type_filter:
+        query += " AND t.transaction_type = %s"
+        params.append(type_filter)
+    
+    if date_from:
+        query += " AND t.transaction_date >= %s"
+        params.append(date_from)
+    
+    if date_to:
+        query += " AND t.transaction_date <= %s"
+        params.append(date_to)
+    
+    query += " ORDER BY t.transaction_date DESC, t.created_at DESC LIMIT 200"
+    
+    cursor.execute(query, params)
+    transactions = cursor.fetchall()
+    
+    # Get items for filter dropdown
+    cursor.execute("SELECT id, item_name FROM inventory_items ORDER BY item_name")
+    items = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_transactions,
+            SUM(CASE WHEN transaction_type = 'Incoming' THEN quantity ELSE 0 END) as total_incoming,
+            SUM(CASE WHEN transaction_type = 'Outgoing' THEN quantity ELSE 0 END) as total_outgoing,
+            SUM(CASE WHEN transaction_type = 'Adjustment' THEN quantity ELSE 0 END) as total_adjustments
+        FROM inventory_transactions t
+        WHERE 1=1
+    """ + (" AND transaction_date >= %s" if date_from else "") + (" AND transaction_date <= %s" if date_to else ""))
+    
+    filter_params = []
+    if date_from:
+        filter_params.append(date_from)
+    if date_to:
+        filter_params.append(date_to)
+    
+    cursor.execute(query.replace("SELECT t.id", "SELECT COUNT(*)").split("ORDER BY")[0], params)
+    total_filtered = cursor.fetchone()[0] if params else 0
+    
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_transactions,
+            SUM(CASE WHEN transaction_type = 'Incoming' THEN quantity ELSE 0 END) as total_incoming,
+            SUM(CASE WHEN transaction_type = 'Outgoing' THEN quantity ELSE 0 END) as total_outgoing,
+            SUM(CASE WHEN transaction_type = 'Adjustment' THEN ABS(quantity) ELSE 0 END) as total_adjustments
+        FROM inventory_transactions
+    """)
+    summary = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('inventory_movement_report.html',
+                         transactions=transactions,
+                         items=items,
+                         summary=summary,
+                         item_filter=item_filter,
+                         type_filter=type_filter,
+                         date_from=date_from,
+                         date_to=date_to)
+
+# ========================================
+# FIXED ASSET MANAGEMENT ROUTES
+# ========================================
+
+@app.route('/manage_fixed_assets', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Asset Manager')
+def manage_fixed_assets():
+    """Manage fixed assets register - CRUD operations"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get search and filters
+    search = request.args.get('search', '')
+    category_filter = request.args.get('category', '')
+    department_filter = request.args.get('department', '')
+    status_filter = request.args.get('status', 'Active')
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                purchase_cost = float(request.form.get('purchase_cost'))
+                useful_life = int(request.form.get('useful_life_years', 5))
+                salvage = float(request.form.get('salvage_value', 0))
+                
+                # Calculate initial book value
+                book_value = purchase_cost
+                
+                data = {
+                    'asset_name': request.form.get('asset_name'),
+                    'category': request.form.get('category'),
+                    'purchase_date': request.form.get('purchase_date'),
+                    'purchase_cost': purchase_cost,
+                    'current_location': request.form.get('current_location'),
+                    'condition_status': request.form.get('condition_status', 'Good'),
+                    'assigned_department': request.form.get('assigned_department'),
+                    'assigned_user': request.form.get('assigned_user'),
+                    'serial_number': request.form.get('serial_number'),
+                    'useful_life_years': useful_life,
+                    'depreciation_method': request.form.get('depreciation_method', 'Straight-Line'),
+                    'salvage_value': salvage,
+                    'book_value': book_value,
+                    'description': request.form.get('description'),
+                    'created_by': session.get('username', 'Unknown')
+                }
+                
+                cursor.execute("""
+                    INSERT INTO fixed_assets (
+                        asset_name, category, purchase_date, purchase_cost, current_location,
+                        condition_status, assigned_department, assigned_user, serial_number,
+                        useful_life_years, depreciation_method, salvage_value, book_value,
+                        description, created_by
+                    ) VALUES (
+                        %(asset_name)s, %(category)s, %(purchase_date)s, %(purchase_cost)s, %(current_location)s,
+                        %(condition_status)s, %(assigned_department)s, %(assigned_user)s, %(serial_number)s,
+                        %(useful_life_years)s, %(depreciation_method)s, %(salvage_value)s, %(book_value)s,
+                        %(description)s, %(created_by)s
+                    )
+                """, data)
+                conn.commit()
+                flash('Fixed asset added successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error adding asset: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                asset_id = request.form.get('asset_id')
+                data = {
+                    'id': asset_id,
+                    'asset_name': request.form.get('asset_name'),
+                    'category': request.form.get('category'),
+                    'purchase_date': request.form.get('purchase_date'),
+                    'purchase_cost': float(request.form.get('purchase_cost')),
+                    'current_location': request.form.get('current_location'),
+                    'condition_status': request.form.get('condition_status'),
+                    'assigned_department': request.form.get('assigned_department'),
+                    'assigned_user': request.form.get('assigned_user'),
+                    'serial_number': request.form.get('serial_number'),
+                    'useful_life_years': int(request.form.get('useful_life_years')),
+                    'depreciation_method': request.form.get('depreciation_method'),
+                    'salvage_value': float(request.form.get('salvage_value', 0)),
+                    'description': request.form.get('description'),
+                    'status': request.form.get('status')
+                }
+                
+                cursor.execute("""
+                    UPDATE fixed_assets SET
+                        asset_name = %(asset_name)s,
+                        category = %(category)s,
+                        purchase_date = %(purchase_date)s,
+                        purchase_cost = %(purchase_cost)s,
+                        current_location = %(current_location)s,
+                        condition_status = %(condition_status)s,
+                        assigned_department = %(assigned_department)s,
+                        assigned_user = %(assigned_user)s,
+                        serial_number = %(serial_number)s,
+                        useful_life_years = %(useful_life_years)s,
+                        depreciation_method = %(depreciation_method)s,
+                        salvage_value = %(salvage_value)s,
+                        description = %(description)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, data)
+                conn.commit()
+                flash('Fixed asset updated successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating asset: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                asset_id = request.form.get('asset_id')
+                cursor.execute("DELETE FROM fixed_assets WHERE id = %s", (asset_id,))
+                conn.commit()
+                flash('Fixed asset deleted successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting asset: {str(e)}', 'danger')
+        
+        return redirect(url_for('manage_fixed_assets'))
+    
+    # Build query with filters
+    query = """
+        SELECT id, asset_name, category, purchase_date, purchase_cost, current_location,
+               condition_status, assigned_department, assigned_user, serial_number,
+               useful_life_years, depreciation_method, book_value, description, status,
+               created_at
+        FROM fixed_assets
+        WHERE 1=1
+    """
+    params = []
+    
+    if search:
+        query += " AND (asset_name LIKE %s OR description LIKE %s OR serial_number LIKE %s)"
+        search_term = f'%{search}%'
+        params.extend([search_term, search_term, search_term])
+    
+    if category_filter:
+        query += " AND category = %s"
+        params.append(category_filter)
+    
+    if department_filter:
+        query += " AND assigned_department = %s"
+        params.append(department_filter)
+    
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY asset_name"
+    
+    cursor.execute(query, params)
+    assets = cursor.fetchall()
+    
+    # Get unique values for filters
+    cursor.execute("SELECT DISTINCT category FROM fixed_assets ORDER BY category")
+    categories = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT assigned_department FROM fixed_assets WHERE assigned_department IS NOT NULL ORDER BY assigned_department")
+    departments = [row[0] for row in cursor.fetchall()]
+    
+    # Get all members for assignment dropdown
+    cursor.execute("SELECT id, full_name, section_name, phone FROM member_registration ORDER BY full_name")
+    members = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_assets,
+            SUM(purchase_cost) as total_cost,
+            SUM(book_value) as total_book_value,
+            COUNT(CASE WHEN status = 'Active' THEN 1 END) as active_count,
+            COUNT(CASE WHEN condition_status = 'Poor' THEN 1 END) as poor_condition_count
+        FROM fixed_assets
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_fixed_assets.html',
+                         assets=assets,
+                         categories=categories,
+                         departments=departments,
+                         members=members,
+                         stats=stats,
+                         search=search,
+                         category_filter=category_filter,
+                         department_filter=department_filter,
+                         status_filter=status_filter)
+
+@app.route('/asset_movements', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Asset Manager')
+def asset_movements():
+    """Track asset movements, assignments, and maintenance"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        try:
+            asset_id = int(request.form.get('asset_id'))
+            movement_type = request.form.get('movement_type')
+            movement_date = request.form.get('movement_date')
+            
+            # Get current asset info
+            cursor.execute("""
+                SELECT current_location, assigned_department, assigned_user, condition_status
+                FROM fixed_assets WHERE id = %s
+            """, (asset_id,))
+            current = cursor.fetchone()
+            
+            if not current:
+                flash('Asset not found', 'danger')
+                return redirect(url_for('asset_movements'))
+            
+            from_location, from_dept, from_user, condition_before = current
+            
+            # Get new values from form
+            to_location = request.form.get('to_location') or from_location
+            to_department = request.form.get('to_department') or from_dept
+            to_user = request.form.get('to_user') or from_user
+            condition_after = request.form.get('condition_after') or condition_before
+            repair_cost = float(request.form.get('repair_cost', 0)) if request.form.get('repair_cost') else None
+            
+            # Record movement
+            cursor.execute("""
+                INSERT INTO asset_movements (
+                    asset_id, movement_type, movement_date, from_location, to_location,
+                    from_department, to_department, from_user, to_user,
+                    responsible_person, condition_before, condition_after,
+                    repair_cost, remarks, created_by
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (asset_id, movement_type, movement_date, from_location, to_location,
+                  from_dept, to_department, from_user, to_user,
+                  request.form.get('responsible_person'),
+                  condition_before, condition_after, repair_cost,
+                  request.form.get('remarks'),
+                  session.get('username', 'Unknown')))
+            
+            # Update asset record
+            update_data = {
+                'id': asset_id,
+                'current_location': to_location,
+                'assigned_department': to_department,
+                'assigned_user': to_user,
+                'condition_status': condition_after
+            }
+            
+            # If disposal, update status
+            if movement_type == 'Disposal':
+                update_data['status'] = 'Disposed'
+                update_data['disposal_date'] = movement_date
+                update_data['disposal_method'] = request.form.get('disposal_method')
+                update_data['disposal_value'] = float(request.form.get('disposal_value', 0)) if request.form.get('disposal_value') else None
+                
+                cursor.execute("""
+                    UPDATE fixed_assets SET
+                        current_location = %(current_location)s,
+                        assigned_department = %(assigned_department)s,
+                        assigned_user = %(assigned_user)s,
+                        condition_status = %(condition_status)s,
+                        status = %(status)s,
+                        disposal_date = %(disposal_date)s,
+                        disposal_method = %(disposal_method)s,
+                        disposal_value = %(disposal_value)s
+                    WHERE id = %(id)s
+                """, update_data)
+            elif movement_type == 'Repair':
+                update_data['status'] = 'Under Repair'
+                cursor.execute("""
+                    UPDATE fixed_assets SET
+                        current_location = %(current_location)s,
+                        condition_status = %(condition_status)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, update_data)
+            else:
+                cursor.execute("""
+                    UPDATE fixed_assets SET
+                        current_location = %(current_location)s,
+                        assigned_department = %(assigned_department)s,
+                        assigned_user = %(assigned_user)s,
+                        condition_status = %(condition_status)s
+                    WHERE id = %(id)s
+                """, update_data)
+            
+            conn.commit()
+            flash(f'Asset movement recorded successfully ({movement_type})', 'success')
+        except Exception as e:
+            conn.rollback()
+            flash(f'Error recording movement: {str(e)}', 'danger')
+        
+        return redirect(url_for('asset_movements'))
+    
+    # Get all active assets
+    cursor.execute("""
+        SELECT id, asset_name, category, current_location, assigned_department,
+               assigned_user, serial_number, condition_status
+        FROM fixed_assets
+        WHERE status != 'Disposed'
+        ORDER BY asset_name
+    """)
+    assets = cursor.fetchall()
+    
+    # Get recent movements
+    cursor.execute("""
+        SELECT m.id, a.asset_name, m.movement_type, m.movement_date,
+               m.from_location, m.to_location, m.from_department, m.to_department,
+               m.responsible_person, m.condition_before, m.condition_after,
+               m.repair_cost, m.remarks, m.created_at
+        FROM asset_movements m
+        JOIN fixed_assets a ON m.asset_id = a.id
+        ORDER BY m.movement_date DESC, m.created_at DESC
+        LIMIT 50
+    """)
+    movements = cursor.fetchall()
+    
+    # Get unique departments
+    cursor.execute("SELECT DISTINCT assigned_department FROM fixed_assets WHERE assigned_department IS NOT NULL")
+    departments = [row[0] for row in cursor.fetchall()]
+    
+    # Get all members for assignment dropdown
+    cursor.execute("SELECT id, full_name, section_name, phone FROM member_registration ORDER BY full_name")
+    members = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('asset_movements.html',
+                         assets=assets,
+                         movements=movements,
+                         departments=departments,
+                         members=members)
+
+@app.route('/asset_register_report')
+@login_required
+def asset_register_report():
+    """Asset register report with current status"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get filters
+    category_filter = request.args.get('category', '')
+    department_filter = request.args.get('department', '')
+    condition_filter = request.args.get('condition', '')
+    
+    # Build query
+    query = """
+        SELECT id, asset_name, category, purchase_date, purchase_cost,
+               current_location, condition_status, assigned_department,
+               assigned_user, serial_number, book_value, status,
+               YEAR(CURDATE()) - YEAR(purchase_date) as age_years
+        FROM fixed_assets
+        WHERE 1=1
+    """
+    params = []
+    
+    if category_filter:
+        query += " AND category = %s"
+        params.append(category_filter)
+    
+    if department_filter:
+        query += " AND assigned_department = %s"
+        params.append(department_filter)
+    
+    if condition_filter:
+        query += " AND condition_status = %s"
+        params.append(condition_filter)
+    
+    query += " ORDER BY asset_name"
+    
+    cursor.execute(query, params)
+    assets = cursor.fetchall()
+    
+    # Get filter options
+    cursor.execute("SELECT DISTINCT category FROM fixed_assets ORDER BY category")
+    categories = [row[0] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT assigned_department FROM fixed_assets WHERE assigned_department IS NOT NULL ORDER BY assigned_department")
+    departments = [row[0] for row in cursor.fetchall()]
+    
+    # Get summary
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_assets,
+            SUM(purchase_cost) as total_purchase_cost,
+            SUM(book_value) as total_book_value,
+            SUM(accumulated_depreciation) as total_depreciation,
+            COUNT(CASE WHEN status = 'Active' THEN 1 END) as active_count,
+            COUNT(CASE WHEN status = 'Disposed' THEN 1 END) as disposed_count
+        FROM fixed_assets
+    """)
+    summary = cursor.fetchone()
+    
+    # Category breakdown
+    cursor.execute("""
+        SELECT category, COUNT(*) as count, SUM(purchase_cost) as total_cost, SUM(book_value) as total_value
+        FROM fixed_assets
+        WHERE status = 'Active'
+        GROUP BY category
+        ORDER BY category
+    """)
+    category_stats = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('asset_register_report.html',
+                         assets=assets,
+                         categories=categories,
+                         departments=departments,
+                         summary=summary,
+                         category_stats=category_stats,
+                         category_filter=category_filter,
+                         department_filter=department_filter,
+                         condition_filter=condition_filter)
+
+@app.route('/asset_movement_report')
+@login_required
+def asset_movement_report():
+    """Asset movement history report"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get filters
+    asset_filter = request.args.get('asset', '')
+    type_filter = request.args.get('type', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    
+    # Build query
+    query = """
+        SELECT m.id, a.asset_name, a.category, m.movement_type, m.movement_date,
+               m.from_location, m.to_location, m.from_department, m.to_department,
+               m.from_user, m.to_user, m.responsible_person,
+               m.condition_before, m.condition_after, m.repair_cost, m.remarks
+        FROM asset_movements m
+        JOIN fixed_assets a ON m.asset_id = a.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if asset_filter:
+        query += " AND m.asset_id = %s"
+        params.append(asset_filter)
+    
+    if type_filter:
+        query += " AND m.movement_type = %s"
+        params.append(type_filter)
+    
+    if date_from:
+        query += " AND m.movement_date >= %s"
+        params.append(date_from)
+    
+    if date_to:
+        query += " AND m.movement_date <= %s"
+        params.append(date_to)
+    
+    query += " ORDER BY m.movement_date DESC LIMIT 200"
+    
+    cursor.execute(query, params)
+    movements = cursor.fetchall()
+    
+    # Get assets for filter
+    cursor.execute("SELECT id, asset_name FROM fixed_assets ORDER BY asset_name")
+    assets = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_movements,
+            COUNT(CASE WHEN movement_type = 'Assignment' THEN 1 END) as assignments,
+            COUNT(CASE WHEN movement_type = 'Relocation' THEN 1 END) as relocations,
+            COUNT(CASE WHEN movement_type = 'Repair' THEN 1 END) as repairs,
+            COUNT(CASE WHEN movement_type = 'Disposal' THEN 1 END) as disposals
+        FROM asset_movements
+    """)
+    summary = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('asset_movement_report.html',
+                         movements=movements,
+                         assets=assets,
+                         summary=summary,
+                         asset_filter=asset_filter,
+                         type_filter=type_filter,
+                         date_from=date_from,
+                         date_to=date_to)
+
+@app.route('/asset_depreciation_report')
+@login_required
+def asset_depreciation_report():
+    """Asset depreciation analysis report"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get all active assets with depreciation calculation
+    cursor.execute("""
+        SELECT 
+            id, asset_name, category, purchase_date, purchase_cost,
+            useful_life_years, depreciation_method, salvage_value,
+            book_value, accumulated_depreciation,
+            YEAR(CURDATE()) - YEAR(purchase_date) as age_years,
+            DATEDIFF(CURDATE(), purchase_date) / 365.25 as age_decimal
+        FROM fixed_assets
+        WHERE status = 'Active'
+        ORDER BY category, asset_name
+    """)
+    assets = cursor.fetchall()
+    
+    # Calculate depreciation for each asset
+    depreciation_data = []
+    for asset in assets:
+        asset_id, name, category, purchase_date, cost, useful_life, method, salvage, book_val, accum_dep, age_years, age_decimal = asset
+        
+        # Straight-line depreciation calculation
+        if method == 'Straight-Line' and useful_life > 0:
+            annual_depreciation = (cost - salvage) / useful_life
+            calculated_accum_dep = min(annual_depreciation * age_decimal, cost - salvage)
+            calculated_book_value = cost - calculated_accum_dep
+        else:
+            annual_depreciation = 0
+            calculated_accum_dep = accum_dep or 0
+            calculated_book_value = book_val or cost
+        
+        depreciation_data.append({
+            'id': asset_id,
+            'name': name,
+            'category': category,
+            'purchase_date': purchase_date,
+            'purchase_cost': cost,
+            'useful_life': useful_life,
+            'age_years': age_years,
+            'annual_depreciation': annual_depreciation,
+            'accumulated_depreciation': calculated_accum_dep,
+            'book_value': calculated_book_value,
+            'salvage_value': salvage
+        })
+    
+    # Summary statistics
+    cursor.execute("""
+        SELECT 
+            SUM(purchase_cost) as total_cost,
+            SUM(book_value) as total_book_value,
+            SUM(accumulated_depreciation) as total_depreciation,
+            AVG(YEAR(CURDATE()) - YEAR(purchase_date)) as avg_age
+        FROM fixed_assets
+        WHERE status = 'Active'
+    """)
+    summary = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('asset_depreciation_report.html',
+                         depreciation_data=depreciation_data,
+                         summary=summary)
+
+# ========================================
+# DEPARTMENT & POSITION MANAGEMENT ROUTES
+# ========================================
+
+@app.route('/manage_departments', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin')
+def manage_departments():
+    """Manage organizational departments"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                data = {
+                    'department_name': request.form.get('department_name'),
+                    'department_code': request.form.get('department_code'),
+                    'parent_department_id': int(request.form.get('parent_department_id')) if request.form.get('parent_department_id') else None,
+                    'head_member_id': int(request.form.get('head_member_id')) if request.form.get('head_member_id') else None,
+                    'description': request.form.get('description'),
+                    'created_by': session.get('username', 'Unknown')
+                }
+                
+                cursor.execute("""
+                    INSERT INTO departments (department_name, department_code, parent_department_id, 
+                                           head_member_id, description, created_by)
+                    VALUES (%(department_name)s, %(department_code)s, %(parent_department_id)s, 
+                           %(head_member_id)s, %(description)s, %(created_by)s)
+                """, data)
+                
+                department_id = cursor.lastrowid
+                
+                # If a head is assigned, create history record
+                if data['head_member_id']:
+                    cursor.execute("""
+                        INSERT INTO department_head_history (department_id, member_id, start_date, 
+                                                            appointment_reason, created_by)
+                        VALUES (%s, %s, CURDATE(), %s, %s)
+                    """, (department_id, data['head_member_id'], 
+                          'Initial appointment', session.get('username', 'Unknown')))
+                
+                conn.commit()
+                flash('Department created successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating department: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                data = {
+                    'id': request.form.get('department_id'),
+                    'department_name': request.form.get('department_name'),
+                    'department_code': request.form.get('department_code'),
+                    'parent_department_id': int(request.form.get('parent_department_id')) if request.form.get('parent_department_id') else None,
+                    'head_member_id': int(request.form.get('head_member_id')) if request.form.get('head_member_id') else None,
+                    'description': request.form.get('description'),
+                    'status': request.form.get('status')
+                }
+                
+                # Get current head to check if it's changing
+                cursor.execute("SELECT head_member_id FROM departments WHERE id = %s", (data['id'],))
+                current_head = cursor.fetchone()
+                old_head_id = current_head[0] if current_head else None
+                
+                # Check if department head is changing
+                if old_head_id != data['head_member_id']:
+                    # End previous head's tenure if exists
+                    if old_head_id:
+                        cursor.execute("""
+                            UPDATE department_head_history 
+                            SET end_date = CURDATE(), is_current = 0,
+                                termination_reason = %s
+                            WHERE department_id = %s AND member_id = %s AND is_current = 1
+                        """, (request.form.get('change_reason', 'Department head changed'), 
+                              data['id'], old_head_id))
+                    
+                    # Create new head history record if new head is assigned
+                    if data['head_member_id']:
+                        cursor.execute("""
+                            INSERT INTO department_head_history (department_id, member_id, start_date, 
+                                                                appointment_reason, created_by)
+                            VALUES (%s, %s, CURDATE(), %s, %s)
+                        """, (data['id'], data['head_member_id'], 
+                              request.form.get('appointment_reason', 'New appointment'), 
+                              session.get('username', 'Unknown')))
+                
+                cursor.execute("""
+                    UPDATE departments SET
+                        department_name = %(department_name)s,
+                        department_code = %(department_code)s,
+                        parent_department_id = %(parent_department_id)s,
+                        head_member_id = %(head_member_id)s,
+                        description = %(description)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, data)
+                conn.commit()
+                flash('Department updated successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating department: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                dept_id = request.form.get('department_id')
+                cursor.execute("DELETE FROM departments WHERE id = %s", (dept_id,))
+                conn.commit()
+                flash('Department deleted successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting department: {str(e)}', 'danger')
+        
+        return redirect(url_for('manage_departments'))
+    
+    # Get all departments with head member info
+    cursor.execute("""
+        SELECT d.id, d.department_name, d.department_code, d.parent_department_id,
+               pd.department_name as parent_name, d.head_member_id, m.full_name as head_name,
+               d.description, d.status, d.created_at
+        FROM departments d
+        LEFT JOIN departments pd ON d.parent_department_id = pd.id
+        LEFT JOIN member_registration m ON d.head_member_id = m.id
+        ORDER BY d.department_name
+    """)
+    departments = cursor.fetchall()
+    
+    # Get all members for head selection
+    cursor.execute("SELECT id, full_name, section_name FROM member_registration ORDER BY full_name")
+    members = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_departments,
+            COUNT(CASE WHEN status = 'Active' THEN 1 END) as active_count,
+            COUNT(CASE WHEN head_member_id IS NOT NULL THEN 1 END) as with_head_count
+        FROM departments
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_departments.html',
+                         departments=departments,
+                         members=members,
+                         stats=stats)
+
+@app.route('/manage_positions', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin')
+def manage_positions():
+    """Manage job positions with dynamic creation features"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                data = {
+                    'position_title': request.form.get('position_title'),
+                    'department_id': int(request.form.get('department_id')) if request.form.get('department_id') else None,
+                    'position_level': request.form.get('position_level'),
+                    'responsibilities': request.form.get('responsibilities'),
+                    'reporting_to': int(request.form.get('reporting_to')) if request.form.get('reporting_to') else None,
+                    'position_type': request.form.get('position_type', 'Regular'),
+                    'is_leadership': 1 if request.form.get('is_leadership') == 'on' else 0,
+                    'max_holders': int(request.form.get('max_holders', 1)),
+                    'min_experience_years': int(request.form.get('min_experience_years', 0)),
+                    'required_skills': request.form.get('required_skills'),
+                    'salary_range': request.form.get('salary_range'),
+                    'created_by': session.get('username', 'Unknown')
+                }
+                
+                cursor.execute("""
+                    INSERT INTO positions (position_title, department_id, position_level, 
+                                         responsibilities, reporting_to, position_type, 
+                                         is_leadership, max_holders, min_experience_years, 
+                                         required_skills, salary_range, created_by)
+                    VALUES (%(position_title)s, %(department_id)s, %(position_level)s, 
+                           %(responsibilities)s, %(reporting_to)s, %(position_type)s, 
+                           %(is_leadership)s, %(max_holders)s, %(min_experience_years)s, 
+                           %(required_skills)s, %(salary_range)s, %(created_by)s)
+                """, data)
+                conn.commit()
+                flash('Position created successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating position: {str(e)}', 'danger')
+        
+        elif action == 'create_from_template':
+            try:
+                template_id = request.form.get('template_id')
+                department_id = int(request.form.get('department_id')) if request.form.get('department_id') else None
+                
+                # Get template data
+                cursor.execute("""
+                    SELECT template_name, position_title, position_level, responsibilities, 
+                           position_type, is_leadership, max_holders, min_experience_years, 
+                           required_skills, description
+                    FROM position_templates WHERE id = %s
+                """, (template_id,))
+                template = cursor.fetchone()
+                
+                if template:
+                    # Create position from template
+                    cursor.execute("""
+                        INSERT INTO positions (position_title, department_id, position_level, 
+                                             responsibilities, position_type, is_leadership, 
+                                             max_holders, min_experience_years, required_skills, 
+                                             created_by)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (template[1], department_id, template[2], template[3], template[4], 
+                          template[5], template[6], template[7], template[8], 
+                          session.get('username', 'Unknown')))
+                    
+                    # Update template usage count
+                    cursor.execute("""
+                        UPDATE position_templates SET usage_count = usage_count + 1 
+                        WHERE id = %s
+                    """, (template_id,))
+                    
+                    conn.commit()
+                    flash(f'Position "{template[1]}" created from template successfully', 'success')
+                else:
+                    flash('Template not found', 'danger')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating position from template: {str(e)}', 'danger')
+        
+        elif action == 'bulk_create':
+            try:
+                department_id = int(request.form.get('department_id')) if request.form.get('department_id') else None
+                template_ids = request.form.getlist('template_ids')
+                
+                created_count = 0
+                for template_id in template_ids:
+                    cursor.execute("""
+                        SELECT template_name, position_title, position_level, responsibilities, 
+                               position_type, is_leadership, max_holders, min_experience_years, 
+                               required_skills, description
+                        FROM position_templates WHERE id = %s
+                    """, (template_id,))
+                    template = cursor.fetchone()
+                    
+                    if template:
+                        cursor.execute("""
+                            INSERT INTO positions (position_title, department_id, position_level, 
+                                                 responsibilities, position_type, is_leadership, 
+                                                 max_holders, min_experience_years, required_skills, 
+                                                 created_by)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (template[1], department_id, template[2], template[3], template[4], 
+                              template[5], template[6], template[7], template[8], 
+                              session.get('username', 'Unknown')))
+                        
+                        cursor.execute("""
+                            UPDATE position_templates SET usage_count = usage_count + 1 
+                            WHERE id = %s
+                        """, (template_id,))
+                        created_count += 1
+                
+                conn.commit()
+                flash(f'{created_count} positions created from templates successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating bulk positions: {str(e)}', 'danger')
+        
+        elif action == 'clone':
+            try:
+                source_position_id = request.form.get('source_position_id')
+                new_title = request.form.get('new_title')
+                department_id = int(request.form.get('department_id')) if request.form.get('department_id') else None
+                
+                # Get source position data
+                cursor.execute("""
+                    SELECT position_title, position_level, responsibilities, position_type, 
+                           is_leadership, max_holders, min_experience_years, required_skills, 
+                           salary_range
+                    FROM positions WHERE id = %s
+                """, (source_position_id,))
+                source = cursor.fetchone()
+                
+                if source:
+                    cursor.execute("""
+                        INSERT INTO positions (position_title, department_id, position_level, 
+                                             responsibilities, position_type, is_leadership, 
+                                             max_holders, min_experience_years, required_skills, 
+                                             salary_range, created_by)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (new_title, department_id, source[1], source[2], source[3], 
+                          source[4], source[5], source[6], source[7], source[8], 
+                          session.get('username', 'Unknown')))
+                    conn.commit()
+                    flash(f'Position "{new_title}" cloned successfully', 'success')
+                else:
+                    flash('Source position not found', 'danger')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error cloning position: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                data = {
+                    'id': request.form.get('position_id'),
+                    'position_title': request.form.get('position_title'),
+                    'department_id': int(request.form.get('department_id')) if request.form.get('department_id') else None,
+                    'position_level': request.form.get('position_level'),
+                    'responsibilities': request.form.get('responsibilities'),
+                    'reporting_to': int(request.form.get('reporting_to')) if request.form.get('reporting_to') else None,
+                    'position_type': request.form.get('position_type'),
+                    'is_leadership': 1 if request.form.get('is_leadership') == 'on' else 0,
+                    'max_holders': int(request.form.get('max_holders', 1)),
+                    'min_experience_years': int(request.form.get('min_experience_years', 0)),
+                    'required_skills': request.form.get('required_skills'),
+                    'salary_range': request.form.get('salary_range'),
+                    'status': request.form.get('status')
+                }
+                
+                cursor.execute("""
+                    UPDATE positions SET
+                        position_title = %(position_title)s,
+                        department_id = %(department_id)s,
+                        position_level = %(position_level)s,
+                        responsibilities = %(responsibilities)s,
+                        reporting_to = %(reporting_to)s,
+                        position_type = %(position_type)s,
+                        is_leadership = %(is_leadership)s,
+                        max_holders = %(max_holders)s,
+                        min_experience_years = %(min_experience_years)s,
+                        required_skills = %(required_skills)s,
+                        salary_range = %(salary_range)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, data)
+                conn.commit()
+                flash('Position updated successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating position: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                position_id = request.form.get('position_id')
+                
+                # Check if position has active assignments
+                cursor.execute("""
+                    SELECT COUNT(*) FROM member_positions 
+                    WHERE position_id = %s AND is_current = 1
+                """, (position_id,))
+                active_assignments = cursor.fetchone()[0]
+                
+                if active_assignments > 0:
+                    flash(f'Cannot delete position. It has {active_assignments} active member assignment(s).', 'danger')
+                else:
+                    cursor.execute("DELETE FROM positions WHERE id = %s", (position_id,))
+                    conn.commit()
+                    flash('Position deleted successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting position: {str(e)}', 'danger')
+        
+        return redirect(url_for('manage_positions'))
+    
+    # Get all positions with department names
+    cursor.execute("""
+        SELECT p.id, p.position_title, p.department_id, d.department_name, 
+               p.position_level, p.responsibilities, p.reporting_to, 
+               p.position_type, p.is_leadership, p.max_holders, 
+               p.min_experience_years, p.required_skills, p.salary_range, 
+               p.status, p.created_at,
+               (SELECT COUNT(*) FROM member_positions mp WHERE mp.position_id = p.id AND mp.is_current = 1) as current_holders,
+               (SELECT pt.position_title FROM positions pt WHERE pt.id = p.reporting_to) as reports_to_title
+        FROM positions p
+        LEFT JOIN departments d ON p.department_id = d.id
+        ORDER BY p.position_level DESC, p.position_title
+    """)
+    positions = cursor.fetchall()
+    
+    # Get departments for dropdown
+    cursor.execute("SELECT id, department_name FROM departments WHERE status = 'Active' ORDER BY department_name")
+    departments = cursor.fetchall()
+    
+    # Get position templates
+    cursor.execute("""
+        SELECT id, template_name, category, position_title, position_level, 
+               responsibilities, position_type, is_leadership, max_holders, 
+               min_experience_years, required_skills, description, usage_count
+        FROM position_templates 
+        WHERE is_active = 1
+        ORDER BY category, position_title
+    """)
+    templates = cursor.fetchall()
+    
+    # Get positions for reporting hierarchy dropdown
+    cursor.execute("""
+        SELECT p.id, p.position_title, p.department_id, d.department_name
+        FROM positions p
+        LEFT JOIN departments d ON p.department_id = d.id
+        WHERE p.status = 'Active'
+        ORDER BY p.position_level DESC, p.position_title
+    """)
+    reporting_positions = cursor.fetchall()
+    
+    # Calculate statistics
+    cursor.execute("SELECT COUNT(*) FROM positions")
+    total_positions = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM positions WHERE status = 'Active'")
+    active_positions = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(DISTINCT department_id) FROM positions WHERE department_id IS NOT NULL")
+    departments_with_positions = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM positions WHERE is_leadership = 1")
+    leadership_positions = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM position_templates WHERE is_active = 1")
+    available_templates = cursor.fetchone()[0]
+    
+    stats = [total_positions, active_positions, departments_with_positions, leadership_positions, available_templates]
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('manage_positions.html',
+                         positions=positions,
+                         departments=departments,
+                         templates=templates,
+                         reporting_positions=reporting_positions,
+                         stats=stats)
+
+@app.route('/assign_member_positions', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin')
+def assign_member_positions():
+    """Assign members to positions in departments"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'assign':
+            try:
+                member_id = int(request.form.get('member_id'))
+                position_id = int(request.form.get('position_id'))
+                department_id = int(request.form.get('department_id'))
+                start_date = request.form.get('start_date')
+                appointment_type = request.form.get('appointment_type')
+                notes = request.form.get('notes')
+                
+                # Set previous assignments for this member to not current
+                cursor.execute("""
+                    UPDATE member_positions SET is_current = 0, end_date = %s
+                    WHERE member_id = %s AND is_current = 1
+                """, (start_date, member_id))
+                
+                # Create new assignment
+                cursor.execute("""
+                    INSERT INTO member_positions (member_id, position_id, department_id, 
+                                                start_date, appointment_type, notes, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (member_id, position_id, department_id, start_date, appointment_type, notes,
+                      session.get('username', 'Unknown')))
+                
+                conn.commit()
+                flash('Member assigned to position successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error assigning position: {str(e)}', 'danger')
+        
+        elif action == 'end_assignment':
+            try:
+                assignment_id = request.form.get('assignment_id')
+                end_date = request.form.get('end_date')
+                
+                cursor.execute("""
+                    UPDATE member_positions SET is_current = 0, end_date = %s
+                    WHERE id = %s
+                """, (end_date, assignment_id))
+                conn.commit()
+                flash('Assignment ended successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error ending assignment: {str(e)}', 'danger')
+        
+        return redirect(url_for('assign_member_positions'))
+    
+    # Get search filter
+    search = request.args.get('search', '')
+    department_filter = request.args.get('department', '')
+    
+    # Get current assignments
+    query = """
+        SELECT mp.id, m.id as member_id, m.full_name, m.section_name,
+               p.position_title, d.department_name, mp.start_date, mp.end_date,
+               mp.appointment_type, mp.is_current
+        FROM member_positions mp
+        JOIN member_registration m ON mp.member_id = m.id
+        JOIN positions p ON mp.position_id = p.id
+        JOIN departments d ON mp.department_id = d.id
+        WHERE mp.is_current = 1
+    """
+    params = []
+    
+    if search:
+        query += " AND m.full_name LIKE %s"
+        params.append(f'%{search}%')
+    
+    if department_filter:
+        query += " AND mp.department_id = %s"
+        params.append(department_filter)
+    
+    query += " ORDER BY d.department_name, p.position_title, m.full_name"
+    
+    cursor.execute(query, params)
+    current_assignments = cursor.fetchall()
+    
+    # Get members without current positions
+    cursor.execute("""
+        SELECT m.id, m.full_name, m.section_name, m.phone
+        FROM member_registration m
+        LEFT JOIN member_positions mp ON m.id = mp.member_id AND mp.is_current = 1
+        WHERE mp.id IS NULL
+        ORDER BY m.full_name
+    """)
+    unassigned_members = cursor.fetchall()
+    
+    # Get all members, positions, departments for dropdowns
+    cursor.execute("SELECT id, full_name, section_name FROM member_registration ORDER BY full_name")
+    all_members = cursor.fetchall()
+    
+    cursor.execute("SELECT id, position_title, department_id FROM positions WHERE status = 'Active' ORDER BY position_title")
+    positions = cursor.fetchall()
+    
+    cursor.execute("SELECT id, department_name FROM departments WHERE status = 'Active' ORDER BY department_name")
+    departments = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(DISTINCT member_id) as members_with_positions,
+            COUNT(*) as total_current_assignments,
+            COUNT(DISTINCT department_id) as active_departments
+        FROM member_positions
+        WHERE is_current = 1
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('assign_member_positions.html',
+                         current_assignments=current_assignments,
+                         unassigned_members=unassigned_members,
+                         all_members=all_members,
+                         positions=positions,
+                         departments=departments,
+                         stats=stats,
+                         search=search,
+                         department_filter=department_filter)
+
+@app.route('/member_career_history/<int:member_id>')
+@login_required
+def member_career_history(member_id):
+    """View member's complete career/position history"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get member basic info
+    cursor.execute("""
+        SELECT id, full_name, section_name, phone, email, gender
+        FROM member_registration WHERE id = %s
+    """, (member_id,))
+    member = cursor.fetchone()
+    
+    if not member:
+        flash('Member not found', 'danger')
+        return redirect(url_for('manage_members'))
+    
+    # Get current positions
+    cursor.execute("""
+        SELECT mp.id, p.position_title, d.department_name, mp.start_date, 
+               mp.appointment_type, p.position_level, p.is_leadership,
+               p.position_type, mp.notes
+        FROM member_positions mp
+        JOIN positions p ON mp.position_id = p.id
+        LEFT JOIN departments d ON mp.department_id = d.id
+        WHERE mp.member_id = %s AND mp.is_current = 1
+        ORDER BY mp.start_date DESC
+    """, (member_id,))
+    current_positions = cursor.fetchall()
+    
+    # Get position history
+    cursor.execute("""
+        SELECT mp.id, p.position_title, d.department_name, mp.start_date, 
+               mp.end_date, mp.appointment_type, p.position_level, p.is_leadership,
+               p.position_type, mp.notes,
+               DATEDIFF(COALESCE(mp.end_date, CURDATE()), mp.start_date) as days_served
+        FROM member_positions mp
+        JOIN positions p ON mp.position_id = p.id
+        LEFT JOIN departments d ON mp.department_id = d.id
+        WHERE mp.member_id = %s AND mp.is_current = 0
+        ORDER BY mp.end_date DESC, mp.start_date DESC
+    """, (member_id,))
+    position_history = cursor.fetchall()
+    
+    # Get department head history
+    cursor.execute("""
+        SELECT dh.id, d.department_name, dh.start_date, dh.end_date, 
+               dh.appointment_reason, dh.termination_reason, dh.is_current,
+               DATEDIFF(COALESCE(dh.end_date, CURDATE()), dh.start_date) as days_served
+        FROM department_head_history dh
+        JOIN departments d ON dh.department_id = d.id
+        WHERE dh.member_id = %s
+        ORDER BY dh.start_date DESC
+    """, (member_id,))
+    dept_head_history = cursor.fetchall()
+    
+    # Calculate statistics
+    total_positions_held = len(current_positions) + len(position_history)
+    leadership_count = len([p for p in current_positions if p[6]]) + len([p for p in position_history if p[7]])
+    total_service_days = sum([p[10] for p in position_history if p[10]])
+    
+    # Timeline data (combine all positions for timeline view)
+    cursor.execute("""
+        SELECT 'Position' as type, p.position_title as title, d.department_name as department,
+               mp.start_date, mp.end_date, mp.is_current, p.is_leadership,
+               mp.appointment_type as details
+        FROM member_positions mp
+        JOIN positions p ON mp.position_id = p.id
+        LEFT JOIN departments d ON mp.department_id = d.id
+        WHERE mp.member_id = %s
+        
+        UNION ALL
+        
+        SELECT 'Dept Head' as type, d.department_name as title, '' as department,
+               dh.start_date, dh.end_date, dh.is_current, 1 as is_leadership,
+               dh.appointment_reason as details
+        FROM department_head_history dh
+        JOIN departments d ON dh.department_id = d.id
+        WHERE dh.member_id = %s
+        
+        ORDER BY start_date DESC, end_date DESC
+    """, (member_id, member_id))
+    timeline = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('member_career_history.html',
+                         member=member,
+                         current_positions=current_positions,
+                         position_history=position_history,
+                         dept_head_history=dept_head_history,
+                         timeline=timeline,
+                         total_positions=total_positions_held,
+                         leadership_count=leadership_count,
+                         total_service_days=total_service_days)
+
+@app.route('/organizational_chart')
+@login_required
+def organizational_chart():
+    """View organizational structure and member positions"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get all departments with hierarchy
+    cursor.execute("""
+        SELECT d.id, d.department_name, d.department_code, d.parent_department_id,
+               pd.department_name as parent_name, d.head_member_id, m.full_name as head_name,
+               d.description
+        FROM departments d
+        LEFT JOIN departments pd ON d.parent_department_id = pd.id
+        LEFT JOIN member_registration m ON d.head_member_id = m.id
+        WHERE d.status = 'Active'
+        ORDER BY d.parent_department_id, d.department_name
+    """)
+    departments = cursor.fetchall()
+    
+    # Get all current member positions
+    cursor.execute("""
+        SELECT mp.id, d.id as dept_id, d.department_name, p.position_title, p.position_level,
+               m.full_name, m.phone, mp.start_date, mp.appointment_type
+        FROM member_positions mp
+        JOIN member_registration m ON mp.member_id = m.id
+        JOIN positions p ON mp.position_id = p.id
+        JOIN departments d ON mp.department_id = d.id
+        WHERE mp.is_current = 1
+        ORDER BY d.department_name, p.position_level, p.position_title
+    """)
+    member_positions = cursor.fetchall()
+    
+    # Get summary stats
+    cursor.execute("""
+        SELECT 
+            COUNT(DISTINCT d.id) as total_departments,
+            COUNT(DISTINCT p.id) as total_positions,
+            COUNT(DISTINCT mp.member_id) as members_with_positions
+        FROM departments d
+        LEFT JOIN positions p ON d.id = p.department_id AND p.status = 'Active'
+        LEFT JOIN member_positions mp ON mp.is_current = 1
+        WHERE d.status = 'Active'
+    """)
+    summary = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('organizational_chart.html',
+                         departments=departments,
+                         member_positions=member_positions,
+                         summary=summary)
 
 # ========================================
 # APPLICATION INITIALIZATION
@@ -2943,6 +5189,229 @@ def member_medebe_report():
                          sections=sections,
                          section_filter=section_filter,
                          medebe_filter=medebe_filter)
+
+@app.route('/member_accounts', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin')
+def member_accounts():
+    """Manage member portal accounts"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                member_id = request.form.get('member_id')
+                username = request.form.get('username')
+                password = request.form.get('password')
+                email = request.form.get('email')
+                phone = request.form.get('phone')
+                
+                # Check if account already exists
+                cursor.execute("SELECT id FROM member_accounts WHERE member_id = %s", (member_id,))
+                if cursor.fetchone():
+                    flash('Account already exists for this member', 'danger')
+                else:
+                    # Hash password
+                    import hashlib
+                    password_hash = hashlib.sha256(password.encode()).hexdigest()
+                    
+                    cursor.execute("""
+                        INSERT INTO member_accounts (member_id, username, password_hash, email, phone, created_by)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (member_id, username, password_hash, email, phone, session.get('username', 'Unknown')))
+                    conn.commit()
+                    flash('Member account created successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating account: {str(e)}', 'danger')
+        
+        elif action == 'generate_bulk':
+            try:
+                # Get all members without accounts
+                cursor.execute("""
+                    SELECT m.id, m.full_name, m.phone, m.email
+                    FROM member_registration m
+                    LEFT JOIN member_accounts ma ON m.id = ma.member_id
+                    WHERE ma.id IS NULL
+                """)
+                members_without_accounts = cursor.fetchall()
+                
+                created_count = 0
+                import hashlib
+                
+                # Default password for all members
+                default_password = "12345678"
+                password_hash = hashlib.sha256(default_password.encode()).hexdigest()
+                
+                for member in members_without_accounts:
+                    member_id, full_name, phone, email = member
+                    
+                    # Generate username from name (remove spaces, lowercase)
+                    username = full_name.replace(' ', '').lower()[:20]
+                    
+                    # Check if username exists, add number if needed
+                    cursor.execute("SELECT COUNT(*) FROM member_accounts WHERE username LIKE %s", (f"{username}%",))
+                    count = cursor.fetchone()[0]
+                    if count > 0:
+                        username = f"{username}{count + 1}"
+                    
+                    cursor.execute("""
+                        INSERT INTO member_accounts (member_id, username, password_hash, email, phone, created_by)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (member_id, username, password_hash, email, phone, session.get('username', 'Unknown')))
+                    created_count += 1
+                
+                conn.commit()
+                flash(f'{created_count} member accounts created successfully with default password: 12345678', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error generating accounts: {str(e)}', 'danger')
+        
+        elif action == 'reset_password':
+            try:
+                account_id = request.form.get('account_id')
+                new_password = request.form.get('new_password')
+                
+                import hashlib
+                password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+                
+                cursor.execute("""
+                    UPDATE member_accounts 
+                    SET password_hash = %s, login_attempts = 0, locked_until = NULL
+                    WHERE id = %s
+                """, (password_hash, account_id))
+                conn.commit()
+                flash('Password reset successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error resetting password: {str(e)}', 'danger')
+        
+        elif action == 'toggle_status':
+            try:
+                account_id = request.form.get('account_id')
+                new_status = request.form.get('new_status')
+                
+                cursor.execute("UPDATE member_accounts SET account_status = %s WHERE id = %s", 
+                             (new_status, account_id))
+                conn.commit()
+                flash(f'Account status updated to {new_status}', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating status: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                account_id = request.form.get('account_id')
+                cursor.execute("DELETE FROM member_accounts WHERE id = %s", (account_id,))
+                conn.commit()
+                flash('Account deleted successfully', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting account: {str(e)}', 'danger')
+        
+        return redirect(url_for('member_accounts'))
+    
+    # Get all member accounts with member info
+    cursor.execute("""
+        SELECT ma.id, ma.member_id, m.full_name, m.section_name, m.phone, m.email,
+               ma.username, ma.account_status, ma.is_verified, ma.last_login,
+               ma.login_attempts, ma.mobile_platform, ma.created_at,
+               (SELECT COUNT(*) FROM member_login_history mlh 
+                WHERE mlh.member_account_id = ma.id) as login_count
+        FROM member_accounts ma
+        JOIN member_registration m ON ma.member_id = m.id
+        ORDER BY ma.created_at DESC
+    """)
+    accounts = cursor.fetchall()
+    
+    # Get members without accounts
+    cursor.execute("""
+        SELECT m.id, m.full_name, m.section_name, m.phone, m.email
+        FROM member_registration m
+        LEFT JOIN member_accounts ma ON m.id = ma.member_id
+        WHERE ma.id IS NULL
+        ORDER BY m.full_name
+    """)
+    members_without_accounts = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("SELECT COUNT(*) FROM member_accounts")
+    total_accounts = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM member_accounts WHERE account_status = 'Active'")
+    active_accounts = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM member_accounts WHERE is_verified = 1")
+    verified_accounts = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM member_accounts WHERE last_login IS NOT NULL")
+    accounts_with_login = cursor.fetchone()[0]
+    
+    stats = [total_accounts, active_accounts, verified_accounts, accounts_with_login, len(members_without_accounts)]
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('member_accounts.html',
+                         accounts=accounts,
+                         members_without_accounts=members_without_accounts,
+                         stats=stats)
+
+@app.route('/member_login_history/<int:account_id>')
+@login_required
+@role_required('Super Admin')
+def member_login_history(account_id):
+    """View login history for a member account"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get account info
+    cursor.execute("""
+        SELECT ma.id, ma.username, m.full_name, m.section_name
+        FROM member_accounts ma
+        JOIN member_registration m ON ma.member_id = m.id
+        WHERE ma.id = %s
+    """, (account_id,))
+    account = cursor.fetchone()
+    
+    if not account:
+        flash('Account not found', 'danger')
+        return redirect(url_for('member_accounts'))
+    
+    # Get login history
+    cursor.execute("""
+        SELECT id, login_time, logout_time, ip_address, device_info,
+               platform, app_version, location, status, failure_reason,
+               session_duration
+        FROM member_login_history
+        WHERE member_account_id = %s
+        ORDER BY login_time DESC
+        LIMIT 100
+    """, (account_id,))
+    history = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_logins,
+            COUNT(CASE WHEN status = 'Success' THEN 1 END) as successful_logins,
+            COUNT(CASE WHEN status = 'Failed' THEN 1 END) as failed_logins,
+            AVG(session_duration) as avg_session_duration
+        FROM member_login_history
+        WHERE member_account_id = %s
+    """, (account_id,))
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('member_login_history.html',
+                         account=account,
+                         history=history,
+                         stats=stats)
 
 if __name__ == '__main__':
     # Initialize database and tables

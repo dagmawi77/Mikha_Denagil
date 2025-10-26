@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .depreciation-container { background: #f8f9fa; min-height: 100vh; padding: 30px; }
+    .page-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+    .page-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid #14860C; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #2c3e50; }
+    .stat-card .label { font-size: 14px; color: #6c757d; font-weight: 600; text-transform: uppercase; }
+    .modern-card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); margin-bottom: 30px; }
+    .modern-card .card-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 20px 30px; }
+    .modern-card .card-header h4 { margin: 0; font-size: 20px; font-weight: 600; }
+    .modern-card .card-body { padding: 30px; }
+    .professional-table thead th { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white !important; padding: 12px; font-weight: 600; font-size: 13px; text-transform: uppercase; }
+    .professional-table tbody td { padding: 12px; border-bottom: 1px solid #e9ecef; font-size: 14px; }
+    .professional-table tbody tr:hover { background: #f8f9fa; }
+</style>
+
+<div class="depreciation-container">
+    <div class="page-header">
+        <h2><i class="icon-calculator"></i> Asset Depreciation Report / የእቃ ግምት መቀነስ ሪፖርት</h2>
+        <p>Depreciation analysis and book value calculations</p>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label">Total Purchase Cost</div>
+            <div class="value" style="font-size: 22px;">{{ '{:,.0f}'.format(summary[0] or 0) }} Birr</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Current Book Value</div>
+            <div class="value" style="font-size: 22px;">{{ '{:,.0f}'.format(summary[1] or 0) }} Birr</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Accumulated Depreciation</div>
+            <div class="value" style="font-size: 22px; color: #dc3545;">{{ '{:,.0f}'.format(summary[2] or 0) }} Birr</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Average Age</div>
+            <div class="value">{{ '{:.1f}'.format(summary[3] or 0) }} yrs</div>
+        </div>
+    </div>
+    
+    <div class="modern-card">
+        <div class="card-header"><h4><i class="icon-list"></i> Depreciation Schedule ({{ depreciation_data|length }} assets)</h4></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Asset Name</th>
+                            <th>Category</th>
+                            <th>Purchase Date</th>
+                            <th>Age (Years)</th>
+                            <th>Purchase Cost</th>
+                            <th>Useful Life</th>
+                            <th>Salvage Value</th>
+                            <th>Annual Depreciation</th>
+                            <th>Accumulated Depreciation</th>
+                            <th>Current Book Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in depreciation_data %}
+                        <tr>
+                            <td><strong>{{ asset.name }}</strong></td>
+                            <td>{{ asset.category }}</td>
+                            <td>{{ asset.purchase_date }}</td>
+                            <td>{{ asset.age_years }}</td>
+                            <td>{{ '{:,.2f}'.format(asset.purchase_cost) }}</td>
+                            <td>{{ asset.useful_life }} yrs</td>
+                            <td>{{ '{:,.2f}'.format(asset.salvage_value) }}</td>
+                            <td>{{ '{:,.2f}'.format(asset.annual_depreciation) }}</td>
+                            <td style="color: #dc3545;">{{ '{:,.2f}'.format(asset.accumulated_depreciation) }}</td>
+                            <td><strong>{{ '{:,.2f}'.format(asset.book_value) }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

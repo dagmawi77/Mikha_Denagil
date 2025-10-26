@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .transactions-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-card.incoming { border-left: 4px solid #28a745; }
+    .stat-card.outgoing { border-left: 4px solid #dc3545; }
+    .stat-card.adjustment { border-left: 4px solid #ffc107; }
+    .stat-card.total { border-left: 4px solid #14860C; }
+    
+    .stat-card .label {
+        font-size: 14px;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px 15px;
+    }
+    
+    .form-control:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.15);
+    }
+    
+    .btn-record {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+    }
+    
+    .btn-record:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .professional-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .professional-table thead th {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white !important;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+    }
+    
+    .professional-table thead th:first-child {
+        border-top-left-radius: 10px;
+    }
+    
+    .professional-table thead th:last-child {
+        border-top-right-radius: 10px;
+    }
+    
+    .professional-table tbody tr {
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .professional-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .professional-table tbody td {
+        padding: 12px;
+        font-size: 14px;
+        color: #2c3e50;
+    }
+    
+    .transaction-type {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .type-incoming {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .type-outgoing {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .type-adjustment {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    #adjustment_fields {
+        display: none;
+    }
+</style>
+
+<div class="transactions-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2><i class="icon-shuffle"></i> Inventory Transactions / የእቃ እንቅስቃሴ</h2>
+        <p>Record stock movements - Incoming, Outgoing, and Adjustments</p>
+    </div>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card total">
+            <div class="label">Total (30 days)</div>
+            <div class="value">{{ stats[0] or 0 }}</div>
+        </div>
+        <div class="stat-card incoming">
+            <div class="label">Incoming</div>
+            <div class="value">{{ stats[1] or 0 }}</div>
+        </div>
+        <div class="stat-card outgoing">
+            <div class="label">Outgoing</div>
+            <div class="value">{{ stats[2] or 0 }}</div>
+        </div>
+        <div class="stat-card adjustment">
+            <div class="label">Adjustments</div>
+            <div class="value">{{ stats[3] or 0 }}</div>
+        </div>
+    </div>
+    
+    <!-- Record Transaction Form -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-plus"></i> Record New Transaction</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Select Item *</label>
+                            <select class="form-control" name="item_id" required onchange="showItemInfo(this)">
+                                <option value="">-- Select Item --</option>
+                                {% for item in items %}
+                                    <option value="{{ item[0] }}" data-qty="{{ item[3] }}" data-unit="{{ item[4] }}">
+                                        {{ item[1] }} ({{ item[2] }}) - Qty: {{ item[3] }} {{ item[4] }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Transaction Type *</label>
+                            <select class="form-control" name="transaction_type" required onchange="handleTypeChange(this)">
+                                <option value="">-- Select Type --</option>
+                                <option value="Incoming">Incoming (Purchase/Receive)</option>
+                                <option value="Outgoing">Outgoing (Issue/Use)</option>
+                                <option value="Adjustment">Adjustment (Damage/Loss/Found)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Quantity *</label>
+                            <input type="number" class="form-control" name="quantity" min="1" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Date *</label>
+                            <input type="date" class="form-control" name="transaction_date" id="transaction_date" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" id="adjustment_fields">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Adjustment Direction</label>
+                            <select class="form-control" name="adjustment_direction">
+                                <option value="increase">Increase (Found items)</option>
+                                <option value="decrease">Decrease (Damage/Loss)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Reference #</label>
+                            <input type="text" class="form-control" name="reference_number" placeholder="Invoice/Receipt">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Responsible Person</label>
+                            <input type="text" class="form-control" name="responsible_user">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Recipient (for outgoing)</label>
+                            <input type="text" class="form-control" name="recipient">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>Purpose</label>
+                            <input type="text" class="form-control" name="purpose" placeholder="Reason/Event">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea class="form-control" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-record">
+                    <i class="icon-check"></i> Record Transaction
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-list"></i> Recent Transactions (Last 50)</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Item</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Reference</th>
+                            <th>Responsible</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trans in transactions %}
+                        <tr>
+                            <td>{{ trans[4] }}</td>
+                            <td><strong>{{ trans[1] }}</strong></td>
+                            <td>
+                                <span class="transaction-type type-{{ trans[2]|lower }}">
+                                    {{ trans[2] }}
+                                </span>
+                            </td>
+                            <td><strong>{{ trans[3] }}</strong></td>
+                            <td>{{ trans[9] }}</td>
+                            <td><strong>{{ trans[10] }}</strong></td>
+                            <td>{{ trans[5] or '-' }}</td>
+                            <td>{{ trans[6] or '-' }}</td>
+                            <td>{{ trans[8] or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if not transactions %}
+            <div class="text-center py-5">
+                <i class="icon-shuffle" style="font-size: 60px; color: #ccc;"></i>
+                <p class="text-muted mt-3">No transactions recorded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set today's date as default
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('transaction_date');
+        if (dateInput && !dateInput.value) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
+    });
+    
+    function handleTypeChange(select) {
+        const adjustmentFields = document.getElementById('adjustment_fields');
+        if (select.value === 'Adjustment') {
+            adjustmentFields.style.display = 'block';
+        } else {
+            adjustmentFields.style.display = 'none';
+        }
+    }
+    
+    function showItemInfo(select) {
+        const option = select.options[select.selectedIndex];
+        if (option.value) {
+            const qty = option.getAttribute('data-qty');
+            const unit = option.getAttribute('data-unit');
+            console.log(`Current stock: ${qty} ${unit}`);
+        }
+    }
+    
+    // Auto-dismiss alerts
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+</script>
+{% endblock %}
+

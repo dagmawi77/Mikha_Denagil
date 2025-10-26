@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .report-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 4px solid #14860C;
+    }
+    
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .stat-card .label {
+        font-size: 14px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .professional-table thead th {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white !important;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .professional-table tbody td {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .status-in-stock { background: #d4edda; color: #155724; }
+    .status-low-stock { background: #fff3cd; color: #856404; }
+    .status-out-of-stock { background: #f8d7da; color: #721c24; }
+    
+    .btn-export {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+    }
+</style>
+
+<div class="report-container">
+    <div class="page-header">
+        <h2><i class="icon-graph"></i> Inventory Stock Report</h2>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label">Total Items</div>
+            <div class="value">{{ summary[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total Quantity</div>
+            <div class="value">{{ summary[1] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Low Stock</div>
+            <div class="value" style="color: #ffc107;">{{ summary[2] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Out of Stock</div>
+            <div class="value" style="color: #dc3545;">{{ summary[3] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total Value</div>
+            <div class="value" style="font-size: 24px;">{{ '%.2f'|format(summary[4] or 0) }} Birr</div>
+        </div>
+    </div>
+    
+    <!-- Filters and Export -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-filter"></i> Filters & Export</h4>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row">
+                <div class="col-md-3">
+                    <select class="form-control" name="category">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat }}" {% if cat == category_filter %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" name="location">
+                        <option value="">All Locations</option>
+                        {% for loc in locations %}
+                            <option value="{{ loc }}" {% if loc == location_filter %}selected{% endif %}>{{ loc }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" name="alert">
+                        <option value="">All Stock Levels</option>
+                        <option value="low" {% if stock_alert == 'low' %}selected{% endif %}>Low Stock Only</option>
+                        <option value="out" {% if stock_alert == 'out' %}selected{% endif %}>Out of Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-create" style="width: 100%;">
+                        <i class="icon-magnifier"></i> Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Stock Table -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-list"></i> Current Stock Levels ({{ items|length }})</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Min Level</th>
+                            <th>Location</th>
+                            <th>Supplier</th>
+                            <th>Unit Price</th>
+                            <th>Total Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td><strong>{{ item[1] }}</strong></td>
+                            <td>{{ item[2] }}</td>
+                            <td><strong>{{ item[3] }}</strong></td>
+                            <td>{{ item[4] }}</td>
+                            <td>{{ item[9] }}</td>
+                            <td>{{ item[5] or '-' }}</td>
+                            <td>{{ item[6] or '-' }}</td>
+                            <td>{{ '%.2f'|format(item[8]) if item[8] else '-' }}</td>
+                            <td>{{ '%.2f'|format(item[3] * item[8]) if item[8] else '-' }}</td>
+                            <td>
+                                <span class="status-badge status-{{ item[11]|lower|replace(' ', '-') }}">
+                                    {{ item[11] }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -509,6 +509,9 @@
                             <td>{{ member[22] or '-' }}</td>
                             <td>{{ member[13] or '-' }}</td>
                             <td style="white-space: nowrap;">
+                                <a href="{{ url_for('member_career_history', member_id=member[0]) }}" class="btn btn-sm btn-success action-btn" title="Career History">
+                                    <i class="fa fa-briefcase"></i>
+                                </a>
                                 <a href="?edit={{ member[0] }}" class="btn btn-sm btn-primary action-btn" title="Edit">
                                     <i class="fa fa-edit"></i>
                                 </a>

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .movements-container { background: #f8f9fa; min-height: 100vh; padding: 30px; }
+    .page-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3); }
+    .page-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+    .modern-card { background: white; border-radius: 15px; box-shadow: 0 2px 15px rgba(0,0,0,0.08); margin-bottom: 30px; overflow: hidden; }
+    .modern-card .card-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 20px 30px; }
+    .modern-card .card-header h4 { margin: 0; font-size: 20px; font-weight: 600; }
+    .modern-card .card-body { padding: 30px; }
+    .form-control { border: 2px solid #e9ecef; border-radius: 8px; padding: 12px 15px; }
+    .form-control:focus { border-color: #14860C; outline: none; }
+    .btn-record { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 12px 30px; border: none; border-radius: 8px; font-weight: 600; }
+    .professional-table thead th { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white !important; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; }
+    .professional-table tbody td { padding: 12px; border-bottom: 1px solid #e9ecef; font-size: 14px; }
+    .movement-type { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .type-assignment { background: #d4edda; color: #155724; }
+    .type-relocation { background: #cfe2ff; color: #084298; }
+    .type-repair { background: #fff3cd; color: #856404; }
+    .type-disposal { background: #f8d7da; color: #721c24; }
+    #disposal_fields, #repair_fields { display: none; }
+</style>
+
+<div class="movements-container">
+    <div class="page-header">
+        <h2><i class="icon-shuffle"></i> Asset Movement & Assignment / የእቃ እንቅስቃሴ</h2>
+        <p>Track assignments, relocations, repairs, and disposals</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">{{ message }}<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>
+            {% endfor %}{% endif %}
+    {% endwith %}
+    
+    <!-- Record Movement Form -->
+    <div class="modern-card">
+        <div class="card-header"><h4><i class="icon-plus"></i> Record Asset Movement</h4></div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Select Asset *</label>
+                            <select class="form-control" name="asset_id" required id="assetSelect">
+                                <option value="">-- Select Asset --</option>
+                                {% for asset in assets %}
+                                    <option value="{{ asset[0] }}" data-location="{{ asset[3] }}" data-dept="{{ asset[4] }}" data-user="{{ asset[5] }}">
+                                        {{ asset[1] }} ({{ asset[2] }}) - {{ asset[6] or 'No Serial' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Movement Type *</label>
+                            <select class="form-control" name="movement_type" required onchange="handleMovementType(this)">
+                                <option value="">-- Select Type --</option>
+                                <option value="Assignment">Assignment (to department/user)</option>
+                                <option value="Relocation">Relocation (change location)</option>
+                                <option value="Repair">Repair / Maintenance</option>
+                                <option value="Disposal">Disposal (Retire/Sell/Scrap)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Movement Date *</label>
+                            <input type="date" class="form-control" name="movement_date" id="movementDate" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>New Location</label>
+                            <input type="text" class="form-control" name="to_location" placeholder="New location">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>New Department</label>
+                            <select class="form-control" name="to_department">
+                                <option value="">-- Select Department --</option>
+                                {% for dept in departments %}
+                                    <option value="{{ dept }}">{{ dept }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>New Assigned Member</label>
+                            <select class="form-control" name="to_user">
+                                <option value="">-- Select Member --</option>
+                                {% for member in members %}
+                                    <option value="{{ member[1] }}">{{ member[1] }} ({{ member[2] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Condition After Movement</label>
+                            <select class="form-control" name="condition_after">
+                                <option value="Good">Good</option>
+                                <option value="Fair">Fair</option>
+                                <option value="Poor">Poor</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Responsible Person</label>
+                            <input type="text" class="form-control" name="responsible_person">
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="repair_fields">
+                        <div class="form-group">
+                            <label>Repair Cost (Birr)</label>
+                            <input type="number" class="form-control" name="repair_cost" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" id="disposal_fields">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Disposal Method</label>
+                            <select class="form-control" name="disposal_method">
+                                <option value="Sold">Sold</option>
+                                <option value="Donated">Donated</option>
+                                <option value="Scrapped">Scrapped</option>
+                                <option value="Broken">Broken</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Disposal Value (Birr)</label>
+                            <input type="number" class="form-control" name="disposal_value" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Remarks / Notes</label>
+                            <textarea class="form-control" name="remarks" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-record">
+                    <i class="icon-check"></i> Record Movement
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Movement History -->
+    <div class="modern-card">
+        <div class="card-header"><h4><i class="icon-list"></i> Recent Movements ({{ movements|length }})</h4></div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="professional-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Asset</th>
+                            <th>Type</th>
+                            <th>From Location</th>
+                            <th>To Location</th>
+                            <th>From Dept</th>
+                            <th>To Dept</th>
+                            <th>Responsible</th>
+                            <th>Condition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for move in movements %}
+                        <tr>
+                            <td>{{ move[3] }}</td>
+                            <td><strong>{{ move[1] }}</strong></td>
+                            <td><span class="movement-type type-{{ move[2]|lower }}">{{ move[2] }}</span></td>
+                            <td>{{ move[4] or '-' }}</td>
+                            <td>{{ move[5] or '-' }}</td>
+                            <td>{{ move[6] or '-' }}</td>
+                            <td>{{ move[7] or '-' }}</td>
+                            <td>{{ move[8] or '-' }}</td>
+                            <td>{{ move[9] }} → {{ move[10] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById('movementDate');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+    });
+    
+    function handleMovementType(select) {
+        const disposalFields = document.getElementById('disposal_fields');
+        const repairFields = document.getElementById('repair_fields');
+        
+        disposalFields.style.display = select.value === 'Disposal' ? 'block' : 'none';
+        repairFields.style.display = select.value === 'Repair' ? 'block' : 'none';
+    }
+</script>
+{% endblock %}
+

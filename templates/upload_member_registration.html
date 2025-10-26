@@ -1,54 +1,597 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Upload Member Registration CSV</h2>
+<style>
+    .upload-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .page-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+        border: none;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .upload-zone {
+        border: 3px dashed #14860C;
+        border-radius: 15px;
+        padding: 50px;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.05) 0%, rgba(16, 107, 9, 0.05) 100%);
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .upload-zone:hover {
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.1) 0%, rgba(16, 107, 9, 0.1) 100%);
+        transform: scale(1.02);
+    }
+    
+    .upload-zone.dragover {
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.15) 0%, rgba(16, 107, 9, 0.15) 100%);
+        border-color: #106b09;
+    }
+    
+    .upload-icon {
+        font-size: 80px;
+        color: #14860C;
+        margin-bottom: 20px;
+    }
+    
+    .btn-download-template {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        margin-bottom: 20px;
+    }
+    
+    .btn-download-template:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-upload {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 15px 40px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 18px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(20, 134, 12, 0.3);
+        margin-top: 20px;
+    }
+    
+    .btn-upload:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(20, 134, 12, 0.4);
+        color: white;
+    }
+    
+    .btn-upload:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .file-info {
+        margin-top: 20px;
+        padding: 15px;
+        background: #e3f2fd;
+        border-radius: 10px;
+        border-left: 4px solid #007bff;
+        display: none;
+    }
+    
+    .file-info.show {
+        display: block;
+    }
+    
+    .result-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .result-card {
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    
+    .result-card.success {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left: 4px solid #28a745;
+    }
+    
+    .result-card.duplicate {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        border-left: 4px solid #ffc107;
+    }
+    
+    .result-card.error {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border-left: 4px solid #dc3545;
+    }
+    
+    .result-card.total {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left: 4px solid #007bff;
+    }
+    
+    .result-card .value {
+        font-size: 48px;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+    
+    .result-card .label {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #6c757d;
+    }
+    
+    .details-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .details-table thead th {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white !important;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+    }
+    
+    .details-table thead th:first-child {
+        border-top-left-radius: 10px;
+    }
+    
+    .details-table thead th:last-child {
+        border-top-right-radius: 10px;
+    }
+    
+    .details-table tbody td {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 14px;
+    }
+    
+    .details-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .badge-duplicate {
+        background: #ffc107;
+        color: #000;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .badge-error {
+        background: #dc3545;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .info-banner {
+        background: linear-gradient(135deg, #e3f2fd 0%, #fff3e0 100%);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        border-left: 4px solid #14860C;
+    }
+    
+    .info-banner h5 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-banner ul {
+        margin: 10px 0 0 20px;
+        color: #6c757d;
+        line-height: 1.8;
+    }
+    
+    .btn-new-upload {
+        background: #14860C;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+    }
+    
+    .btn-new-upload:hover {
+        background: #106b09;
+        color: white;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+    
+    .progress-bar-custom {
+        width: 100%;
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 20px;
+        display: none;
+    }
+    
+    .progress-bar-custom.show {
+        display: block;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #14860C 0%, #106b09 100%);
+        width: 0%;
+        transition: width 0.3s;
+        border-radius: 10px;
+    }
+</style>
 
+<div class="upload-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2><i class="icon-cloud-upload"></i> Bulk Member Upload</h2>
+        <p>Upload multiple members at once using Excel or CSV files</p>
+    </div>
+    
+    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    <strong>
+                        {% if category == 'success' %}✓{% elif category == 'danger' %}✗{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}
+                    </strong>
             {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <form method="POST" action="{{ url_for('upload_member_registration') }}" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="file" class="form-label">Select CSV file</label>
-            <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+    {% if not upload_complete %}
+    <!-- Upload Form -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-info"></i> Instructions</h4>
         </div>
-        <button type="submit" class="btn btn-primary">Upload</button>
+        <div class="card-body">
+            <div class="info-banner">
+                <h5><i class="icon-doc"></i> How to Upload Members</h5>
+                <ul>
+                    <li><strong>Step 1:</strong> Download the Excel template below</li>
+                    <li><strong>Step 2:</strong> Fill in member data (Required: Full Name, Phone, Section, Gender)</li>
+                    <li><strong>Step 3:</strong> Use dropdown values for: Section, Gender, Work Status, Marital Status</li>
+                    <li><strong>Step 4:</strong> Save and upload the file (Excel or CSV format)</li>
+                    <li><strong>Step 5:</strong> Review upload results and fix any errors</li>
+                </ul>
+            </div>
+            
+            <div class="text-center">
+                <a href="{{ url_for('download_member_template') }}" class="btn-download-template">
+                    <i class="icon-cloud-download"></i> Download Excel Template (with Dropdowns)
+                </a>
+                <br>
+                <a href="{{ url_for('download_member_template_csv') }}" class="btn-download-template" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); margin-top: 15px;">
+                    <i class="icon-doc"></i> Download CSV Template (with Valid Values)
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-cloud-upload"></i> Upload File</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon"><i class="icon-cloud-upload"></i></div>
+                    <h4>Drag & Drop your file here</h4>
+                    <p>or click to browse</p>
+                    <p class="text-muted">Supports: .xlsx, .xls, .csv (Max 10MB)</p>
+                </div>
+                
+                <input type="file" 
+                       name="file" 
+                       id="fileInput" 
+                       accept=".csv,.xlsx,.xls" 
+                       style="display: none;" 
+                       onchange="handleFileSelect(this)">
+                
+                <div class="file-info" id="fileInfo">
+                    <strong><i class="icon-doc"></i> Selected File:</strong> 
+                    <span id="fileName"></span>
+                    <br>
+                    <strong>Size:</strong> <span id="fileSize"></span>
+                </div>
+                
+                <div class="progress-bar-custom" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn-upload" id="uploadBtn" disabled>
+                        <i class="icon-cloud-upload"></i> Upload Members
+                    </button>
+                </div>
     </form>
-
-    <hr>
-
-    <h5>CSV must include columns:</h5>
-    <ul>
-        <li><code>full_name</code></li>
-        <li><code>father_of_repentance</code></li>
-        <li><code>mother_name</code></li>
-        <li><code>parish</code></li>
-        <li><code>christian_name</code></li>
-        <li><code>age_of_birth</code></li>
-        <li><code>subcity</code></li>
-        <li><code>woreda</code></li>
-        <li><code>house_number</code></li>
-        <li><code>special_place</code></li>
-        <li><code>phone</code></li>
-        <li><code>leving</code></li>
-        <li><code>work_status</code></li>
-        <li><code>email</code></li>
-        <li><code>member_year</code></li>
-        <li><code>education</code></li>
-        <li><code>rank</code></li>
-        <li><code>education_status</code></li>
-        <li><code>work</code></li>
-        <li><code>student</code></li>
-        <li><code>career</code></li>
-        <li><code>marital_status</code></li>
-    </ul>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Upload Results -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-check"></i> Upload Complete - Results Summary</h4>
+        </div>
+        <div class="card-body">
+            <div class="result-summary">
+                <div class="result-card total">
+                    <div class="label">Total Rows</div>
+                    <div class="value">{{ total_rows }}</div>
+                </div>
+                
+                <div class="result-card success">
+                    <div class="label">✓ Successfully Added</div>
+                    <div class="value">{{ success_count }}</div>
+                </div>
+                
+                <div class="result-card duplicate">
+                    <div class="label">⚠ Duplicates Skipped</div>
+                    <div class="value">{{ duplicate_count }}</div>
+                </div>
+                
+                <div class="result-card error">
+                    <div class="label">✗ Errors</div>
+                    <div class="value">{{ error_count }}</div>
+                </div>
+            </div>
+            
+            <div class="text-center mb-4">
+                <a href="{{ url_for('upload_member_registration') }}" class="btn-new-upload">
+                    <i class="icon-reload"></i> Upload Another File
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Duplicates Details -->
+    {% if duplicates %}
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-info"></i> Duplicate Records ({{ duplicates|length }})</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>These records were skipped because they already exist in the database:</strong></p>
+            <div class="table-responsive">
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th>Row #</th>
+                            <th>Uploaded Name</th>
+                            <th>Uploaded Phone</th>
+                            <th>Existing Name</th>
+                            <th>Existing Phone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dup in duplicates %}
+                        <tr>
+                            <td>{{ dup.row }}</td>
+                            <td><strong>{{ dup.name }}</strong></td>
+                            <td>{{ dup.phone }}</td>
+                            <td>{{ dup.existing_name }}</td>
+                            <td>{{ dup.existing_phone }}</td>
+                            <td><span class="badge-duplicate">DUPLICATE</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Errors Details -->
+    {% if errors %}
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-close"></i> Errors ({{ errors|length }})</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>These records failed to upload due to validation or system errors:</strong></p>
+            <div class="table-responsive">
+                <table class="details-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 100%;">Error Details</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for error in errors %}
+                        <tr>
+                            <td>{{ error }}</td>
+                            <td><span class="badge-error">ERROR</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% endif %}
 </div>
+
+<script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    
+    // Drag and drop handlers
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.classList.add('dragover');
+        }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.classList.remove('dragover');
+        }, false);
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(fileInput);
+        }
+    }, false);
+    
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (file) {
+            const fileName = file.name;
+            const fileSize = (file.size / 1024).toFixed(2) + ' KB';
+            
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('fileSize').textContent = fileSize;
+            fileInfo.classList.add('show');
+            uploadBtn.disabled = false;
+        }
+    }
+    
+    // Form submission with progress
+    uploadForm.addEventListener('submit', function(e) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="icon-hourglass"></i> Uploading...';
+        progressBar.classList.add('show');
+        
+        // Simulate progress (in real implementation, use XMLHttpRequest for actual progress)
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 5;
+            progressFill.style.width = progress + '%';
+            if (progress >= 90) {
+                clearInterval(interval);
+            }
+        }, 100);
+    });
+    
+    // Auto-dismiss alerts
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+</script>
 {% endblock %}

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .org-container { background: #f8f9fa; min-height: 100vh; padding: 30px; }
+    .page-header { background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+    .page-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid #14860C; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #2c3e50; }
+    .stat-card .label { font-size: 14px; color: #6c757d; font-weight: 600; }
+    .dept-card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 4px solid #14860C; }
+    .dept-card h4 { color: #14860C; font-weight: 700; margin-bottom: 15px; }
+    .dept-card .dept-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .position-item { padding: 12px; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 10px; }
+    .position-item .position-title { font-weight: 700; color: #2c3e50; font-size: 16px; }
+    .position-item .member-name { color: #14860C; margin-left: 10px; }
+    .position-item .level-badge { background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+</style>
+
+<div class="org-container">
+    <div class="page-header">
+        <h2><i class="icon-diagram"></i> Organizational Chart / የአደረጃጀት ገበታ</h2>
+        <p>View organizational structure, departments, and member positions</p>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="label">Total Departments</div>
+            <div class="value">{{ summary[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Total Positions</div>
+            <div class="value">{{ summary[1] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Members with Positions</div>
+            <div class="value">{{ summary[2] or 0 }}</div>
+        </div>
+    </div>
+    
+    <!-- Group positions by department -->
+    {% set ns = namespace(positions_by_dept={}) %}
+    {% for pos in member_positions %}
+        {% set dept_id = pos[1] %}
+        {% if dept_id not in ns.positions_by_dept %}
+            {% set _ = ns.positions_by_dept.update({dept_id: []}) %}
+        {% endif %}
+        {% set _ = ns.positions_by_dept[dept_id].append(pos) %}
+    {% endfor %}
+    
+    <!-- Display departments with their positions -->
+    {% for dept in departments %}
+    <div class="dept-card">
+        <h4><i class="icon-briefcase"></i> {{ dept[1] }} {% if dept[2] %}({{ dept[2] }}){% endif %}</h4>
+        
+        <div class="dept-info">
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Parent Department:</strong> {{ dept[4] or 'None (Top Level)' }}
+                </div>
+                <div class="col-md-4">
+                    <strong>Department Head:</strong> {{ dept[6] or 'Not Assigned' }}
+                </div>
+                <div class="col-md-4">
+                    <strong>Description:</strong> {{ dept[7] or '-' }}
+                </div>
+            </div>
+        </div>
+        
+        <h5 style="margin-top: 20px; margin-bottom: 15px; color: #6c757d;">Positions & Members:</h5>
+        
+        {% if dept[0] in ns.positions_by_dept %}
+            {% for pos in ns.positions_by_dept[dept[0]] %}
+            <div class="position-item">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <span class="position-title">{{ pos[3] }}</span>
+                        {% if pos[4] %}
+                            <span class="level-badge">{{ pos[4] }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <i class="icon-user"></i>
+                        <span class="member-name">{{ pos[5] }}</span>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">Since: {{ pos[7] }}</small>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted">{{ pos[8] or '-' }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted"><i>No positions assigned in this department yet.</i></p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    
+    {% if not departments %}
+    <div class="text-center py-5">
+        <i class="icon-organization" style="font-size: 80px; color: #ccc;"></i>
+        <h3 class="text-muted mt-3">No Departments Found</h3>
+        <p class="text-muted">Create departments first in Department Management</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

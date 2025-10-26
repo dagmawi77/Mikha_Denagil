@@ -1566,6 +1566,137 @@ def manage_members():
     return render_template("manage_members.html", members=members, member_data=member_data)
 
 
+@app.route('/member_report')
+def member_report():
+    """Comprehensive member report with statistics and charts"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get filters
+    section_filter = request.args.get('section', '')
+    gender_filter = request.args.get('gender', '')
+    year_filter = request.args.get('year', datetime.now().year)
+    
+    # Overall statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_members,
+            COUNT(CASE WHEN gender = 'ወንድ' THEN 1 END) as male_count,
+            COUNT(CASE WHEN gender = 'ሴት' THEN 1 END) as female_count,
+            COUNT(CASE WHEN marital_status IN ('ያላገባ', 'ያላገባች') THEN 1 END) as single_count,
+            COUNT(CASE WHEN marital_status = 'ያገባ' THEN 1 END) as married_count,
+            COUNT(CASE WHEN work_status = 'በሥራ ላይ' THEN 1 END) as employed_count,
+            COUNT(CASE WHEN work_status = 'ስራ የለኝም' THEN 1 END) as unemployed_count,
+            COUNT(CASE WHEN work_status = 'ተማሪ' OR student = 'Yes' THEN 1 END) as student_count
+        FROM member_registration
+    """)
+    stats = cursor.fetchone()
+    overall_stats = {
+        'total_members': stats[0] or 0,
+        'male_count': stats[1] or 0,
+        'female_count': stats[2] or 0,
+        'single_count': stats[3] or 0,
+        'married_count': stats[4] or 0,
+        'employed_count': stats[5] or 0,
+        'unemployed_count': stats[6] or 0,
+        'student_count': stats[7] or 0
+    }
+    
+    # Section-wise statistics
+    cursor.execute("""
+        SELECT 
+            section_name,
+            COUNT(*) as total,
+            COUNT(CASE WHEN gender = 'ወንድ' THEN 1 END) as male,
+            COUNT(CASE WHEN gender = 'ሴት' THEN 1 END) as female
+        FROM member_registration
+        GROUP BY section_name
+        ORDER BY section_name
+    """)
+    section_stats = cursor.fetchall()
+    
+    # Age distribution (approximate)
+    cursor.execute("""
+        SELECT 
+            CASE 
+                WHEN TIMESTAMPDIFF(YEAR, age_of_birth, CURDATE()) < 18 THEN 'Under 18'
+                WHEN TIMESTAMPDIFF(YEAR, age_of_birth, CURDATE()) BETWEEN 18 AND 30 THEN '18-30'
+                WHEN TIMESTAMPDIFF(YEAR, age_of_birth, CURDATE()) BETWEEN 31 AND 50 THEN '31-50'
+                WHEN TIMESTAMPDIFF(YEAR, age_of_birth, CURDATE()) > 50 THEN 'Over 50'
+                ELSE 'Unknown'
+            END as age_group,
+            COUNT(*) as count
+        FROM member_registration
+        WHERE age_of_birth IS NOT NULL
+        GROUP BY age_group
+        ORDER BY age_group
+    """)
+    age_distribution = cursor.fetchall()
+    
+    # Education statistics
+    cursor.execute("""
+        SELECT 
+            education_status,
+            COUNT(*) as count
+        FROM member_registration
+        WHERE education_status IS NOT NULL AND education_status != ''
+        GROUP BY education_status
+        ORDER BY count DESC
+    """)
+    education_stats = cursor.fetchall()
+    
+    # Subcity distribution
+    cursor.execute("""
+        SELECT 
+            subcity,
+            COUNT(*) as count
+        FROM member_registration
+        WHERE subcity IS NOT NULL AND subcity != ''
+        GROUP BY subcity
+        ORDER BY count DESC
+        LIMIT 10
+    """)
+    subcity_stats = cursor.fetchall()
+    
+    # Build filtered query for detailed list
+    query = """
+        SELECT id, full_name, gender, section_name, phone, email, 
+               subcity, marital_status, work_status, education_status
+        FROM member_registration
+        WHERE 1=1
+    """
+    params = []
+    
+    if section_filter:
+        query += " AND section_name = %s"
+        params.append(section_filter)
+    
+    if gender_filter:
+        query += " AND gender = %s"
+        params.append(gender_filter)
+    
+    query += " ORDER BY section_name, full_name LIMIT 100"
+    
+    cursor.execute(query, params)
+    members_list = cursor.fetchall()
+    
+    sections = ['የሕፃናት ክፍል', 'ማህከላዊያን ክፍል', 'ወጣት ክፍል', 'ወላጅ ክፍል']
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('member_report.html',
+                         overall_stats=overall_stats,
+                         section_stats=section_stats,
+                         age_distribution=age_distribution,
+                         education_stats=education_stats,
+                         subcity_stats=subcity_stats,
+                         members_list=members_list,
+                         sections=sections,
+                         section_filter=section_filter,
+                         gender_filter=gender_filter,
+                         year_filter=year_filter)
+
 
 def get_last_10_weeks_weekends():
     today = date.today()

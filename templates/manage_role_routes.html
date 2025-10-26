@@ -1,33 +1,716 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Manage Routes for Role: {{ role.role_name }}</h2>
+<style>
+    .routes-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
     
-    <div class="card mt-4">
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .page-header-content h2 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .page-header-content p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+    
+    .btn-back {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 2px solid white;
+    }
+    
+    .btn-back:hover {
+        background: white;
+        color: #14860C;
+        text-decoration: none;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .stats-banner {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-around;
+        gap: 20px;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-item .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #14860C;
+    }
+    
+    .stat-item .label {
+        font-size: 14px;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-top: 5px;
+    }
+    
+    .search-filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+    }
+    
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box input {
+        padding-left: 45px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        width: 100%;
+        padding: 12px 15px 12px 45px;
+    }
+    
+    .search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        font-size: 18px;
+    }
+    
+    .routes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+        gap: 20px;
+    }
+    
+    .route-card {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s;
+        position: relative;
+    }
+    
+    .route-card.checked {
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.05) 0%, rgba(16, 107, 9, 0.05) 100%);
+        border-color: #14860C;
+        border-width: 3px;
+    }
+    
+    .route-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-3px);
+    }
+    
+    .route-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .route-main-checkbox {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        margin-right: 12px;
+        accent-color: #14860C;
+    }
+    
+    .route-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2c3e50;
+        flex: 1;
+    }
+    
+    .route-description {
+        color: #6c757d;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+    
+    .crud-permissions {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .permission-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+    
+    .permission-item:hover {
+        background: #e9ecef;
+    }
+    
+    .permission-item.active {
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.1) 0%, rgba(16, 107, 9, 0.1) 100%);
+        border-color: #14860C;
+    }
+    
+    .permission-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #14860C;
+    }
+    
+    .permission-item label {
+        margin: 0;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        color: #2c3e50;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .permission-item i {
+        font-size: 14px;
+    }
+    
+    .permission-create { color: #28a745; }
+    .permission-read { color: #007bff; }
+    .permission-update { color: #ffc107; }
+    .permission-delete { color: #dc3545; }
+    .permission-approve { color: #6f42c1; }
+    .permission-export { color: #17a2b8; }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .btn-save {
+        flex: 1;
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 16px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 15px rgba(20, 134, 12, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(20, 134, 12, 0.4);
+        color: white;
+    }
+    
+    .btn-secondary-custom {
+        background: #6c757d;
+        color: white;
+        padding: 15px 30px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .btn-secondary-custom:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .select-all-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .btn-select {
+        padding: 8px 20px;
+        border-radius: 8px;
+        border: 2px solid #14860C;
+        background: white;
+        color: #14860C;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    
+    .btn-select:hover {
+        background: #14860C;
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 15px 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .info-banner {
+        background: linear-gradient(135deg, #e3f2fd 0%, #fff3e0 100%);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        border-left: 4px solid #14860C;
+    }
+    
+    .info-banner h5 {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .info-banner p {
+        margin: 0;
+        color: #6c757d;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .permission-legend {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    @media (max-width: 768px) {
+        .routes-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .stats-banner {
+            flex-direction: column;
+        }
+        
+        .crud-permissions {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<div class="routes-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-header-content">
+            <h2><i class="icon-key"></i> Manage Granular Permissions</h2>
+            <p>Configure CRUD & Approval access for: <strong>{{ role_name }}</strong></p>
+        </div>
+        <a href="{{ url_for('manage_roles') }}" class="btn-back">
+            <i class="icon-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    <strong>
+                        {% if category == 'success' %}✓{% elif category == 'danger' %}✗{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}
+                    </strong>
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Info Banner -->
+    <div class="info-banner">
+        <h5><i class="icon-info"></i> CRUD & Approval-Based Access Control</h5>
+        <p>
+            Select endpoints and specify granular permissions for each one. This allows you to control exactly what actions 
+            users with this role can perform on each endpoint.
+        </p>
+        <div class="permission-legend">
+            <div class="legend-item permission-create">
+                <i class="icon-plus"></i> Create - Add new records
+            </div>
+            <div class="legend-item permission-read">
+                <i class="icon-eye"></i> Read - View data
+            </div>
+            <div class="legend-item permission-update">
+                <i class="icon-pencil"></i> Update - Edit records
+            </div>
+            <div class="legend-item permission-delete">
+                <i class="icon-trash"></i> Delete - Remove records
+            </div>
+            <div class="legend-item permission-approve">
+                <i class="icon-check"></i> Approve - Approve requests/changes
+            </div>
+            <div class="legend-item permission-export">
+                <i class="icon-cloud-download"></i> Export - Download data
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Banner -->
+    <div class="stats-banner">
+        <div class="stat-item">
+            <div class="value">{{ all_routes|length }}</div>
+            <div class="label">Total Endpoints</div>
+        </div>
+        <div class="stat-item">
+            <div class="value" id="selectedCount">{{ assigned_route_ids|length }}</div>
+            <div class="label">Enabled</div>
+        </div>
+        <div class="stat-item">
+            <div class="value" id="unselectedCount">{{ all_routes|length - assigned_route_ids|length }}</div>
+            <div class="label">Disabled</div>
+        </div>
+    </div>
+    
+    <!-- Routes Management Card -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="icon-settings"></i> Configure Endpoint Permissions</h4>
+            <span style="font-size: 14px; opacity: 0.9;">
+                Check endpoint + Select specific permissions
+            </span>
+        </div>
         <div class="card-body">
-            <form method="POST">
-                <div class="row">
+            <form method="POST" id="routesForm">
+                <!-- Search and Select All Controls -->
+                <div class="search-filter-section">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="search-box">
+                                <i class="icon-magnifier"></i>
+                                <input type="text" id="searchRoutes" placeholder="Search endpoints..." 
+                                       onkeyup="filterRoutes()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="select-all-controls">
+                                <button type="button" class="btn-select" onclick="selectAll()">
+                                    <i class="icon-check"></i> Select All
+                                </button>
+                                <button type="button" class="btn-select" onclick="deselectAll()">
+                                    <i class="icon-close"></i> Deselect All
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Routes Grid -->
+                <div class="routes-grid" id="routesGrid">
                     {% for route in all_routes %}
-                    <div class="col-md-4 mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                   name="routes" value="{{ route[0] }}"
-                                   id="route_{{ route[0] }}"
-                                   {% if route[0] in assigned_routes %}checked{% endif %}>
-                            <label class="form-check-label" for="route_{{ route[0] }}">
-                                {{ route[1] }} <small class="text-muted">({{ route[2] }})</small>
+                    {% set perms = route_permissions.get(route.route_id, {}) %}
+                    {% set is_checked = route.route_id in assigned_route_ids %}
+                    <div class="route-card {% if is_checked %}checked{% endif %}" 
+                         data-route-id="{{ route.route_id }}"
+                         data-route-name="{{ route.route_name|lower }}" 
+                         data-description="{{ route.description|lower if route.description else '' }}">
+                        <div class="route-header">
+                            <input type="checkbox" 
+                                   class="route-main-checkbox" 
+                                   name="routes" 
+                                   value="{{ route.route_id }}" 
+                                   id="route_{{ route.route_id }}"
+                                   {% if is_checked %}checked{% endif %}
+                                   onchange="toggleRouteCard(this)">
+                            <label class="route-name" for="route_{{ route.route_id }}">
+                                {{ route.route_name }}
                             </label>
+                        </div>
+                        <div class="route-description">
+                            {{ route.description or 'No description available' }}
+                        </div>
+                        
+                        <!-- CRUD Permissions -->
+                        <div class="crud-permissions">
+                            <div class="permission-item {% if perms.can_create %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_create_{{ route.route_id }}" 
+                                       id="create_{{ route.route_id }}"
+                                       {% if perms.can_create %}checked{% endif %}>
+                                <label for="create_{{ route.route_id }}">
+                                    <i class="icon-plus permission-create"></i> Create
+                                </label>
+                            </div>
+                            
+                            <div class="permission-item {% if perms.can_read %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_read_{{ route.route_id }}" 
+                                       id="read_{{ route.route_id }}"
+                                       {% if perms.can_read %}checked{% endif %}>
+                                <label for="read_{{ route.route_id }}">
+                                    <i class="icon-eye permission-read"></i> Read
+                                </label>
+                            </div>
+                            
+                            <div class="permission-item {% if perms.can_update %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_update_{{ route.route_id }}" 
+                                       id="update_{{ route.route_id }}"
+                                       {% if perms.can_update %}checked{% endif %}>
+                                <label for="update_{{ route.route_id }}">
+                                    <i class="icon-pencil permission-update"></i> Update
+                                </label>
+                            </div>
+                            
+                            <div class="permission-item {% if perms.can_delete %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_delete_{{ route.route_id }}" 
+                                       id="delete_{{ route.route_id }}"
+                                       {% if perms.can_delete %}checked{% endif %}>
+                                <label for="delete_{{ route.route_id }}">
+                                    <i class="icon-trash permission-delete"></i> Delete
+                                </label>
+                            </div>
+                            
+                            <div class="permission-item {% if perms.can_approve %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_approve_{{ route.route_id }}" 
+                                       id="approve_{{ route.route_id }}"
+                                       {% if perms.can_approve %}checked{% endif %}>
+                                <label for="approve_{{ route.route_id }}">
+                                    <i class="icon-check permission-approve"></i> Approve
+                                </label>
+                            </div>
+                            
+                            <div class="permission-item {% if perms.can_export %}active{% endif %}" 
+                                 onclick="togglePermission(this, event)">
+                                <input type="checkbox" 
+                                       name="can_export_{{ route.route_id }}" 
+                                       id="export_{{ route.route_id }}"
+                                       {% if perms.can_export %}checked{% endif %}>
+                                <label for="export_{{ route.route_id }}">
+                                    <i class="icon-cloud-download permission-export"></i> Export
+                                </label>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <a href="{{ url_for('manage_roles') }}" class="btn btn-secondary">Back to Roles</a>
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button type="submit" class="btn-save">
+                        <i class="icon-check"></i> Save All Permissions
+                    </button>
+                    <a href="{{ url_for('manage_roles') }}" class="btn-secondary-custom">
+                        <i class="icon-close"></i> Cancel
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    function toggleRouteCard(checkbox) {
+        const card = checkbox.closest('.route-card');
+        if (checkbox.checked) {
+            card.classList.add('checked');
+            // Auto-check "Read" permission when enabling a route
+            const readCheckbox = card.querySelector('[id^="read_"]');
+            if (readCheckbox && !readCheckbox.checked) {
+                readCheckbox.checked = true;
+                readCheckbox.closest('.permission-item').classList.add('active');
+            }
+        } else {
+            card.classList.remove('checked');
+            // Uncheck all CRUD permissions when disabling route
+            card.querySelectorAll('.permission-item input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+                cb.closest('.permission-item').classList.remove('active');
+            });
+        }
+        updateStats();
+    }
+    
+    function togglePermission(item, event) {
+        if (event.target.tagName !== 'INPUT') {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+        }
+        
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (checkbox.checked) {
+            item.classList.add('active');
+            // Auto-enable the route if any permission is checked
+            const card = item.closest('.route-card');
+            const mainCheckbox = card.querySelector('.route-main-checkbox');
+            if (!mainCheckbox.checked) {
+                mainCheckbox.checked = true;
+                card.classList.add('checked');
+                updateStats();
+            }
+        } else {
+            item.classList.remove('active');
+        }
+    }
+    
+    function selectAll() {
+        document.querySelectorAll('.route-card:not([style*="display: none"]) .route-main-checkbox').forEach(cb => {
+            if (!cb.checked) {
+                cb.checked = true;
+                toggleRouteCard(cb);
+            }
+        });
+    }
+    
+    function deselectAll() {
+        document.querySelectorAll('.route-card:not([style*="display: none"]) .route-main-checkbox').forEach(cb => {
+            if (cb.checked) {
+                cb.checked = false;
+                toggleRouteCard(cb);
+            }
+        });
+    }
+    
+    function updateStats() {
+        const total = document.querySelectorAll('.route-main-checkbox').length;
+        const selected = document.querySelectorAll('.route-main-checkbox:checked').length;
+        const unselected = total - selected;
+        
+        document.getElementById('selectedCount').textContent = selected;
+        document.getElementById('unselectedCount').textContent = unselected;
+    }
+    
+    function filterRoutes() {
+        const searchValue = document.getElementById('searchRoutes').value.toLowerCase();
+        const cards = document.querySelectorAll('.route-card');
+        
+        cards.forEach(card => {
+            const routeName = card.getAttribute('data-route-name');
+            const description = card.getAttribute('data-description');
+            
+            if (routeName.includes(searchValue) || description.includes(searchValue)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 500);
+        });
+    }, 5000);
+</script>
 {% endblock %}
