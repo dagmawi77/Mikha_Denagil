@@ -1,284 +1,259 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>የአቴንዳንስ ሪፖርት</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% extends "base.html" %}
 
-    <style>
-        /* Basic button styles */
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            font-size: 16px;
-            text-align: center;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s, transform 0.3s;
-        }
+{% block title %}Attendance Report - የአቴንዳንስ ሪፖርት{% endblock %}
 
-        /* Button colors */
-        .btn-primary {
-            background-color: #007bff;
-        }
-        .btn-secondary {
-            background-color: #6c757d;
-        }
+{% block content %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .report-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .present { background: #d4edda; color: #155724; }
+    .absent { background: #f8d7da; color: #721c24; }
+    .sick { background: #fff3cd; color: #856404; }
+</style>
 
-        /* Animated button styles */
-        .btn-animated {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-animated::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 300%;
-            height: 300%;
-            background: rgba(255, 255, 255, 0.3);
-            transition: transform 0.5s ease;
-            transform: translate(-50%, -50%) scale(0);
-            border-radius: 50%;
-        }
-
-        .btn-animated:hover::before {
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .btn-animated:hover {
-            background-color: #0056b3;
-            transform: scale(1.05);
-        }
-        
-        /* Make sure flatpickr inputs have calendar icon */
-        .flatpickr-input {
-            background-color: white;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    {% extends "base.html" %}
-    {% block content %}
-
-    <div class="container mt-1">
-        <h1 class="mb-4">የአቴንዳንስ ሪፖርት</h1>
-
-        <form method="get" action="{{ url_for('attendance_report') }}">
-            <div class="row mb-3">
-                <!-- Search Field -->
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" value="{{ search_query }}" placeholder="በስልክ ወይም በስም ፈልግ">
-                    </div>
-                </div>
-        
-                <!-- Branch Dropdown -->
-                <div class="col-md-4 mb-3">
-                    <div class="input-group">
-                        <label class="input-group-text" for="branch">ክፍል</label>
-                        <select name="branch" class="form-select" id="branch">
-                            <option value="All">ሁሉም ክፍል</option>
-                            {% for branch in branches %}
-                                <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="report-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-file-text me-3"></i>የአቴንዳንስ ሪፖርት - Attendance Report</h2>
+                <p class="mb-0" style="opacity: 0.9;">View, filter, and export attendance records</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group" role="group">
+                    <a href="?{{ request.query_string.decode() }}&format=excel" class="btn btn-light" style="border-radius: 10px 0 0 10px;">
+                        <i class="fa fa-file-excel-o me-2"></i>Excel
+                    </a>
+                    <a href="?{{ request.query_string.decode() }}&format=pdf" class="btn btn-light">
+                        <i class="fa fa-file-pdf-o me-2"></i>PDF
+                    </a>
+                    <a href="?{{ request.query_string.decode() }}&format=csv" class="btn btn-light" style="border-radius: 0 10px 10px 0;">
+                        <i class="fa fa-file-code-o me-2"></i>CSV
+                    </a>
                 </div>
             </div>
-            
-            <div class="row mb-3">
-                <!-- Start Date Field -->
-                <div class="col-md-3">
-                    <input type="text" name="start_date" class="form-control flatpickr-input" placeholder="Select Start Date" readonly>
-                </div>
-                
-                <!-- End Date Field -->
-                <div class="col-md-3">
-                    <input type="text" name="end_date" class="form-control flatpickr-input" placeholder="Select End Date" readonly>
-                </div>
-                
-                <!-- Search Button -->
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">Search</button>
-                </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #14860C;">{{ total }}</div>
+                <div class="stat-label">Total Records<br>ጠቅላላ መዝገቦች</div>
             </div>
-            <br>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #28a745;">
+                    {{ payments|selectattr('6', 'equalto', 'Present')|list|length if payments else 0 }}
+                </div>
+                <div class="stat-label">Present<br>የነበሩ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #dc3545;">
+                    {{ payments|selectattr('6', 'equalto', 'Absent')|list|length if payments else 0 }}
+                </div>
+                <div class="stat-label">Absent<br>ያልነበሩ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #ffc107;">
+                    {{ payments|selectattr('6', 'equalto', 'Sick')|list|length if payments else 0 }}
+                </div>
+                <div class="stat-label">Sick<br>በሽተኞች</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="filter-card">
+        <h4 class="mb-3" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-filter me-2"></i>Advanced Filters - የላቀ ማጣሪያ
+        </h4>
         
-            <!-- Export Buttons -->
-            <div class="row">
-                <div class="col-md-4">
-                    <a href="{{ url_for('attendance_report', format='csv', search=search_query, start_date=start_date, end_date=end_date, branch=selected_branch) }}" class="btn btn-animated btn-primary w-100">Export as CSV</a>
+        <form method="GET" action="{{ url_for('attendance_report') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Search by Name or Phone</label>
+                    <input type="text" name="search" class="form-control" value="{{ search_query }}" placeholder="🔍 በስም ወይም ስልክ ፈልግ">
                 </div>
-                <div class="col-md-4">
-                    <a href="{{ url_for('attendance_report', format='pdf', search=search_query, start_date=start_date, end_date=end_date, branch=selected_branch) }}" class="btn btn-animated btn-secondary w-100">Export as PDF</a>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Filter by Section</label>
+                    <select name="branch" class="form-select">
+                        <option value="All" {% if selected_branch == 'All' %}selected{% endif %}>All Sections</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch }}" {% if selected_branch == branch %}selected{% endif %}>{{ branch }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="col-md-4">
-                    <a href="{{ url_for('attendance_report', format='excel', search=search_query, start_date=start_date, end_date=end_date, branch=selected_branch) }}" class="btn btn-animated btn-secondary w-100">Export as Excel</a>
+                
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Start Date</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">End Date</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">&nbsp;</label>
+                    <button type="submit" class="btn btn-success w-100" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); border: none; border-radius: 10px; font-weight: 600;">
+                        <i class="fa fa-search me-2"></i>Filter
+                    </button>
                 </div>
             </div>
         </form>
-
+    </div>
+    
+    <!-- Attendance Records Table -->
+    <div class="report-table-card">
+        <div class="table-header">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h4 class="mb-0"><i class="fa fa-table me-2"></i>Attendance Records - የመገኘት መዝገቦች</h4>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="badge bg-light text-dark" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        Showing {{ payments|length }} of {{ total }} records
+                    </span>
+                </div>
+            </div>
+        </div>
         
-
-        <!-- Paid Bills Table -->
-        <!-- <div class="table-responsive">
-            <table class="table table-striped table-bordered">
-                <thead class="thead-dark">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
                     <tr>
-                        <th>Payment Key</th>
-                        <th>Bill Key</th>
-                        <th>Customer Key</th>
-                        <th>Amount</th>
-                        <th>Bank Txn Ref</th>
-                        <th>Payment Channel</th>
-                        <th>Payment Date</th>
-                        <th>Request ID</th>
-                        <th>Channel</th>
+                        <th>Full Name<br>ሙሉ ስም</th>
+                        <th>Gender<br>ፆታ</th>
+                        <th>Christian Name<br>ክርስትና ስም</th>
+                        <th>Phone<br>ስልክ</th>
+                        <th>Section<br>ክፍል</th>
+                        <th>Date<br>ቀን</th>
+                        <th>Status<br>ሁኔታ</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for payment in payments %}
-                    <tr>
-                        <td>{{ payment[0] }}</td>
-                        <td>{{ payment[1] }}</td>
-                        <td>{{ payment[2] }}</td>
-                        <td>{{ payment[3] }}</td>
-                        <td>{{ payment[4] }}</td>
-                        <td>{{ payment[5] }}</td>
-                        <td>{{ payment[6] }}</td>
-                        <td>{{ payment[7] }}</td>
-                        <td>{{ payment[8] }}</td>
-                    </tr>
-                    {% endfor %}
+                    {% if payments %}
+                        {% for record in payments %}
+                        <tr>
+                            <td><strong>{{ record[0] }}</strong></td>
+                            <td>
+                                <span class="badge {% if record[1] == 'ወንድ' %}bg-info{% else %}bg-danger{% endif %}">
+                                    {{ record[1] }}
+                                </span>
+                            </td>
+                            <td>{{ record[2] or '-' }}</td>
+                            <td>{{ record[3] or '-' }}</td>
+                            <td><span class="badge bg-success">{{ record[4] }}</span></td>
+                            <td>{{ record[5] }}</td>
+                            <td>
+                                {% if record[6] == 'Present' %}
+                                <span class="status-badge present">✓ Present</span>
+                                {% elif record[6] == 'Absent' %}
+                                <span class="status-badge absent">✗ Absent</span>
+                                {% elif record[6] == 'Sick' %}
+                                <span class="status-badge sick">🏥 Sick</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ record[6] }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fa fa-calendar-times-o fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No attendance records found</h5>
+                                <p class="text-muted">Try adjusting your filters or date range</p>
+                            </td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
-    </div> -->
-
-    <div class="table-responsive"></div>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-      
-                <th>ሙሉ ስም</th>
-                <th>GENDER</th>
-                <th>የክርስትና ስምስም</th>
-                <th>ስልክስልክ</th>
-                <th>ክፍል</th>
-                <th>አቴንዳንስ የተያዘበት ቀን</th>
-                <th>የአቴንዳንስ ሁኔታ</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for payment in payments %}
-            <tr>
-                <td>{{ payment[0] }}</td>  <!-- Bill Key -->
-                <td>{{ payment[1] }}</td>  <!-- Customer Key -->
-                <td>{{ payment[2] }}</td>  <!-- Customer Name -->
-                <td>{{ payment[3] }}</td>  <!-- Branch -->
-                <td>{{ payment[4] }}</td>  <!-- Amount -->
-                <td>{{ payment[5] }}</td>
-                <td>{{ payment[6] }}</td> 
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5">No results found</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-
-    <!-- Pagination Controls -->
-    <!-- <nav aria-label="Page navigation">
-        <ul class="pagination">
-            {% if page > 1 %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('attendance_report', page=page-1, branch=selected_branch) }}">Previous</a>
-            </li>
-            {% endif %}
-            
-            {% for p in range(1, pages + 1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('attendance_report', page=p, branch=selected_branch) }}">{{ p }}</a>
-            </li>
-            {% endfor %}
-            
-            {% if page < pages %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('attendance_report', page=page+1, branch=selected_branch) }}">Next</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav> -->
-    <nav aria-label="Page navigation">
-        <ul class="pagination flex-wrap justify-content-center">
-            {% set page_window = 50 %}
-            {% set current_block = (page - 1) // page_window %}
-            {% set start_page = current_block * page_window + 1 %}
-            {% set end_page = start_page + page_window - 1 if start_page + page_window - 1 < pages else pages %}
-    
-            {% if page > 1 %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('attendance_report', page=page-1, branch=selected_branch) }}">« Prev</a>
-            </li>
-            {% endif %}
-    
-            {% for p in range(start_page, end_page + 1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('attendance_report', page=p, branch=selected_branch) }}">{{ p }}</a>
-            </li>
-            {% endfor %}
-    
-            {% if end_page < pages %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('attendance_report', page=end_page + 1, branch=selected_branch) }}">Next »</a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    
-</div>
+        
+        <!-- Pagination -->
+        {% if pages > 1 %}
+        <div class="p-3 bg-light">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page - 1 }}&search={{ search_query }}&branch={{ selected_branch }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                            <i class="fa fa-chevron-left"></i> Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for p in range(1, pages + 1) %}
+                        {% if p == page %}
+                        <li class="page-item active">
+                            <span class="page-link" style="background: #14860C; border-color: #14860C;">{{ p }}</span>
+                        </li>
+                        {% elif p <= 3 or p > pages - 3 or (p >= page - 1 and p <= page + 1) %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ p }}&search={{ search_query }}&branch={{ selected_branch }}&start_date={{ start_date }}&end_date={{ end_date }}">{{ p }}</a>
+                        </li>
+                        {% elif p == 4 or p == pages - 3 %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page < pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page + 1 }}&search={{ search_query }}&branch={{ selected_branch }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                            Next <i class="fa fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
-    <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
-    <script>
-        // Initialize flatpickr with 24-hour format and seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            flatpickr("input[name='start_date']", {
-                enableTime: true,
-                time_24hr: true,
-                dateFormat: "Y-m-d",
-                enableSeconds: true,
-                defaultDate: "{{ start_date }}",
-                allowInput: false, // Disable manual input
-                clickOpens: true // Ensure calendar opens on click
-            });
-            
-            flatpickr("input[name='end_date']", {
-                enableTime: true,
-                time_24hr: true,
-                dateFormat: "Y-m-d",
-                enableSeconds: true,
-                defaultDate: "{{ end_date }}",
-                allowInput: false, // Disable manual input
-                clickOpens: true // Ensure calendar opens on click
-            });
-        });
-    </script>
-    {% endblock %}
-</body>
-</html>
+{% endblock %}

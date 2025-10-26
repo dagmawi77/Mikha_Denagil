@@ -11,6 +11,118 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist/css/chartist.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist-plugin-tooltips/css/chartist-plugin-tooltip.css') }}">
+    
+    <!-- CUSTOM GREEN THEME - MUST BE LAST TO OVERRIDE ALL OTHER STYLES -->
+    <style>
+        /* FORCE GREEN SIDEBAR BACKGROUND - Override all other styles */
+        .nk-sidebar,
+        .nk-sidebar * {
+            background: linear-gradient(180deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        /* FORCE GREEN HEADER BACKGROUND */
+        .header,
+        .header-content,
+        .header-content.clearfix {
+            background: linear-gradient(135deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        /* Header text white */
+        .header *,
+        .header-content *,
+        .header a,
+        .header span,
+        .header i {
+            color: #ffffff !important;
+        }
+        
+        /* FORCE WHITE TEXT - Override all other styles */
+        .metismenu,
+        .metismenu *,
+        .metismenu a,
+        .metismenu li,
+        .metismenu li a,
+        .metismenu ul,
+        .metismenu ul a,
+        .metismenu ul li,
+        .metismenu ul li a,
+        .nav-text,
+        .menu-icon,
+        .metismenu i,
+        .metismenu span {
+            color: #ffffff !important;
+            background: transparent !important;
+        }
+        
+        /* Main menu items - Force white text */
+        .metismenu > li > a {
+            color: #ffffff !important;
+            background: transparent !important;
+            transition: all 0.3s ease;
+        }
+        
+        /* Hover effects */
+        .metismenu > li:hover > a,
+        .metismenu > li.active > a {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Submenu items - Force white text */
+        .metismenu ul a,
+        .metismenu ul li a {
+            color: #ffffff !important;
+            background: transparent !important;
+        }
+        
+        .metismenu ul a:hover,
+        .metismenu ul li a:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        /* Icons - Force white */
+        .metismenu i,
+        .menu-icon {
+            color: #ffffff !important;
+        }
+        
+        /* Nav text - Force white */
+        .nav-text {
+            color: #ffffff !important;
+        }
+        
+        /* Override any existing sidebar styles */
+        #sidebar,
+        #sidebar * {
+            background: linear-gradient(180deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        #sidebar a,
+        #sidebar li,
+        #sidebar span,
+        #sidebar i {
+            color: #ffffff !important;
+        }
+        
+        /* Scrollbar styling */
+        .nk-nav-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .nk-nav-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nk-nav-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        
+        .nk-nav-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
 </head>
 <body>
     <!-- Preloader -->
@@ -23,13 +135,20 @@
     </div>
     <div id="main-wrapper">
     
-        <div class="nav-header">
+        <div class="nav-header" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
             <div class="brand-logo">
-                <a href="index.html">
-                    <b class="logo-abbr"><img src="images/logo.png" alt=""> </b>
-                    <span class="logo-compact"><img src="./images/logo-compact.png" alt=""></span>
-                    <span class="brand-title">
-                        <img src="images/logo-text.png" alt="">
+                <a href="{{ url_for('navigation') }}" style="display: flex; align-items: center; text-decoration: none;">
+                    <b class="logo-abbr">
+                        <img src="{{ url_for('static', filename='img/download.jpg') }}" alt="Logo" 
+                             style="border-radius: 50%; width: 55px; height: 55px; object-fit: cover; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                    </b>
+                    <span class="logo-compact">
+                        <img src="{{ url_for('static', filename='img/download.jpg') }}" alt="Logo" 
+                             style="border-radius: 50%; width: 45px; height: 45px; object-fit: cover; border: 2px solid #fff;">
+                    </span>
+                    <span class="brand-title" style="color: #fff; font-weight: bold; font-size: 20px; margin-left: 12px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        Mikha Denagil<br>
+                        <small style="font-size: 12px; opacity: 0.9;">ምክሐ ደናግል</small>
                     </span>
                 </a>
             </div>
@@ -46,131 +165,11 @@
                     </div>
                     <div class="header-left">
                         <div class="input-group icons">
-                            <!-- <div class="input-group-prepend">
-                                <span class="input-group-text bg-transparent border-0 pr-2 pr-sm-3" id="basic-addon1"><i class="mdi mdi-magnify"></i></span>
-                            </div> -->
-                            <!-- <input type="search" class="form-control" placeholder="Search Dashboard" aria-label="Search Dashboard"> -->
-                            <!-- <div class="drop-down animated flipInX d-md-none">
-                                <form action="#">
-                                    <input type="text" class="form-control" placeholder="Search">
-                                </form>
-                            </div> -->
-                        </div>
+                                                    </div>
                     </div>
                     <div class="header-right">
                         <ul class="clearfix">
-                            <!-- <li class="icons dropdown"><a href="javascript:void(0)" data-toggle="dropdown">
-                                    <i class="mdi mdi-email-outline"></i>
-                                    <span class="badge badge-pill gradient-1">3</span>
-                                </a>
-                                <div class="drop-down animated fadeIn dropdown-menu">
-                                    <div class="dropdown-content-heading d-flex justify-content-between">
-                                        <span class="">3 New Messages</span>  
-                                        <a href="javascript:void()" class="d-inline-block">
-                                            <span class="badge badge-pill gradient-1">3</span>
-                                        </a>
-                                    </div>
-                                    <div class="dropdown-content-body">
-                                         <ul>
-                                            <li class="notification-unread">
-                                                <a href="javascript:void()">
-                                                    <img class="float-left mr-3 avatar-img" src="images/avatar/1.jpg" alt="">
-                                                    <div class="notification-content">
-                                                        <div class="notification-heading">Saiful Islam</div>
-                                                        <div class="notification-timestamp">08 Hours ago</div>
-                                                        <div class="notification-text">Hi Teddy, Just wanted to let you ...</div>
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li class="notification-unread">
-                                                <a href="javascript:void()">
-                                                    <img class="float-left mr-3 avatar-img" src="images/avatar/2.jpg" alt="">
-                                                    <div class="notification-content">
-                                                        <div class="notification-heading">Adam Smith</div>
-                                                        <div class="notification-timestamp">08 Hours ago</div>
-                                                        <div class="notification-text">Can you do me a favour?</div>
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <img class="float-left mr-3 avatar-img" src="images/avatar/3.jpg" alt="">
-                                                    <div class="notification-content">
-                                                        <div class="notification-heading">Barak Obama</div>
-                                                        <div class="notification-timestamp">08 Hours ago</div>
-                                                        <div class="notification-text">Hi Teddy, Just wanted to let you ...</div>
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <img class="float-left mr-3 avatar-img" src="images/avatar/4.jpg" alt="">
-                                                    <div class="notification-content">
-                                                        <div class="notification-heading">Hilari Clinton</div>
-                                                        <div class="notification-timestamp">08 Hours ago</div>
-                                                        <div class="notification-text">Hello</div>
-                                                    </div>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                        
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="icons dropdown"><a href="javascript:void(0)" data-toggle="dropdown">
-                                    <i class="mdi mdi-bell-outline"></i>
-                                    <span class="badge badge-pill gradient-2">3</span>
-                                </a>
-                                <div class="drop-down animated fadeIn dropdown-menu dropdown-notfication">
-                                    <div class="dropdown-content-heading d-flex justify-content-between">
-                                        <span class="">2 New Notifications</span>  
-                                        <a href="javascript:void()" class="d-inline-block">
-                                            <span class="badge badge-pill gradient-2">5</span>
-                                        </a>
-                                    </div>
-                                    <div class="dropdown-content-body">
-                                        <ul>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <span class="mr-3 avatar-icon bg-success-lighten-2"><i class="icon-present"></i></span>
-                                                    <div class="notification-content">
-                                                        <h6 class="notification-heading">Events near you</h6>
-                                                        <span class="notification-text">Within next 5 days</span> 
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <span class="mr-3 avatar-icon bg-danger-lighten-2"><i class="icon-present"></i></span>
-                                                    <div class="notification-content">
-                                                        <h6 class="notification-heading">Event Started</h6>
-                                                        <span class="notification-text">One hour ago</span> 
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <span class="mr-3 avatar-icon bg-success-lighten-2"><i class="icon-present"></i></span>
-                                                    <div class="notification-content">
-                                                        <h6 class="notification-heading">Event Ended Successfully</h6>
-                                                        <span class="notification-text">One hour ago</span>
-                                                    </div>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="javascript:void()">
-                                                    <span class="mr-3 avatar-icon bg-danger-lighten-2"><i class="icon-present"></i></span>
-                                                    <div class="notification-content">
-                                                        <h6 class="notification-heading">Events to Join</h6>
-                                                        <span class="notification-text">After two days</span> 
-                                                    </div>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                        
-                                    </div>
-                                </div>
-                            </li> -->
+                            
                             <li class="icons dropdown d-none d-md-flex">
                                 <a href="javascript:void(0)" class="log-user"  data-toggle="dropdown">
                                     <span>English</span>  <i class="fa fa-angle-down f-s-14" aria-hidden="true"></i>
@@ -239,9 +238,9 @@
                             </a>
                             <ul aria-expanded="false">
                                 <li><a href="{{url_for('manage_members')}}">አባላት መመዝገቢያ</a></li>
+                                <li><a href="{{url_for('member_report')}}">የአባላት ሪፖርት</a></li>
                                 <li><a href="{{url_for('upload_member_registration')}}">አባላት Upload ማድረጊያ</a></li>
                                 <li><a href="{{url_for('attendance')}}">አባላት (Attendance)</a></li>
-                                <!-- <li><a href="./index-2.html">Home 2</a></li> -->
                             </ul>
                         </li>
                         <li class="mega-menu mega-menu-sm">
@@ -250,41 +249,45 @@
                             </a>
                             <ul aria-expanded="false">
                                 <li><a href="{{url_for('attendance_report')}}">የአቴንዳንስ ሪፖርት</a></li>
-                        </ul>
-                
-                        <li class="mega-menu mega-menu-sm">
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-note menu-icon"></i><span class="nav-text">Reports</span>
-                            </a>
-                        
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('report_page')}}">Summary Reports</a></li>
-                                <li><a href="{{url_for('list_paid_bills')}}">List Of Paid Bills</a></li>
-                                <li><a href="{{url_for('list_sent_bills')}}">List Of Sent Bills</a></li>
-                                <li><a href="{{url_for('list_unsettled_bills')}}">List Of Unsettled Bills</a></li>
-                                <li><a href="{{url_for('bill_table_ubs_export')}}">Bill Data</a></li>
-                                <li><a href="{{url_for('call_center_unsettled')}}">Unsettled Bills For Call Center</a></li>
-                                <li><a href="{{url_for('delivery_route_export')}}">Delivery Summary by Book</a>
-                                <li><a href="{{url_for('settled_route_export')}}">Settled Summary by Book</a>
-                                <li><a href="{{url_for('unsettled_route_export')}}">Unsettled Summary by Book</a>
-                                <li><a href="{{url_for('delivery_cg_export')}}">Delivery Summary by Charge Group</a>
-                                <li><a href="{{url_for('settled_cg_export')}}">Settled Summary by Charge Group</a>
-                                <li><a href="{{url_for('unsettled_cg_export')}}">UnSettled Summary by Charge Group</a>
-                                <li><a href="{{url_for('gl_detail_export')}}">GL Detail Report For Finance</a>
-                                <li><a href="{{url_for('list_unmatched')}}">List Of Un match</a></li>
                             </ul>
                         </li>
-                        <li class="nav-label">Admin Tools</li>
+                        
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-speedometer menu-icon"></i> <span class="nav-text">Upload and Download</span>
+                                <i class="icon-book-open menu-icon"></i><span class="nav-text">መፅሀፍት ቤት - Library</span>
                             </a>
                             <ul aria-expanded="false">
-                                <li><a href="{{url_for('upload_bill')}}">Upload BillS</a></li>
-                                <li><a href="{{url_for('upload_vat')}}">Upload VAT</a></li>
-                                <li><a href="{{url_for('move_data')}}">Move Old Bills</a></li>
+                                <li><a href="{{url_for('manage_books')}}">መፅሀፍት መመዝገቢያ</a></li>
+                                <li><a href="{{url_for('borrow_management')}}">መዋስ አስተዳደር</a></li>
+                                <li><a href="{{url_for('book_report')}}">መፅሀፍት ሪፖርት</a></li>
+                                <li><a href="{{url_for('borrow_report')}}">መዋስ ሪፖርት</a></li>
                             </ul>
                         </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-wallet menu-icon"></i><span class="nav-text">መዋጮ - MEWACO</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('mewaco_types')}}">የመዋጮ አይነቶች</a></li>
+                                <li><a href="{{url_for('monthly_contributions')}}">የወር መዋጮ አሰባሰብ</a></li>
+                                <li><a href="{{url_for('contribution_report_monthly')}}">የወር መዋጮ ሪፖርት</a></li>
+                                <li><a href="{{url_for('member_contribution_summary')}}">የአባላት መዋጮ ማጠቃለያ</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-layers menu-icon"></i><span class="nav-text">ምድብ - Section & Medebe</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('medebe_management')}}">ምድብ አስተዳደር</a></li>
+                                <li><a href="{{url_for('member_medebe_assignment')}}">የአባላት ምድብ መመደቢያ</a></li>
+                                <li><a href="{{url_for('medebe_report')}}">የምድብ ሪፖርት</a></li>
+                                <li><a href="{{url_for('member_medebe_report')}}">የአባላት ምድብ ሪፖርት</a></li>
+                            </ul>
+                        </li>
+                        
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
                                 <i class="icon-user menu-icon"></i><span class="nav-text">User Managment</span>
@@ -297,141 +300,12 @@
 
                             </ul>
                         </li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-graph menu-icon"></i> <span class="nav-text">Charts</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="#">Sent Vs Paid</a></li>
-                                <li><a href="#">Month Comparison</a></li>
-                                <li><a href="#">Active User</a></li>
-                                <li><a href="./chart-peity.html">Peity</a></li>
-                            </ul>
-                        </li>
-
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-graph menu-icon"></i> <span class="nav-text">Finance Reconslilation</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('reconciliation')}}">Reconslilation</a></li>
-                                <li><a href="{{url_for('reconciliation')}}">Reconslilation Result</a></li>
-                                <li><a href="#">Active User</a></li>
-                                <li><a href="./chart-peity.html">Peity</a></li>
-                            </ul>
-                        </li>
                         
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-graph menu-icon"></i> <span class="nav-text">Customer Service</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('payment_management')}}">Bill Correction</a></li>
-                                <li><a href="{{url_for('bill_current_corr_export')}}">Currect Month Bill Correction Report</a></li>
-                                <li><a href="{{url_for('bill_past_corr_export')}}">Past Month Bill Correction Report</a></li>
-                                <li><a href="{{url_for('bulk_payments')}}">Bulk Update</a></li>
-                                <li><a href="{{url_for('upload_payment_unsent')}}">Bulk Update data</a></li>
-
-                            </ul>
-                        </li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-graph menu-icon"></i> <span class="nav-text">NRW Reports</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('bill_table_ubs_export')}}">Bill Data</a></li>
-                                <li><a href="{{url_for('xyz_export')}}">XYZ Coordinate Report</a></li>
-
-                            </ul>
-                        </li>
-                        <li class="nav-label">Past Month Reports</li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-grid menu-icon"></i><span class="nav-text">Monthily Reports</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('export_data')}}">Delivery</a></li>
-                                <li><a href="{{url_for('export_data_settled')}}">Settled</a></li>
-                                <li><a href="{{url_for('export_data_unsettled')}}">Unsettled</a></li>
-                                <li><a href="{{url_for('export_data_delivery_cg')}}">Delivery by Book Number</a></li>
-                                <li><a href="{{url_for('export_data_settled_cg')}}">settled by Book Number</a></li>
-                                
-                            <!-- </ul>
-                        </li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-layers menu-icon"></i><span class="nav-text">Components</span>
-                            </a>
-                            <ul aria-expanded="false"> -->
-                            </ul>
-                        </li>
-
+                        
+                        
 
 
                         
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-grid menu-icon"></i><span class="nav-text">Finance</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="{{url_for('export_data_gl')}}">GL Detail Report</a></li>
-                                <li><a href="#">Delivery For Finance</a></li>
-                                <li><a href="#">Settled For Finance</a></li>
-                                <li><a href="#">UnSettled For Finance</a></li>
-                            <!-- </ul>
-                        </li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-layers menu-icon"></i><span class="nav-text">Components</span>
-                            </a>
-                            <ul aria-expanded="false"> -->
-                            </ul>
-                        </li>
-                        <li>
-                            <a href="widgets.html" aria-expanded="false">
-                                <i class="icon-badge menu-icon"></i><span class="nav-text">Futuer Implement</span>
-                            </a>
-                        </li>
-                        <li class="nav-label">Futuer</li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-note menu-icon"></i><span class="nav-text">Futuer Implement</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="#">Futuer 1</a></li>
-                                <li><a href="#">Futuer 2</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-label">Futuer Implement</li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-menu menu-icon"></i><span class="nav-text">Futuer</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="#" aria-expanded="false">Futuer 3</a></li>
-                                <li><a href="#" aria-expanded="false">Futuer 4</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-label">Setting</li>
-                        <li>
-                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-notebook menu-icon"></i><span class="nav-text">Setting</span>
-                            </a>
-                            <ul aria-expanded="false">
-                                <li><a href="#">Login</a></li>
-                                <li><a href="#">Register</a></li>
-                                <li><a href="#">Lock Screen</a></li>
-                                <!-- <li><a class="has-arrow" href="javascript:void()" aria-expanded="false">Error</a>
-                                    <ul aria-expanded="false">
-                                        <li><a href="./page-error-404.html">Error 404</a></li>
-                                        <li><a href="./page-error-403.html">Error 403</a></li>
-                                        <li><a href="./page-error-400.html">Error 400</a></li>
-                                        <li><a href="./page-error-500.html">Error 500</a></li>
-                                        <li><a href="./page-error-503.html">Error 503</a></li>
-                                    </ul> -->
-                                </li>
-                            </ul>
-                        </li>
                     </ul>
                 </div>
             </div>
@@ -461,5 +335,88 @@
     <script src="{{ url_for('static', filename='plugins/pg-calendar/js/pignose.calendar.min.js') }}"></script>
     <script src="{{ url_for('static', filename='plugins/chartist/js/chartist.min.js') }}"></script>
     <script src="{{ url_for('static', filename='plugins/chartist-plugin-tooltips/js/chartist-plugin-tooltip.min.js') }}"></script>
+    
+    <!-- JavaScript to force green sidebar and header -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Force green background on sidebar
+            const sidebar = document.querySelector('.nk-sidebar');
+            if (sidebar) {
+                sidebar.style.background = 'linear-gradient(180deg, #14860C 0%, #106b09 100%)';
+            }
+            
+            // Force green background on header
+            const header = document.querySelector('.header');
+            if (header) {
+                header.style.background = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+            }
+            
+            const headerContent = document.querySelector('.header-content');
+            if (headerContent) {
+                headerContent.style.background = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+            }
+            
+            // Force white text on all menu items
+            const menuItems = document.querySelectorAll('.metismenu, .metismenu *, .metismenu a, .metismenu li, .metismenu ul, .nav-text, .menu-icon');
+            menuItems.forEach(item => {
+                item.style.color = '#ffffff';
+                item.style.background = 'transparent';
+            });
+        });
+    </script>
+    
+    <!-- FINAL OVERRIDE - Force green sidebar, header and white text -->
+    <style>
+        /* ULTIMATE OVERRIDE - This will force the green theme */
+        body .nk-sidebar {
+            background: linear-gradient(180deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        body .nk-sidebar * {
+            color: #ffffff !important;
+        }
+        
+        /* FORCE GREEN HEADER */
+        body .header,
+        body .header-content,
+        body .header-content.clearfix {
+            background: linear-gradient(135deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        /* Header text white */
+        body .header *,
+        body .header-content *,
+        body .header a,
+        body .header span,
+        body .header i {
+            color: #ffffff !important;
+        }
+        
+        body .metismenu,
+        body .metismenu *,
+        body .metismenu a,
+        body .metismenu li,
+        body .metismenu li a,
+        body .metismenu ul,
+        body .metismenu ul a,
+        body .metismenu ul li,
+        body .metismenu ul li a,
+        body .nav-text,
+        body .menu-icon,
+        body .metismenu i,
+        body .metismenu span {
+            color: #ffffff !important;
+            background: transparent !important;
+        }
+        
+        /* Force sidebar background */
+        body #sidebar {
+            background: linear-gradient(180deg, #14860C 0%, #106b09 100%) !important;
+        }
+        
+        body #sidebar * {
+            color: #ffffff !important;
+        }
+    </style>
 </body>
 </html>

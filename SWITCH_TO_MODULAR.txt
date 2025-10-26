@@ -1,0 +1,74 @@
+========================================
+HOW TO SWITCH TO app_modular.py
+========================================
+
+CURRENT STATUS:
+- app.py is running and working ✓
+- app_modular.py has same fixes and is ready ✓
+
+========================================
+TO SWITCH TO MODULAR VERSION:
+========================================
+
+STEP 1: Stop app.py
+--------------------
+In the terminal where app.py is running, press:
+Ctrl + C
+
+STEP 2: Start app_modular.py
+-----------------------------
+python app_modular.py
+
+STEP 3: Access in browser
+--------------------------
+http://localhost:5001
+
+STEP 4: Hard refresh (clear cache)
+-----------------------------------
+Press: Ctrl + Shift + R
+Or: Ctrl + F5
+
+========================================
+BOTH VERSIONS HAVE SAME DATA:
+========================================
+
+✓ current_settled query (አጠቃላይ ሪፖርት)
+✓ Member statistics
+✓ Charts with real data
+✓ All endpoints working
+
+========================================
+CURRENT DATA IN DATABASE:
+========================================
+
+Total Members: 22
+- ወላጅ ክፍል: 11 members
+- ወጣት ክፍል: 4 members  
+- የሕፃናት ክፍል: 2 members
+- ማህከላዊያን ክፍል: 2 members
+
+This should all display in the dashboard!
+
+========================================
+IF STILL SHOWING "No data available":
+========================================
+
+1. Make sure the app restarted completely
+2. Clear browser cache (Ctrl+Shift+R)
+3. Check browser console for JavaScript errors (F12)
+4. Verify you're logged in as ADMIN001
+
+========================================
+RECOMMENDATION:
+========================================
+
+Since app.py is working perfectly now,
+you can:
+
+OPTION A: Keep using app.py (simpler)
+OPTION B: Switch to app_modular.py (cleaner code)
+
+Both work identically!
+
+========================================
+

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}MEWACO Contributions - የወርሃዊ መዋጮ{% endblock %}
+
+{% block content %}
+<style>
+    .contrib-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="contrib-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-money me-3"></i>የወርሃዊ መዋጮ - Monthly Contributions</h2>
+                <p class="mb-0" style="opacity: 0.9;">Record and manage member contributions</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light" onclick="window.print()" style="border-radius: 10px; font-weight: 600;">
+                    <i class="fa fa-print me-2"></i>Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ contrib_stats.total_contributions }}</div>
+                <div class="stat-label">Total Contributions<br>ጠቅላላ መዋጮዎች</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ "%.2f"|format(contrib_stats.total_amount) }}</div>
+                <div class="stat-label">Total Amount (Birr)<br>ጠቅላላ መጠን</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ contrib_stats.unique_contributors }}</div>
+                <div class="stat-label">Unique Contributors<br>ልዩ አበርካቾች</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #6f42c1;">{{ contrib_stats.types_used }}</div>
+                <div class="stat-label">Types Used<br>የተጠቀሙ አይነቶች</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Record Contribution Form -->
+    <div class="book-form-card mb-4">
+        <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-plus-circle me-2"></i>Record Contribution - መዋጮ መመዝገቢያ
+        </h4>
+        
+        <form method="POST" id="contribForm">
+            <input type="hidden" name="action" value="add">
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Select Member / አባል ምረጥ <span class="text-danger">*</span></label>
+                    <select class="form-control" name="member_id" required>
+                        <option value="">-- Select Member --</option>
+                        {% for member in members %}
+                        <option value="{{ member[0] }}">{{ member[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Contribution Type / የመዋጮ አይነት <span class="text-danger">*</span></label>
+                    <select class="form-control" name="mewaco_type_id" id="typeSelect" required>
+                        <option value="">-- Select Type --</option>
+                        {% for mtype in mewaco_types %}
+                        <option value="{{ mtype[0] }}" data-amount="{{ mtype[2] }}">
+                            {{ mtype[1] }} ({{ "%.2f"|format(mtype[2]) }} Birr)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Amount / መጠን (Birr) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="amount" id="amountInput" step="0.01" min="0" required placeholder="200.00">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Contribution Date / ቀን</label>
+                    <input type="date" class="form-control" name="contribution_date" id="contribDate">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Payment Method / የመክፈያ ዘዴ</label>
+                    <select class="form-control" name="payment_method">
+                        <option value="Cash">Cash - ጥሬ ገንዘብ</option>
+                        <option value="Bank Transfer">Bank Transfer - ባንክ ዝውውር</option>
+                        <option value="Mobile Money">Mobile Money - ሞባይል ገንዘብ</option>
+                        <option value="Check">Check - ቼክ</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Receipt Number / የደረሰኝ ቁጥር</label>
+                    <input type="text" class="form-control" name="receipt_number" placeholder="REC-001">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">&nbsp;</label>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-save me-2"></i>Record Contribution
+                    </button>
+                </div>
+                
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">Notes / ማስታወሻ</label>
+                    <textarea class="form-control" name="notes" rows="1" placeholder="Additional notes..."></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Filters -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Member</label>
+                <select class="form-control" name="member_id">
+                    <option value="">All Members</option>
+                    {% for member in members %}
+                    <option value="{{ member[0] }}" {% if member_filter == member[0]|string %}selected{% endif %}>
+                        {{ member[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Type</label>
+                <select class="form-control" name="type_id">
+                    <option value="">All Types</option>
+                    {% for mtype in mewaco_types %}
+                    <option value="{{ mtype[0] }}" {% if type_filter == mtype[0]|string %}selected{% endif %}>
+                        {{ mtype[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Contributions Table -->
+    <div class="book-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="contributionsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Member Name / የአባል ስም</th>
+                        <th>Contribution Type / አይነት</th>
+                        <th>Date / ቀን</th>
+                        <th>Amount (Birr) / መጠን</th>
+                        <th>Payment Method</th>
+                        <th>Receipt # / ደረሰኝ</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if contributions %}
+                        {% for contrib in contributions %}
+                        <tr>
+                            <td><strong>{{ contrib[0] }}</strong></td>
+                            <td>{{ contrib[1] }}</td>
+                            <td><span class="badge bg-info">{{ contrib[2] }}</span></td>
+                            <td>{{ contrib[3] }}</td>
+                            <td><strong style="color: #14860C;">{{ "%.2f"|format(contrib[4]) }} Birr</strong></td>
+                            <td>{{ contrib[5] }}</td>
+                            <td>{{ contrib[6] or '-' }}</td>
+                            <td>{{ contrib[7] or '-' }}</td>
+                            <td>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this contribution?');">
+                                    <input type="hidden" name="id" value="{{ contrib[0] }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-sm btn-danger action-btn">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fa fa-money fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No contributions recorded yet</h5>
+                                <p class="text-muted">Start recording contributions above</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set today's date
+        const dateInput = document.getElementById('contribDate');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+        
+        // Auto-fill amount when type is selected
+        const typeSelect = document.getElementById('typeSelect');
+        const amountInput = document.getElementById('amountInput');
+        
+        if (typeSelect && amountInput) {
+            typeSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const defaultAmount = selectedOption.getAttribute('data-amount');
+                if (defaultAmount) {
+                    amountInput.value = parseFloat(defaultAmount).toFixed(2);
+                }
+            });
+        }
+    });
+</script>
+
+{% endblock %}
+

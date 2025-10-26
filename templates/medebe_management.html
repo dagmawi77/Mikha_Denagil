@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Medebe Management - ምድብ አስተዳደር{% endblock %}
+
+{% block content %}
+<style>
+    .medebe-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="medebe-header">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <h2 class="mb-2"><i class="fa fa-sitemap me-3"></i>ምድብ አስተዳደር - Medebe Management</h2>
+                <p class="mb-0" style="opacity: 0.9;">Create and manage sub-sections (medebe) under main sections</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ medebe_stats.total_medebes }}</div>
+                <div class="stat-label">Total Medebe<br>ጠቅላላ ምድቦች</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ medebe_stats.sections_with_medebes }}</div>
+                <div class="stat-label">Sections with Medebe<br>ምድብ ያላቸው ክፍሎች</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Form -->
+    <div class="book-form-card mb-4">
+        <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-plus-circle me-2"></i>
+            {% if medebe_data %}Edit Medebe - ምድብ ማረም{% else %}Add New Medebe - አዲስ ምድብ መመዝገቢያ{% endif %}
+        </h4>
+        
+        <form method="POST" id="medebeForm">
+            <input type="hidden" name="id" value="{{ medebe_data.id or '' }}">
+            <input type="hidden" name="action" value="{% if medebe_data %}edit{% else %}add{% endif %}">
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Medebe Name / ምድብ ስም <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="medebe_name" value="{{ medebe_data.medebe_name or '' }}" required placeholder="የመጀመሪያ ምድብ">
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Main Section / የክፍል ስም <span class="text-danger">*</span></label>
+                    <select class="form-control" name="section_name" required>
+                        <option value="">-- Select Section --</option>
+                        <option value="የሕፃናት ክፍል" {% if medebe_data and medebe_data.section_name == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
+                        <option value="ማህከላዊያን ክፍል" {% if medebe_data and medebe_data.section_name == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
+                        <option value="ወጣት ክፍል" {% if medebe_data and medebe_data.section_name == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
+                        <option value="ወላጅ ክፍል" {% if medebe_data and medebe_data.section_name == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Created Date / ቀን የተፈጠረበት <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" name="created_date" value="{{ medebe_data.created_date or '' }}" required>
+                </div>
+                
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">Description / ማብራሪያ</label>
+                    <textarea class="form-control" name="description" rows="2" placeholder="Optional description...">{{ medebe_data.description or '' }}</textarea>
+                </div>
+                
+                <div class="col-md-12 text-end">
+                    {% if medebe_data %}
+                    <a href="{{ url_for('medebe_management') }}" class="btn btn-secondary me-2" style="border-radius: 10px;">
+                        <i class="fa fa-times me-2"></i>Cancel
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save me-2"></i>{% if medebe_data %}Update Medebe{% else %}Add Medebe{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Search & Filter -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Filter by Section</label>
+                <select class="form-control" name="section">
+                    <option value="">All Sections</option>
+                    <option value="የሕፃናት ክፍል" {% if section_filter == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
+                    <option value="ማህከላዊያን ክፍል" {% if section_filter == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
+                    <option value="ወጣት ክፍል" {% if section_filter == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
+                    <option value="ወላጅ ክፍል" {% if section_filter == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
+                </select>
+            </div>
+            
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="Search by name or description...">
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-search me-2"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Medebe Table -->
+    <div class="book-table-card">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-list me-2"></i>All Medebe - ሁሉም ምድቦች
+            </h4>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Medebe Name / ምድብ ስም</th>
+                        <th>Main Section / ክፍል</th>
+                        <th>Created Date / ቀን</th>
+                        <th>Members / አባላት</th>
+                        <th>Description / ማብራሪያ</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if medebes %}
+                        {% for medebe in medebes %}
+                        <tr>
+                            <td><strong>{{ medebe[0] }}</strong></td>
+                            <td><strong>{{ medebe[1] }}</strong></td>
+                            <td><span class="badge bg-info">{{ medebe[2] }}</span></td>
+                            <td>{{ medebe[4] }}</td>
+                            <td><span class="badge bg-success">{{ member_counts.get(medebe[0], 0) }} members</span></td>
+                            <td>{{ medebe[3] or '-' }}</td>
+                            <td style="white-space: nowrap;">
+                                <a href="?edit_id={{ medebe[0] }}" class="btn btn-sm btn-primary action-btn" title="Edit">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this medebe? All member assignments will be removed!');">
+                                    <input type="hidden" name="id" value="{{ medebe[0] }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-sm btn-danger action-btn" title="Delete">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fa fa-sitemap fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No medebe found</h5>
+                                <p class="text-muted">Add your first medebe to get started</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set today's date if creating new
+    {% if not medebe_data %}
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.querySelector('input[name="created_date"]');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    });
+    {% endif %}
+    
+    // Smooth scroll to form when editing
+    {% if medebe_data %}
+    window.addEventListener('load', function() {
+        document.getElementById('medebeForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    {% endif %}
+</script>
+
+{% endblock %}
+

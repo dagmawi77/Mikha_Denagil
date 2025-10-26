@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Contribution Collection - የወር መዋጮ አሰባሰብ{% endblock %}
+
+{% block content %}
+<style>
+    .monthly-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .member-row {
+        border-bottom: 1px solid #eee;
+        padding: 0.5rem 0;
+    }
+    
+    .member-row:hover {
+        background: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .paid { background: #d4edda; color: #155724; }
+    .unpaid { background: #f8d7da; color: #721c24; }
+    .partial { background: #fff3cd; color: #856404; }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="monthly-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-calendar-check-o me-3"></i>የወር መዋጮ አሰባሰብ - Monthly Contribution Collection</h2>
+                <p class="mb-0" style="opacity: 0.9;">Collect contributions from all members by month</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#uploadModal" style="border-radius: 10px;">
+                    <i class="fa fa-upload me-2"></i>Bulk Upload (Excel/CSV)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="book-form-card mb-4">
+        <h4 class="mb-3" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-filter me-2"></i>Select Month & Type - ወር እና አይነት ይምረጡ
+        </h4>
+        
+        <form method="GET" id="filterForm">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Month & Year / ወር እና ዓመት <span class="text-danger">*</span></label>
+                    <input type="month" class="form-control" name="month" value="{{ selected_month }}" required>
+                </div>
+                
+                <div class="col-md-5">
+                    <label class="form-label fw-bold">Contribution Type / የመዋጮ አይነት <span class="text-danger">*</span></label>
+                    <select class="form-control" name="type_id" id="typeSelect" required>
+                        <option value="">-- Select Type --</option>
+                        {% for mtype in mewaco_types %}
+                        <option value="{{ mtype[0] }}" 
+                                data-amount="{{ mtype[2] }}"
+                                {% if selected_type_id == mtype[0]|string %}selected{% endif %}>
+                            {{ mtype[1] }} ({{ "%.2f"|format(mtype[2]) }} Birr)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-search me-2"></i>Load Members
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    {% if selected_type_id and selected_month %}
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ "%.2f"|format(summary.total_expected) }}</div>
+                <div class="stat-label">Expected<br>የሚጠበቅ (Birr)</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ "%.2f"|format(summary.total_collected) }}</div>
+                <div class="stat-label">Collected<br>የተሰበሰበ (Birr)</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #dc3545;">{{ "%.2f"|format(summary.total_outstanding) }}</div>
+                <div class="stat-label">Outstanding<br>ቀሪ (Birr)</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ summary.paid_count }}</div>
+                <div class="stat-label">Paid<br>ያከፈሉ</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #ffc107;">{{ summary.unpaid_count }}</div>
+                <div class="stat-label">Unpaid<br>ያልከፈሉ</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-card">
+                <div class="stat-number">{{ members|length }}</div>
+                <div class="stat-label">Total Members<br>ጠቅላላ አባላት</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Member List Form -->
+    <div class="book-table-card">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-users me-2"></i>Members List - የአባላት ዝርዝር
+            </h4>
+        </div>
+        
+        <form method="POST" id="bulkForm">
+            <input type="hidden" name="action" value="bulk_save">
+            <input type="hidden" name="contribution_type_id" value="{{ selected_type_id }}">
+            <input type="hidden" name="contribution_month" value="{{ selected_month }}">
+            
+            <div class="p-3">
+                <!-- Search Box -->
+                <div class="mb-3">
+                    <input type="text" id="searchMember" class="form-control" placeholder="🔍 Search member by name...">
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="markAllPaid()">
+                        <i class="fa fa-check-circle me-1"></i>Mark All as Paid
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger me-2" onclick="markAllUnpaid()">
+                        <i class="fa fa-times-circle me-1"></i>Mark All as Unpaid
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="fillDefaultAmounts()">
+                        <i class="fa fa-calculator me-1"></i>Fill Default Amounts
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 25%;">Member Name / የአባል ስም</th>
+                                <th style="width: 15%;">Section / ክፍል</th>
+                                <th style="width: 15%;">Amount (Birr) / መጠን</th>
+                                <th style="width: 15%;">Status / ሁኔታ</th>
+                                <th style="width: 25%;">Already Paid / ከዚህ ቀደም የከፈሉት</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if members %}
+                                {% for member in members %}
+                                {% set member_id = member[0] %}
+                                {% set already_paid = existing_contributions.get(member_id, 0) %}
+                                <tr class="member-row" data-name="{{ member[1]|lower }}">
+                                    <td><strong>{{ loop.index }}</strong></td>
+                                    <td>{{ member[1] }}</td>
+                                    <td><span class="badge bg-info">{{ member[2] }}</span></td>
+                                    <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm amount-input" 
+                                               name="amount_{{ member_id }}" 
+                                               step="0.01" 
+                                               min="0"
+                                               data-default="{{ mewaco_types[0][2] if mewaco_types else 0 }}"
+                                               value="{{ already_paid if already_paid > 0 else '' }}"
+                                               {% if already_paid > 0 %}readonly{% endif %}>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm status-select" 
+                                                name="status_{{ member_id }}"
+                                                {% if already_paid > 0 %}disabled{% endif %}>
+                                            <option value="Unpaid" {% if already_paid == 0 %}selected{% endif %}>Unpaid</option>
+                                            <option value="Paid" {% if already_paid > 0 %}selected{% endif %}>Paid</option>
+                                            <option value="Partial">Partial</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        {% if already_paid > 0 %}
+                                        <span class="badge bg-success">✓ {{ "%.2f"|format(already_paid) }} Birr</span>
+                                        {% else %}
+                                        <span class="text-muted">Not paid yet</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <p class="text-muted mb-0">No members found. Please select month and type above.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            {% if members %}
+            <div class="p-3 bg-light text-end">
+                <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Save all marked contributions?')">
+                    <i class="fa fa-save me-2"></i>Save All Contributions
+                </button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #14860C; color: white;">
+                <h5 class="modal-title"><i class="fa fa-upload me-2"></i>Bulk Upload Contributions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="bulk_upload">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Contribution Type</label>
+                        <select class="form-control" name="upload_type_id" required>
+                            <option value="">-- Select Type --</option>
+                            {% for mtype in mewaco_types %}
+                            <option value="{{ mtype[0] }}">{{ mtype[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Upload File (Excel or CSV)</label>
+                        <input type="file" class="form-control" name="file" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <strong>Required columns:</strong>
+                        <ul class="mb-0">
+                            <li>Member Name</li>
+                            <li>Amount</li>
+                            <li>Date (YYYY-MM-DD)</li>
+                            <li>Payment Method (optional)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-upload me-2"></i>Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('searchMember');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.member-row');
+            
+            rows.forEach(row => {
+                const name = row.getAttribute('data-name');
+                if (name.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Auto-select type's default amount
+    const typeSelect = document.getElementById('typeSelect');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const defaultAmount = selectedOption.getAttribute('data-amount');
+            
+            // Store for later use
+            document.querySelectorAll('.amount-input').forEach(input => {
+                input.setAttribute('data-default', defaultAmount);
+            });
+        });
+    }
+});
+
+function markAllPaid() {
+    document.querySelectorAll('.status-select').forEach(select => {
+        if (!select.disabled) {
+            select.value = 'Paid';
+        }
+    });
+}
+
+function markAllUnpaid() {
+    document.querySelectorAll('.status-select').forEach(select => {
+        if (!select.disabled) {
+            select.value = 'Unpaid';
+        }
+    });
+}
+
+function fillDefaultAmounts() {
+    document.querySelectorAll('.amount-input').forEach(input => {
+        if (!input.readOnly && !input.value) {
+            const defaultAmount = input.getAttribute('data-default');
+            if (defaultAmount) {
+                input.value = parseFloat(defaultAmount).toFixed(2);
+            }
+        }
+    });
+}
+</script>
+
+{% endblock %}
+

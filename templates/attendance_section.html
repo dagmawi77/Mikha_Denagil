@@ -1,57 +1,318 @@
 {% extends "base.html" %}
+
+{% block title %}Attendance Marking - የአባላት መገኘት{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">የአባላት(Attendance Sheet)</h2>
+<style>
+    .attendance-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .section-selector {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .attendance-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .attendance-table-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+    
+    .attendance-table {
+        margin: 0;
+    }
+    
+    .attendance-table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        padding: 1rem 0.5rem;
+        border: 1px solid #dee2e6;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-size: 0.85rem;
+    }
+    
+    .attendance-table tbody td {
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+    
+    .member-name-cell {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #2c3e50;
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        min-width: 200px;
+        text-align: left !important;
+    }
+    
+    .attendance-select {
+        min-width: 90px;
+        font-size: 0.85rem;
+        padding: 0.4rem;
+        border-radius: 6px;
+        border: 2px solid #e0e0e0;
+    }
+    
+    .attendance-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.15);
+    }
+    
+    .attendance-select option[value="Present"] {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .attendance-select option[value="Absent"] {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .attendance-select option[value="Sick"] {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .quick-actions {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .table-wrapper {
+        max-height: 600px;
+        overflow: auto;
+        border-radius: 0 0 15px 15px;
+    }
+    
+    .submit-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        text-align: center;
+        border-radius: 0 0 15px 15px;
+    }
+</style>
 
-    <!-- Section selection form -->
-    <form method="GET" action="{{ url_for('attendance') }}" class="mb-3">
-        <label for="section">Select Section:</label>
-        <select name="section" id="section" class="form-select w-auto d-inline-block">
-            <option value="">-- Select Section --</option>
-            {% for sec in section_names %}
-                <option value="{{ sec }}" {% if sec == selected_section %}selected{% endif %}>{{ sec }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Load Members</button>
-    </form>
-
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="attendance-header">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <h2 class="mb-2"><i class="fa fa-calendar-check-o me-3"></i>የአባላት መገኘት - Attendance Marking</h2>
+                <p class="mb-0" style="opacity: 0.9;">Mark member attendance for the last 10 weeks</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            <i class="fa fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <!-- Section Selection -->
+    <div class="section-selector">
+        <form method="GET" action="{{ url_for('attendance') }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-9">
+                    <label class="form-label fw-bold" style="color: #14860C; font-size: 1.1rem;">
+                        <i class="fa fa-filter me-2"></i>Select Section to Mark Attendance
+                    </label>
+                    <select name="section" class="form-select form-select-lg" required style="border: 2px solid #14860C;">
+                        <option value="">-- የክፍል ይምረጡ (Select Section) --</option>
+                        {% for sec in section_names %}
+                            <option value="{{ sec }}" {% if sec == selected_section %}selected{% endif %}>{{ sec }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success btn-lg w-100" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); border: none; border-radius: 10px; font-weight: 600;">
+                        <i class="fa fa-users me-2"></i>Load Members
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
     {% if selected_section %}
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <strong style="color: #14860C;"><i class="fa fa-magic me-2"></i>Quick Actions:</strong>
+                <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="markColumnPresent(0)">
+                    <i class="fa fa-check me-1"></i>Mark First Date All Present
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearColumn(0)">
+                    <i class="fa fa-eraser me-1"></i>Clear First Date
+                </button>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="badge bg-success me-2" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                    <i class="fa fa-users me-1"></i>{{ members|length }} Members
+                </span>
+                <span class="badge bg-info" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                    <i class="fa fa-calendar me-1"></i>{{ dates|length }} Dates
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Form -->
     <form method="POST" action="{{ url_for('attendance') }}">
         <input type="hidden" name="selected_section" value="{{ selected_section }}">
-        <div class="table-responsive" style="max-height:600px; overflow-y:auto;">
-            <table class="table table-bordered table-sm text-center">
-                <thead class="table-light">
-                    <tr>
-                        <th>Member</th>
-                        {% for d in dates %}
-                        <th>{{ d }}</th>
+        
+        <div class="attendance-card">
+            <div class="attendance-table-header">
+                <h4 class="mb-0">
+                    <i class="fa fa-table me-2"></i>{{ selected_section }} - Attendance Sheet
+                </h4>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="table table-bordered table-hover attendance-table">
+                    <thead>
+                        <tr>
+                            <th class="member-name-cell">Member Name<br>የአባል ስም</th>
+                            {% for d in dates %}
+                            <th style="min-width: 100px;">
+                                {{ d }}
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in members %}
+                        <tr>
+                            <td class="member-name-cell">
+                                <i class="fa fa-user me-2" style="color: #14860C;"></i>
+                                {{ member.full_name }}
+                            </td>
+                            {% for d in dates %}
+                            {% set key = member.member_id|string + '_' + d %}
+                            <td class="text-center">
+                                <select name="attendance_{{ member.member_id }}_{{ d }}" 
+                                        class="form-select form-select-sm attendance-select attendance-col-{{ loop.index0 }}"
+                                        onchange="updateCellColor(this)">
+                                    <option value="" {% if attendance_data.get(key) is none %}selected{% endif %}>--</option>
+                                    <option value="Present" {% if attendance_data.get(key) == 'Present' %}selected{% endif %}>✓ Present</option>
+                                    <option value="Absent" {% if attendance_data.get(key) == 'Absent' %}selected{% endif %}>✗ Absent</option>
+                                    <option value="Sick" {% if attendance_data.get(key) == 'Sick' %}selected{% endif %}>🏥 Sick</option>
+                                </select>
+                            </td>
+                            {% endfor %}
+                        </tr>
                         {% endfor %}
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member in members %}
-                    <tr>
-                        <td class="text-start">{{ member.full_name }}</td>
-                        {% for d in dates %}
-                        {% set key = member.member_id|string + '_' + d %}
-                        <td>
-                            <select name="attendance_{{ member.member_id }}_{{ d }}" class="form-select form-select-sm">
-                                <option value="" {% if attendance_data.get(key) is none %}selected{% endif %}>--</option>
-                                <option value="Present" {% if attendance_data.get(key) == 'Present' %}selected{% endif %}>Present</option>
-                                <option value="Absent" {% if attendance_data.get(key) == 'Absent' %}selected{% endif %}>Absent</option>
-                                <option value="Sick" {% if attendance_data.get(key) == 'Sick' %}selected{% endif %}>Sick</option>
-                            </select>
-                        </td>
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="text-center mt-3">
-            <button type="submit" class="btn btn-primary">አስገባ (Submit Attendance)</button>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="submit-section">
+                <button type="submit" class="btn btn-success btn-lg" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); border: none; border-radius: 10px; padding: 0.75rem 3rem; font-weight: 600;">
+                    <i class="fa fa-save me-2"></i>አስገባ (Save Attendance)
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-lg ms-2" onclick="window.location.href='{{ url_for('attendance') }}';" style="border-radius: 10px; padding: 0.75rem 3rem;">
+                    <i class="fa fa-times me-2"></i>Cancel
+                </button>
+            </div>
         </div>
     </form>
+    {% else %}
+    <!-- Empty State -->
+    <div class="attendance-card">
+        <div class="text-center py-5">
+            <i class="fa fa-calendar-check-o fa-5x text-muted mb-4" style="opacity: 0.3;"></i>
+            <h3 class="text-muted mb-3">No Section Selected</h3>
+            <p class="text-muted">Please select a section above to load members and mark attendance</p>
+        </div>
+    </div>
     {% endif %}
 </div>
+
+<script>
+// Update cell background color based on selection
+function updateCellColor(selectElement) {
+    const value = selectElement.value;
+    selectElement.parentElement.style.transition = 'all 0.3s ease';
+    
+    if (value === 'Present') {
+        selectElement.parentElement.style.background = '#d4edda';
+        selectElement.style.borderColor = '#28a745';
+    } else if (value === 'Absent') {
+        selectElement.parentElement.style.background = '#f8d7da';
+        selectElement.style.borderColor = '#dc3545';
+    } else if (value === 'Sick') {
+        selectElement.parentElement.style.background = '#fff3cd';
+        selectElement.style.borderColor = '#ffc107';
+    } else {
+        selectElement.parentElement.style.background = 'white';
+        selectElement.style.borderColor = '#e0e0e0';
+    }
+}
+
+// Initialize cell colors on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.attendance-select').forEach(function(select) {
+        updateCellColor(select);
+    });
+});
+
+// Mark entire column as present
+function markColumnPresent(colIndex) {
+    const selects = document.querySelectorAll('.attendance-col-' + colIndex);
+    selects.forEach(select => {
+        select.value = 'Present';
+        updateCellColor(select);
+    });
+}
+
+// Clear entire column
+function clearColumn(colIndex) {
+    const selects = document.querySelectorAll('.attendance-col-' + colIndex);
+    selects.forEach(select => {
+        select.value = '';
+        updateCellColor(select);
+    });
+}
+
+// Auto-dismiss alerts
+setTimeout(function() {
+    let alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        let bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+    });
+}, 5000);
+</script>
+
 {% endblock %}

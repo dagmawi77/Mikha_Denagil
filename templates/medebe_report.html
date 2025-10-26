@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Medebe Report - የምድብ ሪፖርት{% endblock %}
+
+{% block content %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="report-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-bar-chart me-3"></i>የምድብ ሪፖርት - Medebe Report</h2>
+                <p class="mb-0" style="opacity: 0.9;">View statistics and distribution of medebe groups</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light me-2" onclick="exportToExcel()" style="border-radius: 10px;">
+                    <i class="fa fa-file-excel-o me-2"></i>Export Excel
+                </button>
+                <button class="btn btn-light" onclick="window.print()" style="border-radius: 10px;">
+                    <i class="fa fa-print me-2"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overall Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ overall_stats.total_medebes }}</div>
+                <div class="stat-label">Total Medebe<br>ጠቅላላ ምድቦች</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ overall_stats.total_sections }}</div>
+                <div class="stat-label">Sections with Medebe<br>ምድብ ያላቸው ክፍሎች</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ overall_stats.total_assigned_members }}</div>
+                <div class="stat-label">Assigned Members<br>የተመደቡ አባላት</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label fw-bold">Filter by Section</label>
+                <select class="form-control" name="section">
+                    <option value="">All Sections</option>
+                    {% for section in sections %}
+                    <option value="{{ section }}" {% if section_filter == section %}selected{% endif %}>{{ section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row g-4 mb-4">
+        {% for section, data in sections_chart.items() %}
+        <div class="col-md-6">
+            <div class="book-form-card">
+                <h5 class="mb-3" style="color: #14860C; font-weight: 700;">
+                    <i class="fa fa-pie-chart me-2"></i>{{ section }}
+                </h5>
+                <div class="chart-container">
+                    <canvas id="chart{{ loop.index }}"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Medebe Summary Table -->
+    <div class="book-table-card">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-table me-2"></i>Medebe Summary - የምድብ ማጠቃለያ
+            </h4>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Medebe Name / ምድብ ስም</th>
+                        <th>Section / ክፍል</th>
+                        <th>Created Date / የተፈጠረበት ቀን</th>
+                        <th>Members / አባላት ብዛት</th>
+                        <th>Description / ማብራሪያ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if medebe_summary %}
+                        {% for row in medebe_summary %}
+                        <tr>
+                            <td><strong>{{ row[1] }}</strong></td>
+                            <td><span class="badge bg-info">{{ row[2] }}</span></td>
+                            <td>{{ row[3] }}</td>
+                            <td><strong style="color: #14860C;">{{ row[5] }} members</strong></td>
+                            <td>{{ row[4] or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="fa fa-bar-chart fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No data available</h5>
+                                <p class="text-muted">Try adjusting your filters or add medebe first</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+                {% if medebe_summary %}
+                <tfoot style="background: #f8f9fa; font-weight: bold;">
+                    <tr>
+                        <td colspan="3" class="text-end">Total Members:</td>
+                        <td style="color: #14860C;">
+                            {{ medebe_summary|sum(attribute=5) }} members
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Create charts for each section
+{% for section, data in sections_chart.items() %}
+const ctx{{ loop.index }} = document.getElementById('chart{{ loop.index }}').getContext('2d');
+const chart{{ loop.index }} = new Chart(ctx{{ loop.index }}, {
+    type: 'bar',
+    data: {
+        labels: {{ data.labels|tojson }},
+        datasets: [{
+            label: 'Number of Members',
+            data: {{ data.values|tojson }},
+            backgroundColor: 'rgba(20, 134, 12, 0.7)',
+            borderColor: 'rgba(20, 134, 12, 1)',
+            borderWidth: 2,
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y + ' members';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+{% endfor %}
+
+// Export to Excel
+function exportToExcel() {
+    const table = document.getElementById('reportTable');
+    let html = table.outerHTML;
+    const blob = new Blob([html], {
+        type: 'application/vnd.ms-excel'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'medebe_report_' + new Date().toISOString().split('T')[0] + '.xls';
+    a.click();
+}
+</script>
+
+{% endblock %}
+

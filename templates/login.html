@@ -7,76 +7,170 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/new.css') }}">
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f9ff;
+            background: linear-gradient(135deg, #14860C 0%, #106b09 50%, #0d5207 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(20, 134, 12, 0.3), transparent 50%),
+                        radial-gradient(circle at bottom left, rgba(13, 82, 7, 0.3), transparent 50%);
+            z-index: 1;
         }
 
         .header {
             position: absolute;
             top: 0;
             width: 100%;
-            background-color: #0c8bca;
+            background: linear-gradient(135deg, rgba(20, 134, 12, 0.95) 0%, rgba(16, 107, 9, 0.95) 100%);
             color: white;
             text-align: center;
-            padding: 1rem 0;
-            font-size: 24px;
+            padding: 1.5rem 0;
+            font-size: 28px;
             font-weight: bold;
+            z-index: 3;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         .container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 3rem 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             text-align: center;
             position: relative;
             z-index: 2;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-container img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid #14860C;
+            box-shadow: 0 8px 25px rgba(20, 134, 12, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .logo-container img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(20, 134, 12, 0.6);
         }
 
         h2 {
-            margin-bottom: 1.5rem;
-            color: #0c8bca;
+            margin-bottom: 0.5rem;
+            color: #14860C;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 2rem;
         }
 
         label {
-            font-size: 16px;
+            font-size: 15px;
+            font-weight: 600;
             display: block;
             margin-bottom: 0.5rem;
             text-align: left;
+            color: #333;
         }
 
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            padding: 0.9rem;
+            margin-bottom: 1.2rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #14860C;
+            box-shadow: 0 0 0 3px rgba(20, 134, 12, 0.2);
         }
 
         button {
             width: 100%;
-            padding: 0.75rem;
-            background-color: #0c8bca;
+            padding: 1rem;
+            background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 17px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(20, 134, 12, 0.4);
         }
 
         button:hover {
-            background-color: #096899;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(20, 134, 12, 0.6);
+            background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .alert {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .alert-danger {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background-color: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
         }
 
         /* Water wave animation */
@@ -115,13 +209,28 @@
 <body>
     <div class="header">Mikha Denagil ምክሐ ደናግል - Login</div>
     <div class="container">
-        <h2>Login</h2>
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='img/download.jpg') }}" alt="Mikha Denagil Logo">
+        </div>
+        <h2>Welcome Back!</h2>
+        <p class="subtitle">Sign in to continue to your dashboard</p>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         <form method="POST" action="/">
-            <label for="payroll_number">User Name</label>
-            <input type="text" id="payroll_number" name="payroll_number" required>
+            <label for="payroll_number">Payroll Number</label>
+            <input type="text" id="payroll_number" name="payroll_number" placeholder="Enter your payroll number" required autofocus>
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-            <button type="submit">Login</button>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            <button type="submit">
+                <span>🔐</span> Login
+            </button>
         </form>
     </div>
 

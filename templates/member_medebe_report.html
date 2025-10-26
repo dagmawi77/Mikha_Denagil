@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Member Medebe Report - የአባላት ምድብ ሪፖርት{% endblock %}
+
+{% block content %}
+<style>
+    .member-report-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="member-report-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-users me-3"></i>የአባላት ምድብ ሪፖርት - Member Medebe Report</h2>
+                <p class="mb-0" style="opacity: 0.9;">View member assignments and distribution across medebe groups</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light me-2" onclick="exportToExcel()" style="border-radius: 10px;">
+                    <i class="fa fa-file-excel-o me-2"></i>Export Excel
+                </button>
+                <button class="btn btn-light" onclick="exportToPDF()" style="border-radius: 10px;">
+                    <i class="fa fa-file-pdf-o me-2"></i>Export PDF
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Section Statistics Cards -->
+    <div class="row g-3 mb-4">
+        {% for stat in section_stats %}
+        <div class="col-md-3">
+            <div class="stat-card">
+                <h6 style="color: #14860C; margin-bottom: 0.5rem;">{{ stat[0] }}</h6>
+                <div class="stat-number" style="font-size: 1.8rem; color: #28a745;">{{ stat[1] }}</div>
+                <div class="stat-label" style="font-size: 0.85rem;">members in {{ stat[2] }} medebe</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Filters -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Filter by Section</label>
+                <select class="form-control" name="section">
+                    <option value="">All Sections</option>
+                    {% for section in sections %}
+                    <option value="{{ section }}" {% if section_filter == section %}selected{% endif %}>{{ section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Filter by Medebe</label>
+                <select class="form-control" name="medebe">
+                    <option value="">All Medebe</option>
+                    {% for medebe in medebes %}
+                    <option value="{{ medebe[0] }}" {% if medebe_filter == medebe[0]|string %}selected{% endif %}>
+                        {{ medebe[1] }} ({{ medebe[2] }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Distribution Chart -->
+    <div class="book-form-card mb-4">
+        <h4 class="mb-3" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-pie-chart me-2"></i>Member Distribution - የአባላት ስርጭት
+        </h4>
+        <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Member Assignments Table -->
+    <div class="book-table-card">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-table me-2"></i>Member Assignments - የአባላት ምደባ
+            </h4>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="reportTable">
+                <thead>
+                    <tr>
+                        <th>Member Name / የአባል ስም</th>
+                        <th>Phone Number / ስልክ ቁጥር</th>
+                        <th>Section / ክፍል</th>
+                        <th>Medebe / ምድብ</th>
+                        <th>Assigned Date / የተመደበበት ቀን</th>
+                        <th>Method / ዘዴ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if member_assignments %}
+                        {% for assignment in member_assignments %}
+                        <tr>
+                            <td><strong>{{ assignment[0] }}</strong></td>
+                            <td>{{ assignment[1] or '-' }}</td>
+                            <td><span class="badge bg-info">{{ assignment[2] }}</span></td>
+                            <td><span class="badge bg-success">{{ assignment[3] }}</span></td>
+                            <td>{{ assignment[4] }}</td>
+                            <td>
+                                {% if assignment[5] == 'Auto' %}
+                                <span class="badge bg-warning">🤖 Auto</span>
+                                {% else %}
+                                <span class="badge bg-primary">👤 Manual</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fa fa-users fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No assignments found</h5>
+                                <p class="text-muted">No members have been assigned to medebe yet</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+                {% if member_assignments %}
+                <tfoot style="background: #f8f9fa; font-weight: bold;">
+                    <tr>
+                        <td colspan="5" class="text-end">Total Assigned Members:</td>
+                        <td style="color: #14860C;">{{ member_assignments|length }}</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// Distribution Chart
+const ctx = document.getElementById('distributionChart').getContext('2d');
+
+// Prepare data from chart_data
+const chartLabels = [];
+const chartValues = [];
+const backgroundColors = [
+    'rgba(20, 134, 12, 0.7)',
+    'rgba(40, 167, 69, 0.7)',
+    'rgba(23, 162, 184, 0.7)',
+    'rgba(111, 66, 193, 0.7)',
+    'rgba(255, 193, 7, 0.7)',
+    'rgba(220, 53, 69, 0.7)',
+    'rgba(108, 117, 125, 0.7)',
+    'rgba(13, 110, 253, 0.7)'
+];
+
+{% for data in chart_data %}
+chartLabels.push('{{ data[0] }} ({{ data[1] }})');
+chartValues.push({{ data[2] }});
+{% endfor %}
+
+const distributionChart = new Chart(ctx, {
+    type: 'pie',
+    data: {
+        labels: chartLabels,
+        datasets: [{
+            label: 'Members',
+            data: chartValues,
+            backgroundColor: backgroundColors.slice(0, chartLabels.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    font: {
+                        size: 12
+                    },
+                    generateLabels: function(chart) {
+                        const data = chart.data;
+                        if (data.labels.length && data.datasets.length) {
+                            return data.labels.map((label, i) => {
+                                const value = data.datasets[0].data[i];
+                                return {
+                                    text: label + ': ' + value + ' members',
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    hidden: false,
+                                    index: i
+                                };
+                            });
+                        }
+                        return [];
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const value = context.parsed;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return value + ' members (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Export to Excel
+function exportToExcel() {
+    const table = document.getElementById('reportTable');
+    let html = table.outerHTML;
+    const blob = new Blob([html], {
+        type: 'application/vnd.ms-excel'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'member_medebe_report_' + new Date().toISOString().split('T')[0] + '.xls';
+    a.click();
+}
+
+// Export to PDF
+function exportToPDF() {
+    window.print();
+}
+</script>
+
+{% endblock %}
+

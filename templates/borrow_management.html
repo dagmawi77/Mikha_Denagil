@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Borrow Management - መዋስ አስተዳደር{% endblock %}
+
+{% block content %}
+<style>
+    .borrow-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .borrow-form-card, .return-form-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .borrow-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .borrow-table thead {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+    }
+    
+    .borrow-table thead th {
+        color: white !important;
+        font-weight: 600;
+        padding: 1rem;
+    }
+    
+    .borrow-table tbody tr:hover {
+        background: rgba(20, 134, 12, 0.05);
+    }
+    
+    .status-borrowed {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .status-returned {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .status-overdue {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="borrow-header">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <h2 class="mb-2"><i class="fa fa-exchange me-3"></i>መዋስ አስተዳደር - Borrow Management</h2>
+                <p class="mb-0" style="opacity: 0.9;">Manage book borrowing and returns</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ borrow_stats.currently_borrowed }}</div>
+                <div class="stat-label">Currently Borrowed<br>የተበደሩ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #dc3545;">{{ borrow_stats.overdue }}</div>
+                <div class="stat-label">Overdue<br>ጊዜያቸው ያለፈ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ borrow_stats.returned }}</div>
+                <div class="stat-label">Returned<br>የተመለሱ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ borrow_stats.total_transactions }}</div>
+                <div class="stat-label">Total Transactions<br>ጠቅላላ ግብይቶች</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row g-3">
+        <!-- Borrow Book Form -->
+        <div class="col-lg-6">
+            <div class="borrow-form-card">
+                <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+                    <i class="fa fa-plus-circle me-2"></i>Borrow Book - መፅሀፍ መዋስ
+                </h4>
+                
+                <form method="POST" id="borrowForm">
+                    <input type="hidden" name="action" value="borrow">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Member / አባል ምረጥ <span class="text-danger">*</span></label>
+                        <select class="form-control" name="member_id" required>
+                            <option value="">-- Select Member --</option>
+                            {% for member in members %}
+                            <option value="{{ member[0] }}">{{ member[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Book / መፅሀፍ ምረጥ <span class="text-danger">*</span></label>
+                        <select class="form-control" name="book_id" id="bookSelect" required>
+                            <option value="">-- Select Book --</option>
+                            {% for book in available_books %}
+                            <option value="{{ book[0] }}" data-available="{{ book[3] }}">
+                                {{ book[1] }} - {{ book[2] }} ({{ book[3] }} available)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Borrow Date / የመዋስ ቀን</label>
+                            <input type="date" class="form-control" name="borrow_date" value="{{ today }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Due Date / መመለሻ ቀን <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="due_date" id="dueDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Notes / ማስታወሻ</label>
+                        <textarea class="form-control" name="notes" rows="2"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-check-circle me-2"></i>Process Borrow
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Return Book Form -->
+        <div class="col-lg-6">
+            <div class="return-form-card">
+                <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+                    <i class="fa fa-undo me-2"></i>Return Book - መፅሀፍ መመለሻ
+                </h4>
+                
+                <form method="POST" id="returnForm">
+                    <input type="hidden" name="action" value="return">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Borrowed Book / የተወሰደ መፅሀፍ ምረጥ <span class="text-danger">*</span></label>
+                        <select class="form-control" name="borrow_id" required>
+                            <option value="">-- Select Borrowed Book --</option>
+                            {% for borrow in borrowings %}
+                                {% if borrow[7] in ['Borrowed', 'Overdue'] %}
+                                <option value="{{ borrow[0] }}">
+                                    {{ borrow[1] }} - {{ borrow[2] }} (Due: {{ borrow[5] }})
+                                    {% if borrow[7] == 'Overdue' %}[OVERDUE]{% endif %}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Return Date / የተመለሰበት ቀን</label>
+                        <input type="date" class="form-control" name="return_date" value="{{ today }}" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-check-circle me-2"></i>Process Return
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Borrowing Records Table -->
+    <div class="borrow-table mt-4">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-list me-2"></i>Borrowing Records - የመዋስ ዝርዝር
+            </h4>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Member Name / የአባል ስም</th>
+                        <th>Book Title / መፅሀፍ ርዕስ</th>
+                        <th>Author / ደራሲ</th>
+                        <th>Borrow Date</th>
+                        <th>Due Date</th>
+                        <th>Return Date</th>
+                        <th>Status</th>
+                        <th>Days Overdue</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if borrowings %}
+                        {% for borrow in borrowings %}
+                        <tr {% if borrow[7] == 'Overdue' %}style="background: rgba(220, 53, 69, 0.1);"{% endif %}>
+                            <td><strong>{{ borrow[0] }}</strong></td>
+                            <td>{{ borrow[1] }}</td>
+                            <td>{{ borrow[2] }}</td>
+                            <td>{{ borrow[3] }}</td>
+                            <td>{{ borrow[4] }}</td>
+                            <td>{{ borrow[5] }}</td>
+                            <td>{{ borrow[6] or '-' }}</td>
+                            <td>
+                                {% if borrow[7] == 'Borrowed' %}
+                                <span class="status-borrowed">{{ borrow[7] }}</span>
+                                {% elif borrow[7] == 'Returned' %}
+                                <span class="status-returned">{{ borrow[7] }}</span>
+                                {% else %}
+                                <span class="status-overdue">{{ borrow[7] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if borrow[9] and borrow[9] > 0 and borrow[7] != 'Returned' %}
+                                <span class="text-danger fw-bold">+{{ borrow[9] }} days</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ borrow[8] or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <i class="fa fa-exchange fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No records found - የመዋስ ዝርዝር የለም</h5>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default due date (2 weeks from borrow date)
+        const borrowDateInput = document.querySelector('input[name="borrow_date"]');
+        const dueDateInput = document.getElementById('dueDate');
+        
+        function updateDueDate() {
+            if (borrowDateInput.value) {
+                const borrowDate = new Date(borrowDateInput.value);
+                borrowDate.setDate(borrowDate.getDate() + 14); // 2 weeks
+                dueDateInput.value = borrowDate.toISOString().split('T')[0];
+            }
+        }
+        
+        if (borrowDateInput && dueDateInput) {
+            borrowDateInput.addEventListener('change', updateDueDate);
+            updateDueDate(); // Set initial value
+        }
+        
+        // Set today's date
+        const today = new Date().toISOString().split('T')[0];
+        if (borrowDateInput && !borrowDateInput.value) {
+            borrowDateInput.value = today;
+            updateDueDate();
+        }
+        
+        const returnDateInput = document.querySelector('#returnForm input[name="return_date"]');
+        if (returnDateInput && !returnDateInput.value) {
+            returnDateInput.value = today;
+        }
+    });
+</script>
+
+{% endblock %}
+

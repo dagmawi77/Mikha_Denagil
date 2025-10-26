@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Borrow Report - መዋስ ሪፖርት{% endblock %}
+
+{% block content %}
+<style>
+    .report-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header with Export Buttons -->
+    <div class="report-header">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="mb-2"><i class="fa fa-exchange me-3"></i>መዋስ ሪፖርት - Borrow Report</h2>
+                <p class="mb-0" style="opacity: 0.9;">Complete borrowing transaction history</p>
+            </div>
+            <div class="col-md-6 text-end export-buttons">
+                <button onclick="window.print()" class="btn btn-light">
+                    <i class="fa fa-file-pdf-o me-2"></i>Export PDF
+                </button>
+                <button onclick="exportToExcel()" class="btn btn-light">
+                    <i class="fa fa-file-excel-o me-2"></i>Export Excel
+                </button>
+                <button onclick="exportToCSV()" class="btn btn-light">
+                    <i class="fa fa-file-text-o me-2"></i>Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ summary_stats.total }}</div>
+                <div class="stat-label">Total Transactions<br>ጠቅላላ ግብይቶች</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #17a2b8;">{{ summary_stats.borrowed }}</div>
+                <div class="stat-label">Currently Borrowed<br>የተበደሩ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #dc3545;">{{ summary_stats.overdue }}</div>
+                <div class="stat-label">Overdue<br>ጊዜያቸው ያለፈ</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ summary_stats.returned }}</div>
+                <div class="stat-label">Returned<br>የተመለሱ</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Member / አባል</label>
+                <select class="form-control" name="member_id">
+                    <option value="">All Members</option>
+                    {% for member in members %}
+                    <option value="{{ member[0] }}" {% if member_filter == member[0]|string %}selected{% endif %}>
+                        {{ member[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Book / መፅሀፍ</label>
+                <select class="form-control" name="book_id">
+                    <option value="">All Books</option>
+                    {% for book in books_list %}
+                    <option value="{{ book[0] }}" {% if book_filter == book[0]|string %}selected{% endif %}>
+                        {{ book[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Status / ሁኔታ</label>
+                <select class="form-control" name="status">
+                    <option value="">All Status</option>
+                    <option value="Borrowed" {% if status_filter == 'Borrowed' %}selected{% endif %}>Borrowed</option>
+                    <option value="Overdue" {% if status_filter == 'Overdue' %}selected{% endif %}>Overdue</option>
+                    <option value="Returned" {% if status_filter == 'Returned' %}selected{% endif %}>Returned</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-success">
+                    <i class="fa fa-filter me-2"></i>Apply Filters
+                </button>
+                <a href="{{ url_for('borrow_report') }}" class="btn btn-secondary">
+                    <i class="fa fa-refresh me-2"></i>Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Borrow Transactions Table -->
+    <div class="book-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover" id="borrowReportTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Member Name</th>
+                        <th>Book Title</th>
+                        <th>Author</th>
+                        <th>Borrow Date</th>
+                        <th>Due Date</th>
+                        <th>Return Date</th>
+                        <th>Status</th>
+                        <th>Days Overdue</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if transactions %}
+                        {% for trans in transactions %}
+                        <tr {% if trans[7] == 'Overdue' %}style="background: rgba(220, 53, 69, 0.1);"{% endif %}>
+                            <td>{{ trans[0] }}</td>
+                            <td><strong>{{ trans[1] }}</strong></td>
+                            <td>{{ trans[2] }}</td>
+                            <td>{{ trans[3] }}</td>
+                            <td>{{ trans[4] }}</td>
+                            <td>{{ trans[5] }}</td>
+                            <td>{{ trans[6] or '-' }}</td>
+                            <td>
+                                {% if trans[7] == 'Borrowed' %}
+                                <span class="status-borrowed">{{ trans[7] }}</span>
+                                {% elif trans[7] == 'Returned' %}
+                                <span class="status-returned">{{ trans[7] }}</span>
+                                {% else %}
+                                <span class="status-overdue">{{ trans[7] }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if trans[8] and trans[8] > 0 and trans[7] != 'Returned' %}
+                                <span class="text-danger fw-bold">+{{ trans[8] }} days</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ trans[9] or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <i class="fa fa-exchange fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No transactions found</h5>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    function exportToExcel() {
+        const table = document.getElementById('borrowReportTable');
+        const wb = XLSX.utils.table_to_book(table, {sheet: "Borrow Report"});
+        XLSX.writeFile(wb, `Borrow_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+    
+    function exportToCSV() {
+        const table = document.getElementById('borrowReportTable');
+        const wb = XLSX.utils.table_to_book(table);
+        XLSX.writeFile(wb, `Borrow_Report_${new Date().toISOString().split('T')[0]}.csv`, {bookType: 'csv'});
+    }
+</script>
+
+{% endblock %}
+

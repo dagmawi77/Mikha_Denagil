@@ -6,9 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Dashboard{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <!-- PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='plugins/pg-calendar/css/pignose.calendar.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='plugins/chartist/css/chartist.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -144,71 +146,313 @@
 
 
         <div class="container-fluid">
-            <div class="row g-2">
-                <!-- Cards Row -->
-                <div class="col-lg-3 col-sm-6">
-                    <div class="card gradient-1 h-80">
-                        <div class="card-body">
-                            <h1 class="card-title text-white"><strong>የአባላት ብዛት</strong></h1>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h1 class="text-white counter mb-0" id="current-bill-count">{{ current_bill_count }}</h2>
-                                    <h6 class="text-white d-block mt-2">
-                                        <mark><strong></strong> <span id="bill-period">{{bill_period}}</span></mark>
-                                    </h6>
-                                </div>
-                                <!-- <i class="fa fa-users opacity-5 fs-2"></i> -->
+            <!-- Professional Dashboard CSS -->
+            <style>
+                /* Modern Dashboard Container */
+                .dashboard-container {
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    min-height: 100vh;
+                    padding: 20px;
+                }
+                
+                /* Enhanced Stat Cards */
+                .stat-card {
+                    border-radius: 20px;
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    border: none;
+                    position: relative;
+                    overflow: hidden;
+                    min-height: 160px;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                }
+                
+                .stat-card:hover {
+                    transform: translateY(-15px) scale(1.02);
+                    box-shadow: 0 25px 50px rgba(0,0,0,0.25) !important;
+                }
+                
+                .stat-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+                    pointer-events: none;
+                }
+                
+                .stat-card::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 4px;
+                    background: linear-gradient(90deg, #14860C 0%, #106b09 100%);
+                    transform: scaleX(0);
+                    transition: transform 0.3s ease;
+                }
+                
+                .stat-card:hover::after {
+                    transform: scaleX(1);
+                }
+                
+                /* Icon Styling */
+                .stat-icon {
+                    font-size: 3.5rem;
+                    opacity: 0.15;
+                    position: absolute;
+                    right: 20px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    transition: all 0.3s ease;
+                }
+                
+                .stat-card:hover .stat-icon {
+                    opacity: 0.25;
+                    transform: translateY(-50%) scale(1.1) rotate(10deg);
+                }
+                
+                /* Counter Number */
+                .counter-number {
+                    font-size: 3.5rem;
+                    font-weight: 800;
+                    background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    text-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    animation: countUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    display: inline-block;
+                }
+                
+                @keyframes countUp {
+                    from { 
+                        transform: scale(0) rotate(-180deg); 
+                        opacity: 0; 
+                    }
+                    to { 
+                        transform: scale(1) rotate(0deg); 
+                        opacity: 1; 
+                    }
+                }
+                
+                /* Card Title */
+                .stat-card .card-title {
+                    font-size: 1rem;
+                    font-weight: 700;
+                    color: #2c3e50 !important;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 1rem;
+                }
+                
+                .card-subtitle {
+                    font-size: 0.85rem;
+                    color: #34495e !important;
+                    font-weight: 600;
+                }
+                
+                /* Professional Table Styling */
+                .professional-table {
+                    background: white;
+                    border-radius: 15px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                }
+                
+                .professional-table .card-body {
+                    padding: 2rem;
+                }
+                
+                .professional-table table {
+                    margin: 0;
+                }
+                
+                .professional-table thead {
+                    background: linear-gradient(135deg, #14860C 0%, #106b09 100%) !important;
+                }
+                
+                .professional-table thead th {
+                    color: white !important;
+                    background: transparent !important;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    font-size: 0.85rem;
+                    letter-spacing: 0.5px;
+                    padding: 1rem;
+                    border: none;
+                }
+                
+                .professional-table tbody tr {
+                    transition: all 0.3s ease;
+                    border-bottom: 1px solid #ecf0f1;
+                }
+                
+                .professional-table tbody tr:hover {
+                    background: linear-gradient(90deg, rgba(20, 134, 12, 0.05) 0%, rgba(20, 134, 12, 0.02) 100%);
+                    transform: scale(1.01);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+                }
+                
+                .professional-table tbody td {
+                    padding: 1rem;
+                    color: #2c3e50;
+                    font-weight: 500;
+                    vertical-align: middle;
+                }
+                
+                .professional-table tbody td:first-child {
+                    font-weight: 700;
+                    color: #14860C;
+                }
+                
+                /* Section Header */
+                .section-header {
+                    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+                    backdrop-filter: blur(10px);
+                    border-radius: 15px;
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    border-left: 5px solid #14860C;
+                }
+                
+                .section-header h3 {
+                    color: #14860C;
+                    font-weight: 700;
+                    margin: 0;
+                    font-size: 1.5rem;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                
+                /* Chart Cards */
+                .chart-card {
+                    background: white;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                    transition: all 0.3s ease;
+                    overflow: hidden;
+                }
+                
+                .chart-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+                }
+                
+                .chart-card .card-title {
+                    background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    margin: 0;
+                    font-weight: 600;
+                    font-size: 1.1rem;
+                }
+                
+                /* Responsive Adjustments */
+                @media (max-width: 1200px) {
+                    .counter-number {
+                        font-size: 2.5rem;
+                    }
+                    .stat-icon {
+                        font-size: 2.5rem;
+                    }
+                }
+                
+                @media (max-width: 768px) {
+                    .stat-card {
+                        min-height: 140px;
+                        margin-bottom: 1rem;
+                    }
+                    .counter-number {
+                        font-size: 2rem;
+                    }
+                }
+                
+                /* Loading Animation */
+                .loading-shimmer {
+                    animation: shimmer 2s infinite;
+                    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                    background-size: 200% 100%;
+                }
+                
+                @keyframes shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+            </style>
+            
+            <div class="row g-3">
+                <!-- All 5 Cards in One Row - Interactive & Attractive -->
+                <!-- Card 1: Total Members -->
+                <div class="col-xl col-lg-4 col-md-6 col-sm-12">
+                    <div class="card gradient-1 h-100 shadow-lg stat-card">
+                        <i class="fa fa-users stat-icon" style="color: #14860C;"></i>
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <h5 class="card-title mb-3 font-weight-bold">የአባላት ብዛት</h5>
+                                <div class="counter-number mb-2" id="current-bill-count">{{ current_bill_count }}</div>
+                                <p class="mb-0 card-subtitle" id="bill-period">{{bill_period}}</p>
                             </div>
                         </div>
                     </div>
                 </div>
             
-                <div class="col-lg-3 col-sm-6">
-                    <div class="card gradient-2 h-80">
-                        <div class="card-body">
-                            <h3 class="card-title text-white">ማህከላዊያን ክፍል</h3>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="text-white counter mb-0" id="current-month-total-bill-amnt">{{current_month_total_bill_amnt}}</h3>
-                                    <h6 class="text-white d-block mt-2">
-                                        <mark> <strong>ክፍል:</strong> <span id="current-month-bill-amnt">{{current_month_bill_amnt}}</span></mark>
-                                    </h6>
-                                </div>
-                                <!-- <i class="fa fa-money opacity-5 fs-4"></i> -->
+                <!-- Card 2: Middle Section -->
+                <div class="col-xl col-lg-4 col-md-6 col-sm-12">
+                    <div class="card gradient-2 h-100 shadow-lg stat-card">
+                        <i class="fa fa-user-circle stat-icon" style="color: #14860C;"></i>
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <h5 class="card-title mb-3 font-weight-bold">ማህከላዊያን ክፍል</h5>
+                                <div class="counter-number mb-2" id="current-month-total-bill-amnt">{{current_month_total_bill_amnt}}</div>
+                                <p class="mb-0 card-subtitle">ክፍል: ማህከላዊያን ክፍል</p>
                             </div>
                         </div>
                     </div>
                 </div>
             
-                <div class="col-lg-3 col-sm-6">
-                    <div class="card gradient-3 h-80">
-                        <div class="card-body">
-                            <h1 class="card-title text-white"><strong><b>የሕፃናት ክፍል</b></strong></h1>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h1 class="text-white counter mb-0" id="payment-count">{{payment_count}}</h2>
-                                    <h6 class="text-white d-block mt-2">
-                                        <mark><strong>ክፍል:</strong> <span id="payment-month">{{payment_month}}</span></mark>
-                                    </h6>
-                                </div>
-                                <!-- <i class="fa fa-check-circle opacity-5 fs-4"></i> -->
+                <!-- Card 3: Children Section -->
+                <div class="col-xl col-lg-4 col-md-6 col-sm-12">
+                    <div class="card gradient-3 h-100 shadow-lg stat-card">
+                        <i class="fa fa-child stat-icon" style="color: #14860C;"></i>
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <h5 class="card-title mb-3 font-weight-bold">የሕፃናት ክፍል</h5>
+                                <div class="counter-number mb-2" id="payment-count">{{payment_count}}</div>
+                                <p class="mb-0 card-subtitle">ክፍል: የሕፃናት ክፍል</p>
                             </div>
                         </div>
                     </div>
                 </div>
             
-                <div class="col-lg-3 col-sm-6">
-                    <div class="card gradient-4 h-80">
-                        <div class="card-body">
-                            <h3 class="card-title text-white">ወጣት ክፍል</h3>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h2 class="text-white counter mb-0" id="payment-total-bill-amnt">{{payment_total_bill_amnt}}</h3>
-                                    <h6 class="text-white d-block mt-2">
-                                        <mark><strong>ክፍል:</strong> <span id="payment-this-month-bill-amnt">{{payment_this_month_bill_amnt}}</span></mark>
-                                    </h6>
-                                </div>
-                                <!-- <i class="fa fa-money-bill-wave opacity-5 fs-4"></i> -->
+                <!-- Card 4: Youth Section -->
+                <div class="col-xl col-lg-4 col-md-6 col-sm-12">
+                    <div class="card gradient-4 h-100 shadow-lg stat-card">
+                        <i class="fa fa-graduation-cap stat-icon" style="color: #14860C;"></i>
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <h5 class="card-title mb-3 font-weight-bold">ወጣት ክፍል</h5>
+                                <div class="counter-number mb-2" id="payment-total-bill-amnt">{{payment_total_bill_amnt}}</div>
+                                <p class="mb-0 card-subtitle">ክፍል: ወጣት ክፍል</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card 5: Parent Section -->
+                <div class="col-xl col-lg-4 col-md-6 col-sm-12">
+                    <div class="card gradient-1 h-100 shadow-lg stat-card">
+                        <i class="fa fa-heart stat-icon" style="color: #14860C;"></i>
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <h5 class="card-title mb-3 font-weight-bold">ወላጅ ክፍል</h5>
+                                <div class="counter-number mb-2" id="parent-section-count">{{parent_section_count}}</div>
+                                <p class="mb-0 card-subtitle">ክፍል: ወላጅ ክፍል</p>
                             </div>
                         </div>
                     </div>
@@ -216,12 +460,22 @@
             </div>
             
 
-            <!-- Charts Row -->
-            <div class="row mt-3 g-2">
-                <div class="col-lg-4">
-                    <div class="card h-100">
+            <!-- Charts Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="section-header">
+                        <h3><i class="fa fa-pie-chart me-2"></i>Statistical Analysis - ስታትስቲክስ ትንታኔ</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3 g-3">
+                <div class="col-lg-6">
+                    <div class="card chart-card h-100">
+                        <h4 class="card-title">
+                            <span style="white-space: nowrap;">አባላት በክፍል - Members by Section</span>
+                        </h4>
                         <div class="card-body">
-                            <h4 class="card-title mb-3">አባላት በክፍል</h4>
                             <div class="chart-wrapper">
                                 <div class="chart-container">
                                     <canvas id="paymentChannelChart"></canvas>
@@ -231,10 +485,12 @@
                     </div>
                 </div>
                 
-                <div class="col-lg-8">
-                    <div class="card h-100">
+                <div class="col-lg-6">
+                    <div class="card chart-card h-100">
+                        <h4 class="card-title">
+                            <span style="white-space: nowrap;">የአባላት ግራፍ በፃታ - Gender Distribution</span>
+                        </h4>
                         <div class="card-body">
-                            <h4 class="card-title mb-3">የአባላት ግራፍ በፃታ</h4>
                             <div class="chart-wrapper">
                                 <div class="chart-container">
                                     <canvas id="branch-sent-data-chart"></canvas>
@@ -245,12 +501,23 @@
                 </div>
             </div>
 
-            <!-- Branch Status Tables -->
-            <div class="row mt-3 g-2">
+            <!-- Section Header with Export Button -->
+            <div class="row mt-4">
                 <div class="col-12">
-                    <div class="card">
-                        <div class="card-body darkcyan-table">
-                            <h4 class="card-title text-white mb-3"><center>አጠቃላይ ሪፖርት</center></h4>
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0"><i class="fa fa-bar-chart me-2"></i>አጠቃላይ ሪፖርት - Summary Report</h3>
+                        <button onclick="exportDashboardToPDF()" class="btn btn-success" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); border: none; padding: 10px 25px; border-radius: 10px; font-weight: 600; box-shadow: 0 4px 15px rgba(20, 134, 12, 0.3); transition: all 0.3s ease;">
+                            <i class="fa fa-file-pdf-o me-2"></i>Export to PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Professional Summary Table -->
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="card professional-table">
+                        <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered table-striped compact-table">
                                     <thead>
@@ -351,29 +618,52 @@
             const tbody = document.getElementById(tableId);
             if (!tbody) return;
             
+            // Determine column count based on table ID
+            const isSettledTable = tableId === 'settledTableBody';
+            const colSpan = isSettledTable ? 9 : 7;
+            
             if (!rows || !Array.isArray(rows) || rows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="no-data">No data available</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="no-data">No data available</td></tr>`;
                 return;
             }
             
             let newRowsHTML = '';
             rows.forEach(row => {
-                if (!row || row.length < 7) return;
+                if (!row) return;
                 
-                newRowsHTML += `
-                <tr class="table-row-update">
-                    <td>${row[0] || 'N/A'}</td>
-                    <td>${row[1] || 'N/A'}</td>
-                    <td>${row[2] || '0'}</td>
-                    <td>${row[3] || '0'}</td>
-                    <td><b>${formatNumber(row[4])}</b></td>
-                    <td><b>${formatNumber(row[5])}</b></td>
-                    <td><b>${formatNumber(row[6])}</b></td>
-                </tr>`;
+                if (isSettledTable && row.length >= 9) {
+                    // Summary report table (አጠቃላይ ሪፖርት) - 9 columns
+                    newRowsHTML += `
+                    <tr class="table-row-update">
+                        <td><b>${row[0] || 'N/A'}</b></td>
+                        <td>${row[1] || '0'}</td>
+                        <td>${row[2] || '0'}</td>
+                        <td>${row[3] || '0'}</td>
+                        <td><b>${row[4] || '0'}</b></td>
+                        <td><b>${row[5] || '0'}</b></td>
+                        <td><b>${row[6] || '0'}</b></td>
+                        <td><b>${row[7] || '0'}</b></td>
+                        <td><b>${row[8] || '0'}</b></td>
+                    </tr>`;
+                } else if (!isSettledTable && row.length >= 7) {
+                    // Other tables - 7 columns
+                    newRowsHTML += `
+                    <tr class="table-row-update">
+                        <td>${row[0] || 'N/A'}</td>
+                        <td>${row[1] || 'N/A'}</td>
+                        <td>${row[2] || '0'}</td>
+                        <td>${row[3] || '0'}</td>
+                        <td><b>${formatNumber(row[4])}</b></td>
+                        <td><b>${formatNumber(row[5])}</b></td>
+                        <td><b>${formatNumber(row[6])}</b></td>
+                    </tr>`;
+                }
             });
             
-            if (tbody.innerHTML !== newRowsHTML) {
+            if (newRowsHTML && tbody.innerHTML !== newRowsHTML) {
                 tbody.innerHTML = newRowsHTML;
+            } else if (!newRowsHTML) {
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" class="no-data">No data available</td></tr>`;
             }
         }
 
@@ -398,10 +688,16 @@
                     animateValue('payment-total-bill-amnt', data.payment_total_bill_amnt);
                 }
                 if (data.payment_month !== undefined) {
-                    document.getElementById('payment-month').textContent = data.payment_month;
+                    const paymentMonthEl = document.getElementById('payment-month');
+                    if (paymentMonthEl) {
+                        paymentMonthEl.textContent = data.payment_month;
+                    }
                 }
                 if (data.payment_this_month_bill_amnt !== undefined) {
-                    document.getElementById('payment-this-month-bill-amnt').textContent = formatNumber(data.payment_this_month_bill_amnt);
+                    const paymentThisMonthEl = document.getElementById('payment-this-month-bill-amnt');
+                    if (paymentThisMonthEl) {
+                        paymentThisMonthEl.textContent = formatNumber(data.payment_this_month_bill_amnt);
+                    }
                 }
                 
                 // Update other counters
@@ -409,17 +705,37 @@
                     animateValue('current-bill-count', data.current_bill_count);
                 }
                 if (data.bill_period !== undefined) {
-                    document.getElementById('bill-period').textContent = data.bill_period;
+                    const billPeriodEl = document.getElementById('bill-period');
+                    if (billPeriodEl) {
+                        billPeriodEl.textContent = data.bill_period;
+                    }
                 }
                 if (data.current_month_total_bill_amnt !== undefined) {
                     animateValue('current-month-total-bill-amnt', data.current_month_total_bill_amnt);
                 }
                 if (data.current_month_bill_amnt !== undefined) {
-                    document.getElementById('current-month-bill-amnt').textContent = formatNumber(data.current_month_bill_amnt);
+                    const currentMonthBillEl = document.getElementById('current-month-bill-amnt');
+                    if (currentMonthBillEl) {
+                        currentMonthBillEl.textContent = formatNumber(data.current_month_bill_amnt);
+                    }
                 }
                 
-                // Update tables
-                updateTable('settledTableBody', data.current_settled || []);
+                // Update parent section count (Card 5)
+                if (data.parent_section_count !== undefined) {
+                    const parentElement = document.getElementById('parent-section-count');
+                    if (parentElement) {
+                        animateValue('parent-section-count', data.parent_section_count);
+                    }
+                }
+                
+                // Update tables - Debug logging
+                console.log('Updating summary table with data:', data.current_settled);
+                if (data.current_settled && data.current_settled.length > 0) {
+                    updateTable('settledTableBody', data.current_settled);
+                } else {
+                    console.warn('No summary data received, keeping existing data');
+                    // Don't clear the table if no data is received
+                }
                 updateTable('deliveryTableBody', data.current_delivery || []);
                 updateTable('unsettledTableBody', data.current_unsettled || []);
                 
@@ -508,14 +824,15 @@
                         datasets: [{
                             data: data.channel_amounts,
                             backgroundColor: [
-                                'rgba(255, 99, 132, 0.7)',
-                                'rgba(54, 162, 235, 0.7)',
-                                'rgba(255, 206, 86, 0.7)',
-                                'rgba(75, 192, 192, 0.7)',
-                                'rgba(153, 102, 255, 0.7)',
-                                'rgba(255, 159, 64, 0.7)'
+                                'rgba(20, 134, 12, 0.8)',  // Green
+                                'rgba(54, 162, 235, 0.8)', // Blue
+                                'rgba(255, 206, 86, 0.8)', // Yellow
+                                'rgba(255, 99, 132, 0.8)', // Red
+                                'rgba(153, 102, 255, 0.8)', // Purple
+                                'rgba(255, 159, 64, 0.8)'  // Orange
                             ],
-                            borderWidth: 1
+                            borderWidth: 2,
+                            borderColor: '#fff'
                         }]
                     },
                     options: {
@@ -523,19 +840,44 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'bottom'
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 13,
+                                        weight: 'bold'
+                                    },
+                                    padding: 15,
+                                    generateLabels: function(chart) {
+                                        const chartData = chart.data;
+                                        if (chartData.labels.length && chartData.datasets.length) {
+                                            return chartData.labels.map((label, i) => {
+                                                const value = chartData.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${value}`,
+                                                    fillStyle: chartData.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
+                                        return [];
+                                    }
+                                }
                             },
                             tooltip: {
+                                enabled: true,
                                 callbacks: {
-                                    label: (context) => `${context.label}: ${context.raw.toLocaleString()}`
+                                    label: (context) => {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        return `${label}: ${value} አባላት`;
+                                    }
                                 }
                             }
                         },
                         animation: {
-                            duration: 1000,
-                            onComplete: () => {
-                                if (this.resize) this.resize();
-                            }
+                            animateRotate: true,
+                            animateScale: true
                         }
                     }
                 });
@@ -546,8 +888,83 @@
             }
         }
 
+        // PDF Export Function - Full Dashboard Screenshot
+        async function exportDashboardToPDF() {
+            const exportBtn = event.target.closest('button');
+            const originalHTML = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Generating PDF...';
+            exportBtn.disabled = true;
+            
+            try {
+                // Get the entire dashboard container
+                const dashboardElement = document.querySelector('.container-fluid');
+                
+                // Temporarily hide the export button
+                exportBtn.style.display = 'none';
+                
+                // Use html2canvas to capture the dashboard
+                const canvas = await html2canvas(dashboardElement, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    windowWidth: dashboardElement.scrollWidth,
+                    windowHeight: dashboardElement.scrollHeight
+                });
+                
+                // Show button again
+                exportBtn.style.display = '';
+                
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                const imgWidth = 210; // A4 width in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Create PDF with landscape if needed
+                const orientation = imgHeight > 297 ? 'portrait' : 'portrait';
+                const pdf = new jsPDF(orientation, 'mm', 'a4');
+                
+                // Add image to PDF
+                const imgData = canvas.toDataURL('image/png');
+                
+                if (imgHeight > 297) {
+                    // Multiple pages needed
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= 297;
+                    
+                    while (heightLeft > 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= 297;
+                    }
+                } else {
+                    // Single page
+                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                }
+                
+                // Save PDF
+                const fileName = `Mikha_Denagil_Dashboard_${new Date().toISOString().split('T')[0]}.pdf`;
+                pdf.save(fileName);
+                
+                // Success message
+                alert('✅ Dashboard exported successfully!\nFile: ' + fileName);
+                
+            } catch (error) {
+                console.error('PDF export error:', error);
+                alert('❌ Error exporting PDF: ' + error.message);
+            } finally {
+                exportBtn.innerHTML = originalHTML;
+                exportBtn.disabled = false;
+            }
+        }
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('📊 Initializing charts...');
             // Initialize charts with template data
             branchSentDataChart = new Chart(
                 document.getElementById('branch-sent-data-chart'),
@@ -593,6 +1010,21 @@
                 }
             );
 
+            // Debug chart data
+            const chartLabels = {{ channel_labels | tojson }};
+            const chartAmounts = {{ channel_amounts | tojson }};
+            const branchLabels = {{ branch_labels | tojson }};
+            const maleData = {{ number_sent_data | tojson }};
+            const femaleData = {{ total_amount_sent_data | tojson }};
+            
+            console.log('=== CHART INITIALIZATION DATA ===');
+            console.log('Pie Chart - Labels:', chartLabels);
+            console.log('Pie Chart - Amounts:', chartAmounts);
+            console.log('Bar Chart - Branch Labels:', branchLabels);
+            console.log('Bar Chart - Male Data:', maleData);
+            console.log('Bar Chart - Female Data:', femaleData);
+            console.log('================================');
+            
             paymentChannelChart = new Chart(
                 document.getElementById('paymentChannelChart'),
                 {
@@ -602,14 +1034,15 @@
                         datasets: [{
                             data: {{ channel_amounts | tojson }},
                             backgroundColor: [
-                                'rgba(255, 99, 132, 0.7)',
-                                'rgba(54, 162, 235, 0.7)',
-                                'rgba(255, 206, 86, 0.7)',
-                                'rgba(75, 192, 192, 0.7)',
-                                'rgba(153, 102, 255, 0.7)',
-                                'rgba(255, 159, 64, 0.7)'
+                                'rgba(20, 134, 12, 0.8)',  // Green
+                                'rgba(54, 162, 235, 0.8)', // Blue
+                                'rgba(255, 206, 86, 0.8)', // Yellow
+                                'rgba(255, 99, 132, 0.8)', // Red
+                                'rgba(153, 102, 255, 0.8)', // Purple
+                                'rgba(255, 159, 64, 0.8)'  // Orange
                             ],
-                            borderWidth: 1
+                            borderWidth: 2,
+                            borderColor: '#fff'
                         }]
                     },
                     options: {
@@ -617,13 +1050,44 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
-                                position: 'bottom'
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        size: 13,
+                                        weight: 'bold'
+                                    },
+                                    padding: 15,
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        if (data.labels.length && data.datasets.length) {
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${value}`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
+                                        return [];
+                                    }
+                                }
                             },
                             tooltip: {
+                                enabled: true,
                                 callbacks: {
-                                    label: (context) => `${context.label}: ${context.raw.toLocaleString()}`
+                                    label: (context) => {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        return `${label}: ${value} አባላት`;
+                                    }
                                 }
                             }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true
                         }
                     }
                 }

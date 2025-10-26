@@ -1,205 +1,555 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="container mt-4">
-    <h2>አባል ምዝገባ (Member Registration)</h2>
 
+{% block title %}Member Management - አባላት ማስተዳደሪያ{% endblock %}
+
+{% block content %}
+<style>
+    .member-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #14860C;
+    }
+    
+    .form-section h5 {
+        color: #14860C;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .form-section h5 i {
+        margin-right: 0.5rem;
+        font-size: 1.2rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.15);
+    }
+    
+    .btn-save {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .search-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .member-table {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+    
+    .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border: none;
+        padding: 1rem;
+    }
+    
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+    
+    .action-btn {
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        margin: 0 0.2rem;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #14860C;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .badge-custom {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="member-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-users me-3"></i>አባላት ማስተዳደሪያ - Member Management</h2>
+                <p class="mb-0" style="opacity: 0.9;">Register, edit, and manage all church members</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('member_report') }}" class="btn btn-light me-2" style="border-radius: 10px;">
+                    <i class="fa fa-bar-chart me-2"></i>View Report
+                </a>
+                <button class="btn btn-light" onclick="window.location.reload()" style="border-radius: 10px;">
+                    <i class="fa fa-refresh me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
       {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            <i class="fa fa-{{ 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
       {% endfor %}
+      {% endif %}
     {% endwith %}
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number">{{ members|length if members else 0 }}</div>
+                <div class="stat-label">Total Members<br>ጠቅላላ አባላት</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #17a2b8;">
+                    {{ members|selectattr('24', 'equalto', 'ወንድ')|list|length if members else 0 }}
+                </div>
+                <div class="stat-label">Male Members<br>ወንድ አባላት</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #e83e8c;">
+                    {{ members|selectattr('24', 'equalto', 'ሴት')|list|length if members else 0 }}
+                </div>
+                <div class="stat-label">Female Members<br>ሴት አባላት</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stat-number" style="color: #ffc107;">4</div>
+                <div class="stat-label">Sections<br>ክፍሎች</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Form -->
+    <div class="form-card" id="memberForm">
+        <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-{{ 'edit' if member_data else 'user-plus' }} me-2"></i>
+            {% if member_data %}Edit Member - አባል ማረም{% else %}Add New Member - አዲስ አባል መመዝገቢያ{% endif %}
+        </h4>
 
     <form method="POST">
-        <input type="hidden" name="id" id="id" value="{{ member_data['id'] if member_data else '' }}">
-        <div class="row">
-            <div class="col-md-6">
-                <label>ሙሉ ስም (Full Name)</label>
-                <input class="form-control" name="full_name" value="{{ member_data['full_name'] if member_data else '' }}">
-                <label>ፃታ (Gender)</label>
-                <select class="form-control" name="gender">  ፃታ
-                    <option value="">ፃታ</option>
-                    <option {% if member_data and member_data['gender'] == 'ወንድ' %}selected{% endif %}>ወንድ</option>
-                    <option {% if member_data and member_data['gender'] == 'ሴት' %}selected{% endif %}>ሴት</option>
-
-                 </select>
-                <label>የንስሀ አባት ስም (Father of Repentance)</label>
-                <input class="form-control" name="father_of_repentance" value="{{ member_data['father_of_repentance'] if member_data else '' }}">
-
-                <label>የእናት ስም (Mother Name)</label>
-                <input class="form-control" name="mother_name" value="{{ member_data['mother_name'] if member_data else '' }}">
-
-                <label>የሚያገለግሉበት ደብር (Parish)</label>
-                <input class="form-control" name="parish" value="{{ member_data['parish'] if member_data else '' }}">
-
-                <label>ክርስትና ስም (Christian Name)</label>
-                <input class="form-control" name="christian_name" value="{{ member_data['christian_name'] if member_data else '' }}">
-
-                <label>የትውልድ ዘመን (Age of Birth)</label>
-                <input class="form-control" type = 'date' name="age_of_birth" value="{{ member_data['age_of_birth'] if member_data else '' }}">
-
-                <label>ክ/ከተማ (Subcity)</label>
-                <select class="form-control" name="subcity">
-                    <option value="">Select Subcity</option>
-                    <option {% if member_data and member_data['subcity'] == 'ልደታ' %}selected{% endif %}>ልደታ</option>
-                    <option {% if member_data and member_data['subcity'] == 'አዲስ ከተማ' %}selected{% endif %}>አዲስ ከተማ</option>
-                    <option {% if member_data and member_data['subcity'] == 'ጉለሌ' %}selected{% endif %}>ጉለሌ</option>
-                    <option {% if member_data and member_data['subcity'] == 'ቂርቆስ' %}selected{% endif %}>ቂርቆስ</option>
-
-                </select>
-
-                <label>ወረዳ (Woreda)</label>
-                  <select class="form-control" name="woreda">
-                    <option value="">Select woreda</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 1' %}selected{% endif %}>ወረዳ 1</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 2' %}selected{% endif %}>ወረዳ 2</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 3' %}selected{% endif %}>ወረዳ 3</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 4' %}selected{% endif %}>ወረዳ 4</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 5' %}selected{% endif %}>ወረዳ 5</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 6' %}selected{% endif %}>ወረዳ 6</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 7' %}selected{% endif %}>ወረዳ 7</option> 
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 8' %}selected{% endif %}>ወረዳ 8</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 9' %}selected{% endif %}>ወረዳ 9</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 10' %}selected{% endif %}>ወረዳ 10</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 11' %}selected{% endif %}>ወረዳ 11</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 12' %}selected{% endif %}>ወረዳ 12</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 13' %}selected{% endif %}>ወረዳ 13</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 14' %}selected{% endif %}>ወረዳ 14</option>
-                    <option {% if member_data and member_data['woreda'] == 'ወረዳ 15' %}selected{% endif %}>ወረዳ 15</option>
+            <input type="hidden" name="id" value="{{ member_data.id if member_data else '' }}">
             
-
-                </select>
-                <!-- <input class="form-control" name="woreda" value="{{ member_data['woreda'] if member_data else '' }}"> -->
-
-                <label>የቤት ቁጥር (House Number)</label>
-                <input class="form-control" type="number" name="house_number" value="{{ member_data['house_number'] if member_data else '' }}">
-
-                <label>ልዩ ቦታ (Special Place)</label>
-                <input class="form-control" name="special_place" value="{{ member_data['special_place'] if member_data else '' }}">
-
-                <label>ስልክ የእጅ (Phone)</label>
-                <input class="form-control" type="number" name="phone" value="{{ member_data['phone'] if member_data else '' }}">
-            </div>
-
-            <div class="col-md-6">
-                <label>የመኖሪያ (Living)</label>
-                <input class="form-control" name="leving" value="{{ member_data['leving'] if member_data else '' }}">
-
-                <label>የስራ ሁኔታ (Work Status)</label>
-                <select class="form-control" name="work_status">
-                    <option value="">Select Status</option>
-                    <option {% if member_data and member_data['work_status'] == 'በሥራ ላይ' %}selected{% endif %}>በሥራ ላይ</option>
-                    <option {% if member_data and member_data['work_status'] == 'ስራ የለኝም' %}selected{% endif %}>ስራ የለኝም</option>
-                    <option {% if member_data and member_data['work_status'] == 'ስራ በመፈለግ ላይ' %}selected{% endif %}>ስራ በመፈለግ ላይ</option>
-                    <option {% if member_data and member_data['work_status'] == 'ተማሪ' %}selected{% endif %}>ተማሪ</option>
-                    <option {% if member_data and member_data['work_status'] == 'ሌላ' %}selected{% endif %}>ሌላ</option>
-
-                    
-                </select>
-
-                <label>ኢሜይል (Email)</label>
-                <input class="form-control" type="email" name="email" value="{{ member_data['email'] if member_data else '' }}">
-
-                <label>አባል የሆኑበት ዓ.ም (Member Year)</label>
-                <input class="form-control" name="member_year" value="{{ member_data['member_year'] if member_data else '' }}">
-
-                <label>መንፈሳዊ ትምህርት (Spiritual Education)</label>
-                <input class="form-control" name="spiritual_education" value="{{ member_data['spiritual_education'] if member_data else '' }}">
-
-                <label>ደረጃ (Rank)</label>
-                <input class="form-control" name="rank" value="{{ member_data['rank'] if member_data else '' }}">
-
-                <label>የትምህርት_ደረጃ(education_status)</label>
-                <select class="form-control" name="education_status">
-                    <option value="">Select Education Status</option>
-                    <option {% if member_data and member_data['education_status'] == 'ማስተርስ' %}selected{% endif %}>ማስተርስ</option>
-                    <option {% if member_data and member_data['education_status'] == 'ዲግሪ' %}selected{% endif %}>ዲግሪ</option>
-                    <option {% if member_data and member_data['education_status'] == 'ዲፕሎማ' %}selected{% endif %}>ዲፕሎማ</option>
-                    <option {% if member_data and member_data['education_status'] == '1ኛ ደረጃ ' %}selected{% endif %}>1ኛ ደረጃ</option>
-                    <option {% if member_data and member_data['education_status'] == '1ኛ ደረጃ' %}selected{% endif %}>2ኛ ደረጃ</option>
-
-                </select>
-                <label>ስራ (Work)</label>
-                <input class="form-control" name="work" value="{{ member_data['work'] if member_data else '' }}">
-
-                <label>ተማሪ (Student)</label>
-                <input class="form-control" name="student" value="{{ member_data['student'] if member_data else '' }}">
-
-                <label>ሙያ (Career)</label>
-                <input class="form-control" name="career" value="{{ member_data['career'] if member_data else '' }}">
-
-                <label>የጋብቻ ሁኔታ (Marital Status)</label>
-                <select class="form-control" name="marital_status">
-                    <option value="">Marital Status</option>
-                    <option {% if member_data and member_data['marital_status'] == 'ያገባ' %}selected{% endif %}>ያገባ</option>
-                    <option {% if member_data and member_data['marital_status'] == 'ያላገባ' %}selected{% endif %}>ያላገባ</option>
-                    <option {% if member_data and member_data['marital_status'] == 'የተፋታ' %}selected{% endif %}>የተፋታ</option>
-
-
-                    
-                </select>
-
-                <label for="">የሚገለግሉበት ክፍል</label>
-                 <select class="form-control" name="section_name">የሚገለግሉበት ክፍል
-                    <option value="">የሚገለግሉበት ክፍል</option>
-                    <option {% if member_data and member_data['section_name'] == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
-                    <option {% if member_data and member_data['section_name'] == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
-                    <option {% if member_data and member_data['section_name'] == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
-                    <option {% if member_data and member_data['section_name'] == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
-
-
+            <!-- Personal Information -->
+            <div class="form-section">
+                <h5><i class="fa fa-user"></i>Personal Information - የግል መረጃ</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Full Name / ሙሉ ስም <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="full_name" value="{{ member_data.full_name if member_data else '' }}" required placeholder="አበበ ከበደ">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Gender / ፃታ <span class="text-danger">*</span></label>
+                        <select class="form-select" name="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="ወንድ" {% if member_data and member_data.gender == 'ወንድ' %}selected{% endif %}>ወንድ (Male)</option>
+                            <option value="ሴት" {% if member_data and member_data.gender == 'ሴት' %}selected{% endif %}>ሴት (Female)</option>
                  </select>
-                <!-- <input class="form-control" name="section_name" value="{{ member_data['section_name'] if member_data else '' }}"> -->
-                            
-
-
-                <!-- <input class="form-control" name="marital_status" value="{{ member_data['marital_status'] if member_data else '' }}"> -->
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Date of Birth / የትውልድ ቀን</label>
+                        <input type="date" class="form-control" name="age_of_birth" value="{{ member_data.age_of_birth if member_data else '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Christian Name / ክርስትና ስም</label>
+                        <input type="text" class="form-control" name="christian_name" value="{{ member_data.christian_name if member_data else '' }}" placeholder="ገብረ ክርስቶስ">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Father of Repentance / የንስሀ አባት</label>
+                        <input type="text" class="form-control" name="father_of_repentance" value="{{ member_data.father_of_repentance if member_data else '' }}" placeholder="አባ ገብረ ማርያም">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mother Name / የእናት ስም</label>
+                        <input type="text" class="form-control" name="mother_name" value="{{ member_data.mother_name if member_data else '' }}" placeholder="ወ/ሮ ፀሃይ">
+                    </div>
+                </div>
             </div>
+            
+            <!-- Address Information -->
+            <div class="form-section">
+                <h5><i class="fa fa-map-marker"></i>Address Information - የአድራሻ መረጃ</h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Subcity / ክ/ከተማ</label>
+                        <select class="form-select" name="subcity">
+                    <option value="">Select Subcity</option>
+                            <option value="ልደታ" {% if member_data and member_data.subcity == 'ልደታ' %}selected{% endif %}>ልደታ</option>
+                            <option value="አዲስ ከተማ" {% if member_data and member_data.subcity == 'አዲስ ከተማ' %}selected{% endif %}>አዲስ ከተማ</option>
+                            <option value="ጉለሌ" {% if member_data and member_data.subcity == 'ጉለሌ' %}selected{% endif %}>ጉለሌ</option>
+                            <option value="ቂርቆስ" {% if member_data and member_data.subcity == 'ቂርቆስ' %}selected{% endif %}>ቂርቆስ</option>
+                            <option value="አራዳ" {% if member_data and member_data.subcity == 'አራዳ' %}selected{% endif %}>አራዳ</option>
+                            <option value="ቦሌ" {% if member_data and member_data.subcity == 'ቦሌ' %}selected{% endif %}>ቦሌ</option>
+                            <option value="ነፋስ ስልክ" {% if member_data and member_data.subcity == 'ነፋስ ስልክ' %}selected{% endif %}>ነፋስ ስልክ</option>
+                            <option value="ቀሊቲ" {% if member_data and member_data.subcity == 'ቀሊቲ' %}selected{% endif %}>ቀሊቲ</option>
+                            <option value="ያካ" {% if member_data and member_data.subcity == 'ያካ' %}selected{% endif %}>ያካ</option>
+                            <option value="የካ" {% if member_data and member_data.subcity == 'የካ' %}selected{% endif %}>የካ</option>
+                            <option value="ኮልፌ ቀራኒዮ" {% if member_data and member_data.subcity == 'ኮልፌ ቀራኒዮ' %}selected{% endif %}>ኮልፌ ቀራኒዮ</option>
+                </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Woreda / ወረዳ</label>
+                        <input type="text" class="form-control" name="woreda" value="{{ member_data.woreda if member_data else '' }}" placeholder="05">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">House Number / የቤት ቁጥር</label>
+                        <input type="text" class="form-control" name="house_number" value="{{ member_data.house_number if member_data else '' }}" placeholder="123">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Special Place / ልዩ ቦታ</label>
+                        <input type="text" class="form-control" name="special_place" value="{{ member_data.special_place if member_data else '' }}" placeholder="አራዳ መዳኒያለም አካባቢ">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="form-section">
+                <h5><i class="fa fa-phone"></i>Contact Information - የመገኛ መረጃ</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number / ስልክ ቁጥር</label>
+                        <input type="tel" class="form-control" name="phone" value="{{ member_data.phone if member_data else '' }}" placeholder="+251911223344">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email / ኢሜይል</label>
+                        <input type="email" class="form-control" name="email" value="{{ member_data.email if member_data else '' }}" placeholder="example@email.com">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Church Information -->
+            <div class="form-section">
+                <h5><i class="fa fa-church"></i>Church Information - የቤተክርስትያን መረጃ</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Parish / የሚያገለግሉበት ደብር</label>
+                        <input type="text" class="form-control" name="parish" value="{{ member_data.parish if member_data else '' }}" placeholder="ቅድስተ ማርያም">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Section / ክፍል <span class="text-danger">*</span></label>
+                        <select class="form-select" name="section_name" required>
+                            <option value="">Select Section</option>
+                            <option value="የሕፃናት ክፍል" {% if member_data and member_data.section_name == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
+                            <option value="ማህከላዊያን ክፍል" {% if member_data and member_data.section_name == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
+                            <option value="ወጣት ክፍል" {% if member_data and member_data.section_name == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
+                            <option value="ወላጅ ክፍል" {% if member_data and member_data.section_name == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
+                </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Member Since / አባል ከሆኑ ጀምሮ</label>
+                        <input type="number" class="form-control" name="member_year" value="{{ member_data.member_year if member_data else '' }}" placeholder="2015" min="1900" max="2100">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Spiritual Education / መንፈሳዊ ትምህርት</label>
+                        <input type="text" class="form-control" name="spiritual_education" value="{{ member_data.education if member_data else '' }}" placeholder="ሰበካ፣ መጽሐፈ ቅዱስ">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Church Rank / ደረጃ</label>
+                        <input type="text" class="form-control" name="rank" value="{{ member_data.rank if member_data else '' }}" placeholder="ዲያቆን፣ ካህን">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Education & Work Status -->
+            <div class="form-section">
+                <h5><i class="fa fa-graduation-cap"></i>Education & Employment - ትምህርት እና ሥራ</h5>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Education Status / የትምህርት ደረጃ</label>
+                        <select class="form-select" name="education_status">
+                            <option value="">Select Status</option>
+                            <option value="ያልተማረ" {% if member_data and member_data.education_status == 'ያልተማረ' %}selected{% endif %}>ያልተማረ</option>
+                            <option value="1ኛ ደረጃ" {% if member_data and member_data.education_status == '1ኛ ደረጃ' %}selected{% endif %}>1ኛ ደረጃ</option>
+                            <option value="2ኛ ደረጃ" {% if member_data and member_data.education_status == '2ኛ ደረጃ' %}selected{% endif %}>2ኛ ደረጃ</option>
+                            <option value="ዲፕሎማ" {% if member_data and member_data.education_status == 'ዲፕሎማ' %}selected{% endif %}>ዲፕሎማ</option>
+                            <option value="ዲግሪ" {% if member_data and member_data.education_status == 'ዲግሪ' %}selected{% endif %}>ዲግሪ</option>
+                            <option value="ማስተርስ" {% if member_data and member_data.education_status == 'ማስተርስ' %}selected{% endif %}>ማስተርስ</option>
+                            <option value="PhD" {% if member_data and member_data.education_status == 'PhD' %}selected{% endif %}>PhD</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Work Status / የሥራ ሁኔታ</label>
+                        <select class="form-select" name="work_status">
+                            <option value="">Select Status</option>
+                            <option value="በሥራ ላይ" {% if member_data and member_data.work_status == 'በሥራ ላይ' %}selected{% endif %}>በሥራ ላይ</option>
+                            <option value="ስራ የለኝም" {% if member_data and member_data.work_status == 'ስራ የለኝም' %}selected{% endif %}>ስራ የለኝም</option>
+                            <option value="ስራ በመፈለግ ላይ" {% if member_data and member_data.work_status == 'ስራ በመፈለግ ላይ' %}selected{% endif %}>ስራ በመፈለግ ላይ</option>
+                            <option value="ተማሪ" {% if member_data and member_data.work_status == 'ተማሪ' %}selected{% endif %}>ተማሪ</option>
+                            <option value="ጡረተኛ" {% if member_data and member_data.work_status == 'ጡረተኛ' %}selected{% endif %}>ጡረተኛ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Is Student? / ተማሪ ነዎት?</label>
+                        <select class="form-select" name="student">
+                            <option value="">Select</option>
+                            <option value="Yes" {% if member_data and member_data.student == 'Yes' %}selected{% endif %}>Yes - አዎ</option>
+                            <option value="No" {% if member_data and member_data.student == 'No' %}selected{% endif %}>No - አይደለሁም</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Occupation / ሙያ</label>
+                        <input type="text" class="form-control" name="work" value="{{ member_data.work if member_data else '' }}" placeholder="መምህር፣ ነርስ፣ መሐንዲስ">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Career / ሙያ/ስራ</label>
+                        <input type="text" class="form-control" name="career" value="{{ member_data.career if member_data else '' }}" placeholder="ሶፍትዌር ኢንጂነር">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marital Status -->
+            <div class="form-section">
+                <h5><i class="fa fa-heart"></i>Personal Status - የግል ሁኔታ</h5>
+                <div class="row g-3">
+            <div class="col-md-6">
+                        <label class="form-label">Marital Status / የትዳር ሁኔታ</label>
+                        <select class="form-select" name="marital_status">
+                    <option value="">Select Status</option>
+                            <option value="ያላገባ" {% if member_data and member_data.marital_status == 'ያላገባ' %}selected{% endif %}>ያላገባ (Single)</option>
+                            <option value="ያገባ" {% if member_data and member_data.marital_status == 'ያገባ' %}selected{% endif %}>ያገባ (Married)</option>
+                            <option value="የፈታ" {% if member_data and member_data.marital_status == 'የፈታ' %}selected{% endif %}>የፈታ (Divorced)</option>
+                            <option value="የሞተበት" {% if member_data and member_data.marital_status == 'የሞተበት' %}selected{% endif %}>የሞተበት (Widowed)</option>
+                </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Living Status / የመኖሪያ ሁኔታ</label>
+                        <input type="text" class="form-control" name="leving" value="{{ member_data.leving if member_data else '' }}" placeholder="ከቤተሰብ፣ ብቻየ">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="text-end mt-4">
+                {% if member_data %}
+                <a href="{{ url_for('manage_members') }}" class="btn btn-secondary me-2" style="border-radius: 10px; padding: 0.75rem 2rem;">
+                    <i class="fa fa-times me-2"></i>Cancel
+                </a>
+                {% endif %}
+                <button type="reset" class="btn btn-outline-secondary me-2" style="border-radius: 10px; padding: 0.75rem 2rem;">
+                    <i class="fa fa-refresh me-2"></i>Reset
+                </button>
+                <button type="submit" class="btn btn-save">
+                    <i class="fa fa-save me-2"></i>{% if member_data %}Update Member{% else %}Add Member{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Search & Filter -->
+    <div class="search-card">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Search by Name</label>
+                <input type="text" class="form-control" name="search" value="{{ search }}" placeholder="🔍 Search member...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Section</label>
+                <select class="form-select" name="section">
+                    <option value="">All Sections</option>
+                    <option value="የሕፃናት ክፍል" {% if section_filter == 'የሕፃናት ክፍል' %}selected{% endif %}>የሕፃናት ክፍል</option>
+                    <option value="ማህከላዊያን ክፍል" {% if section_filter == 'ማህከላዊያን ክፍል' %}selected{% endif %}>ማህከላዊያን ክፍል</option>
+                    <option value="ወጣት ክፍል" {% if section_filter == 'ወጣት ክፍል' %}selected{% endif %}>ወጣት ክፍል</option>
+                    <option value="ወላጅ ክፍል" {% if section_filter == 'ወላጅ ክፍል' %}selected{% endif %}>ወላጅ ክፍል</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Gender</label>
+                <select class="form-select" name="gender">
+                    <option value="">All Genders</option>
+                    <option value="ወንድ" {% if gender_filter == 'ወንድ' %}selected{% endif %}>ወንድ (Male)</option>
+                    <option value="ሴት" {% if gender_filter == 'ሴት' %}selected{% endif %}>ሴት (Female)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100" style="border-radius: 10px; padding: 0.75rem;">
+                    <i class="fa fa-search me-2"></i>Search & Filter
+                </button>
+            </div>
+        </form>
         </div>
 
-        <div class="mt-3">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{{ url_for('manage_members') }}" class="btn btn-secondary">Clear</a>
+    <!-- Members Table -->
+    <div class="member-table">
+        <div class="table-header">
+            <h4 class="mb-0"><i class="fa fa-users me-2"></i>Members List - የአባላት ዝርዝር</h4>
         </div>
-    </form>
 
-    <hr>
-    <h3>Last 10 Members</h3>
-    <table class="table table-bordered table-striped">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Full Name</th>
-                <th>Father's Name</th>
-                <th>Mother's Name</th>
-                <th>Parish</th>
-                <th>Christian Name</th>
-                <th>Age of Birth</th>
-                <th>Subcity</th>
-                <th>Woreda</th>
-                <th>section_name</th>
+                        <th>Full Name / ሙሉ ስም</th>
+                        <th>Gender / ፃታ</th>
+                        <th>Section / ክፍል</th>
+                        <th>Phone / ስልክ</th>
+                        <th>Marital Status / የትዳር ሁኔታ</th>
+                        <th>Work Status / የሥራ ሁኔታ</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
+                    {% if members %}
             {% for member in members %}
             <tr>
-                <td>{{ member.id }}</td>
-                <td>{{ member.full_name }}</td>
-                <td>{{ member.father_of_repentance }}</td>
-                <td>{{ member.mother_name }}</td>
-                <td>{{ member.parish }}</td>
-                <td>{{ member.christian_name }}</td>
-                <td>{{ member.age_of_birth }}</td>
-                <td>{{ member.subcity }}</td>
-                <td>{{ member.woreda }}</td>
-                <td>{{member.section_name}}</td>
-                <td>
-                    <a href="{{ url_for('manage_members', edit=member.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                    <a href="{{ url_for('manage_members', delete=member.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this member?');">Delete</a>
+                            <td><strong>{{ member[0] }}</strong></td>
+                            <td><strong>{{ member[1] }}</strong></td>
+                            <td>
+                                <span class="badge-custom {% if member[24] == 'ወንድ' %}bg-info{% else %}bg-danger{% endif %}">
+                                    {{ member[24] }}
+                                </span>
+                            </td>
+                            <td><span class="badge-custom bg-success">{{ member[23] }}</span></td>
+                            <td>{{ member[11] or '-' }}</td>
+                            <td>{{ member[22] or '-' }}</td>
+                            <td>{{ member[13] or '-' }}</td>
+                            <td style="white-space: nowrap;">
+                                <a href="?edit={{ member[0] }}" class="btn btn-sm btn-primary action-btn" title="Edit">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                <a href="?delete={{ member[0] }}" class="btn btn-sm btn-danger action-btn" title="Delete" 
+                                   onclick="return confirm('Are you sure you want to delete this member?')">
+                                    <i class="fa fa-trash"></i>
+                                </a>
                 </td>
             </tr>
             {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fa fa-users fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No members found</h5>
+                                <p class="text-muted">Add your first member to get started</p>
+                            </td>
+                        </tr>
+                    {% endif %}
         </tbody>
     </table>
+        </div>
+    </div>
 </div>
+
+<script>
+    // Smooth scroll to form when editing
+    {% if member_data %}
+    window.addEventListener('load', function() {
+        document.getElementById('memberForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    {% endif %}
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        let alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            let bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+
 {% endblock %}

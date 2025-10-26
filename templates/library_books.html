@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}Library Management - መፅሀፍት ቤት{% endblock %}
+
+{% block content %}
+<style>
+    /* Professional Library Management Styling */
+    .library-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .stat-box {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #14860C;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .book-form-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .book-table-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .book-table-card .table {
+        margin-bottom: 0;
+    }
+    
+    .book-table-card thead {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+    }
+    
+    .book-table-card thead th {
+        color: white !important;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 1rem;
+        border: none;
+    }
+    
+    .book-table-card tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .book-table-card tbody tr:hover {
+        background: rgba(20, 134, 12, 0.05);
+        transform: scale(1.005);
+    }
+    
+    .badge-available {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .badge-borrowed {
+        background: linear-gradient(135deg, #ffc107, #ff9800);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .badge-unavailable {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .action-btn {
+        margin: 0 2px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .form-control:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        border: none;
+        font-weight: 600;
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(20, 134, 12, 0.4);
+    }
+    
+    .search-box {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="library-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2"><i class="fa fa-book me-3"></i>መፅሀፍት ቤት ማስተዳደሪያ - Library Management</h2>
+                <p class="mb-0" style="opacity: 0.9;">Register and manage church library books</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-light" onclick="window.print()" style="border-radius: 10px; font-weight: 600;">
+                    <i class="fa fa-print me-2"></i>Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="stat-box">
+                <div class="stat-number">{{ library_stats.total_books }}</div>
+                <div class="stat-label">Total Books<br>ጠቅላላ መፅሀፍት</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <div class="stat-number">{{ library_stats.total_copies }}</div>
+                <div class="stat-label">Total Copies<br>ጠቅላላ ቅጂዎች</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <div class="stat-number" style="color: #28a745;">{{ library_stats.available_copies }}</div>
+                <div class="stat-label">Available<br>ዝግጁ</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <div class="stat-number" style="color: #ffc107;">{{ library_stats.borrowed_copies }}</div>
+                <div class="stat-label">Borrowed<br>የተበደሩ</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="stat-box">
+                <div class="stat-number" style="color: #17a2b8;">{{ library_stats.total_categories }}</div>
+                <div class="stat-label">Categories<br>ምድቦች</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Book Form -->
+    <div class="book-form-card">
+        <h4 class="mb-4" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-plus-circle me-2"></i>
+            {% if book_data %}Edit Book - መፅሀፍ ማረም{% else %}Add New Book - አዲስ መፅሀፍ መመዝገቢያ{% endif %}
+        </h4>
+        
+        <form method="POST" id="bookForm">
+            <input type="hidden" name="id" value="{{ book_data.id or '' }}">
+            <input type="hidden" name="action" value="{% if book_data %}edit{% else %}add{% endif %}">
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Book Title / መፅሀፍ ርዕስ <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="title" value="{{ book_data.title or '' }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Author / ደራሲ <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="author" value="{{ book_data.author or '' }}" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Category / ምድብ</label>
+                    <select class="form-control" name="category">
+                        <option value="">Select Category</option>
+                        <option {% if book_data and book_data.category == 'Spiritual' %}selected{% endif %}>Spiritual</option>
+                        <option {% if book_data and book_data.category == 'Prayer' %}selected{% endif %}>Prayer</option>
+                        <option {% if book_data and book_data.category == 'History' %}selected{% endif %}>History</option>
+                        <option {% if book_data and book_data.category == 'Liturgy' %}selected{% endif %}>Liturgy</option>
+                        <option {% if book_data and book_data.category == 'Children' %}selected{% endif %}>Children</option>
+                        <option {% if book_data and book_data.category == 'Youth' %}selected{% endif %}>Youth</option>
+                        <option {% if book_data and book_data.category == 'Biography' %}selected{% endif %}>Biography</option>
+                        <option {% if book_data and book_data.category == 'Educational' %}selected{% endif %}>Educational</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">ISBN</label>
+                    <input type="text" class="form-control" name="isbn" value="{{ book_data.isbn or '' }}" placeholder="978-0-123456-78-9">
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Publisher / አሳታሚ</label>
+                    <input type="text" class="form-control" name="publisher" value="{{ book_data.publisher or '' }}">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Publication Year / የታተመበት ዓመት</label>
+                    <input type="number" class="form-control" name="publication_year" value="{{ book_data.publication_year or '' }}" min="1900" max="2100">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Language / ቋንቋ</label>
+                    <select class="form-control" name="language">
+                        <option {% if not book_data or book_data.language == 'Amharic' %}selected{% endif %}>Amharic</option>
+                        <option {% if book_data and book_data.language == 'English' %}selected{% endif %}>English</option>
+                        <option {% if book_data and book_data.language == 'Ge\'ez' %}selected{% endif %}>Ge'ez</option>
+                        <option {% if book_data and book_data.language == 'Tigrinya' %}selected{% endif %}>Tigrinya</option>
+                        <option {% if book_data and book_data.language == 'Oromo' %}selected{% endif %}>Oromo</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Total Copies / ጠቅላላ ቅጂዎች <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="total_copies" value="{{ book_data.total_copies or 1 }}" min="1" required>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Available Copies / ዝግጁ ቅጂዎች</label>
+                    <input type="number" class="form-control" name="available_copies" value="{{ book_data.available_copies or 1 }}" min="0">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Shelf Location / የመደርደሪያ አድራሻ</label>
+                    <input type="text" class="form-control" name="shelf_location" value="{{ book_data.shelf_location or '' }}" placeholder="e.g., A-001">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Status / ሁኔታ</label>
+                    <select class="form-control" name="status">
+                        <option value="Active" {% if not book_data or book_data.status == 'Active' %}selected{% endif %}>Active - ንቁ</option>
+                        <option value="Archived" {% if book_data and book_data.status == 'Archived' %}selected{% endif %}>Archived - በማህደር</option>
+                        <option value="Lost" {% if book_data and book_data.status == 'Lost' %}selected{% endif %}>Lost - የጠፋ</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-12">
+                    <label class="form-label fw-bold">Description / መግለጫ</label>
+                    <textarea class="form-control" name="description" rows="3" placeholder="Book description...">{{ book_data.description or '' }}</textarea>
+                </div>
+                
+                <div class="col-md-12 text-end">
+                    {% if book_data %}
+                    <a href="{{ url_for('manage_books') }}" class="btn btn-secondary me-2" style="border-radius: 10px;">
+                        <i class="fa fa-times me-2"></i>Cancel
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save me-2"></i>{% if book_data %}Update Book{% else %}Add Book{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="search-box">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Search / ፈልግ</label>
+                <input type="text" class="form-control" name="search" value="{{ search_query or '' }}" placeholder="Search by title, author, or ISBN...">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Category / ምድብ</label>
+                <select class="form-control" name="category">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Status / ሁኔታ</label>
+                <select class="form-control" name="status">
+                    <option value="">All Status</option>
+                    <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+                    <option value="Archived" {% if status_filter == 'Archived' %}selected{% endif %}>Archived</option>
+                    <option value="Lost" {% if status_filter == 'Lost' %}selected{% endif %}>Lost</option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-search me-2"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Books Table -->
+    <div class="book-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title / ርዕስ</th>
+                        <th>Author / ደራሲ</th>
+                        <th>Category / ምድብ</th>
+                        <th>ISBN</th>
+                        <th>Language</th>
+                        <th>Copies / ቅጂዎች</th>
+                        <th>Available / ዝግጁ</th>
+                        <th>Shelf / መደርደሪያ</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if books %}
+                        {% for book in books %}
+                        <tr>
+                            <td><strong>{{ book[0] }}</strong></td>
+                            <td style="max-width: 200px;">
+                                <strong>{{ book[1] }}</strong>
+                                {% if book[12] %}
+                                <br><small class="text-muted">{{ book[12][:100] }}...</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ book[2] }}</td>
+                            <td><span class="badge bg-info">{{ book[3] or 'N/A' }}</span></td>
+                            <td><small>{{ book[4] or 'N/A' }}</small></td>
+                            <td>{{ book[7] }}</td>
+                            <td><strong>{{ book[8] }}</strong></td>
+                            <td>
+                                {% if book[9] > 0 %}
+                                <span class="badge-available">{{ book[9] }}</span>
+                                {% else %}
+                                <span class="badge-unavailable">0</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ book[11] or '-' }}</td>
+                            <td>
+                                {% if book[14] == 'Active' %}
+                                <span class="badge bg-success">{{ book[14] }}</span>
+                                {% elif book[14] == 'Archived' %}
+                                <span class="badge bg-secondary">{{ book[14] }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">{{ book[14] }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <a href="?edit_id={{ book[0] }}" class="btn btn-sm btn-primary action-btn" title="Edit">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this book?');">
+                                    <input type="hidden" name="id" value="{{ book[0] }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-sm btn-danger action-btn" title="Delete">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center py-5">
+                                <i class="fa fa-book fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No books found</h5>
+                                <p class="text-muted">Add your first book to get started</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-calculate borrowed copies
+    document.addEventListener('DOMContentLoaded', function() {
+        const totalCopiesInput = document.querySelector('input[name="total_copies"]');
+        const availableCopiesInput = document.querySelector('input[name="available_copies"]');
+        
+        function updateBorrowed() {
+            const total = parseInt(totalCopiesInput.value) || 0;
+            const available = parseInt(availableCopiesInput.value) || 0;
+            const borrowed = total - available;
+            
+            // Show borrowed count
+            const borrowedSpan = document.getElementById('borrowedCount');
+            if (borrowedSpan) {
+                borrowedSpan.textContent = borrowed;
+            }
+        }
+        
+        if (totalCopiesInput && availableCopiesInput) {
+            totalCopiesInput.addEventListener('input', updateBorrowed);
+            availableCopiesInput.addEventListener('input', updateBorrowed);
+        }
+    });
+    
+    // Smooth scroll to form when editing
+    {% if book_data %}
+    window.addEventListener('load', function() {
+        document.getElementById('bookForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    {% endif %}
+</script>
+
+{% endblock %}
+

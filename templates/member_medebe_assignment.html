@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Member Medebe Assignment - የአባላት ምድብ መመደቢያ{% endblock %}
+
+{% block content %}
+<style>
+    .assignment-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .assigned-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-assigned { background: #d4edda; color: #155724; }
+    .status-unassigned { background: #f8d7da; color: #721c24; }
+</style>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="assignment-header">
+        <div class="row align-items-center">
+            <div class="col-md-10">
+                <h2 class="mb-2"><i class="fa fa-users me-3"></i>የአባላት ምድብ መመደቢያ - Member Medebe Assignment</h2>
+                <p class="mb-0" style="opacity: 0.9;">Assign members to medebe groups (sub-sections)</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #14860C;">{{ assignment_stats.total_members }}</div>
+                <div class="stat-label">Total Members<br>ጠቅላላ አባላት</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #28a745;">{{ assignment_stats.assigned_members }}</div>
+                <div class="stat-label">Assigned<br>የተመደቡ</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #dc3545;">{{ assignment_stats.unassigned_members }}</div>
+                <div class="stat-label">Not Assigned<br>ያልተመደቡ</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Auto-Assignment Section -->
+    <div class="book-form-card mb-4">
+        <h4 class="mb-3" style="color: #14860C; font-weight: 700;">
+            <i class="fa fa-magic me-2"></i>Auto-Assignment - ራስ-ሰር መመደቢያ
+        </h4>
+        
+        <div class="alert alert-info">
+            <strong>How it works:</strong> Select a section and the system will automatically distribute all unassigned members evenly across available medebe groups in that section.
+        </div>
+        
+        <form method="POST" onsubmit="return confirm('Auto-assign all unassigned members in this section?');">
+            <input type="hidden" name="action" value="auto_assign">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Select Section for Auto-Assignment</label>
+                    <select class="form-control" name="section_name" required>
+                        <option value="">-- Select Section --</option>
+                        {% for section in sections %}
+                        <option value="{{ section }}">{{ section }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fa fa-magic me-2"></i>Auto-Assign
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Filters -->
+    <div class="search-box mb-4">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Section</label>
+                <select class="form-control" name="section">
+                    <option value="">All Sections</option>
+                    {% for section in sections %}
+                    <option value="{{ section }}" {% if section_filter == section %}selected{% endif %}>{{ section }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Medebe</label>
+                <select class="form-control" name="medebe">
+                    <option value="">All Medebe</option>
+                    {% for medebe in medebes %}
+                    <option value="{{ medebe[0] }}" {% if medebe_filter == medebe[0]|string %}selected{% endif %}>{{ medebe[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Filter by Status</label>
+                <select class="form-control" name="status">
+                    <option value="">All Status</option>
+                    <option value="Assigned" {% if status_filter == 'Assigned' %}selected{% endif %}>✅ Assigned</option>
+                    <option value="Not Assigned" {% if status_filter == 'Not Assigned' %}selected{% endif %}>⚠️ Not Assigned</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="fa fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Members Table -->
+    <div class="book-table-card">
+        <div class="p-3" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+            <h4 class="text-white mb-0">
+                <i class="fa fa-users me-2"></i>Member List - የአባላት ዝርዝር
+            </h4>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Member Name / የአባል ስም</th>
+                        <th>Phone / ስልክ</th>
+                        <th>Section / ክፍል</th>
+                        <th>Current Medebe / የአሁኑ ምድብ</th>
+                        <th>Assigned Date / የተመደበበት ቀን</th>
+                        <th>Status / ሁኔታ</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if members %}
+                        {% for member in members %}
+                        <tr>
+                            <td><strong>{{ member[1] }}</strong></td>
+                            <td>{{ member[2] or '-' }}</td>
+                            <td><span class="badge bg-info">{{ member[3] }}</span></td>
+                            <td>
+                                {% if member[5] %}
+                                <span class="badge bg-success">{{ member[5] }}</span>
+                                {% else %}
+                                <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ member[6] or '-' }}</td>
+                            <td>
+                                {% if member[4] %}
+                                <span class="assigned-status status-assigned">✅ Assigned</span>
+                                {% else %}
+                                <span class="assigned-status status-unassigned">⚠️ Not Assigned</span>
+                                {% endif %}
+                            </td>
+                            <td style="white-space: nowrap;">
+                                <!-- Assign/Reassign Button -->
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#assignModal{{ member[0] }}">
+                                    <i class="fa fa-{{ 'edit' if member[4] else 'plus' }}"></i>
+                                    {{ 'Reassign' if member[4] else 'Assign' }}
+                                </button>
+                                
+                                <!-- Remove Button (if assigned) -->
+                                {% if member[4] %}
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Remove this member from medebe?');">
+                                    <input type="hidden" name="action" value="remove">
+                                    <input type="hidden" name="member_id" value="{{ member[0] }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                
+                                <!-- Assignment Modal -->
+                                <div class="modal fade" id="assignModal{{ member[0] }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header" style="background: #14860C; color: white;">
+                                                <h5 class="modal-title">Assign to Medebe - {{ member[1] }}</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="POST">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="action" value="assign">
+                                                    <input type="hidden" name="member_id" value="{{ member[0] }}">
+                                                    
+                                                    <div class="alert alert-info">
+                                                        <strong>Section:</strong> {{ member[3] }}
+                                                    </div>
+                                                    
+                                                    <label class="form-label fw-bold">Select Medebe</label>
+                                                    <select class="form-control" name="medebe_id" required>
+                                                        <option value="">-- Select Medebe --</option>
+                                                        {% for medebe in all_medebes %}
+                                                            {% if medebe[2] == member[3] %}
+                                                            <option value="{{ medebe[0] }}" {% if member[4] == medebe[0] %}selected{% endif %}>
+                                                                {{ medebe[1] }}
+                                                            </option>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </select>
+                                                    
+                                                    <div class="alert alert-warning mt-3">
+                                                        <small><strong>Note:</strong> Only medebe from {{ member[3] }} are shown. Cross-section assignment is not allowed.</small>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fa fa-save me-2"></i>{{ 'Update' if member[4] else 'Assign' }}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fa fa-users fa-3x text-muted mb-3" style="display: block;"></i>
+                                <h5 class="text-muted">No members found</h5>
+                                <p class="text-muted">Adjust your filters or add members first</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
