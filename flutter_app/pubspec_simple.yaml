@@ -1,0 +1,43 @@
+name: mikha_denagil_mobile
+description: Mikha Denagil Spiritual Society Members Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.19.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # UI
+  cupertino_icons: ^1.0.2
+  
+  # State Management
+  provider: ^6.0.0
+  
+  # HTTP
+  http: ^0.13.5
+  
+  # Storage
+  shared_preferences: ^2.1.0
+  flutter_secure_storage: ^8.0.0
+  
+  # UI Enhancements
+  cached_network_image: ^3.2.0
+  pull_to_refresh: ^2.0.0
+  
+  # Date/Time
+  intl: ^0.18.0
+  
+  # Utils
+  url_launcher: ^6.1.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+
