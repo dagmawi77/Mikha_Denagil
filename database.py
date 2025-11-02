@@ -666,6 +666,71 @@ def initialize_rbac_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Post read tracking/የተነበቡ ማስታወቂያዎች'
         """)
         
+        # Create study_categories table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS study_categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                category_name VARCHAR(255) NOT NULL COMMENT 'Category name/የምድብ ስም',
+                description TEXT COMMENT 'Category description/መግለጫ',
+                status VARCHAR(20) DEFAULT 'Active' COMMENT 'Active or Inactive',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                created_by VARCHAR(50) COMMENT 'User who created',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_category_name (category_name),
+                INDEX idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Study categories/የትምህርት መደቦች'
+        """)
+        
+        # Create studies table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS studies (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                study_title VARCHAR(500) NOT NULL COMMENT 'Study title/ርዕስ',
+                category_id INT NOT NULL COMMENT 'Category reference',
+                target_audience VARCHAR(100) DEFAULT 'All Members' COMMENT 'Target: All Members or specific ክፍል',
+                content_body LONGTEXT NOT NULL COMMENT 'Rich text content/ይዘት',
+                summary TEXT COMMENT 'Brief summary/አጭር መግለጫ',
+                attachment_path VARCHAR(500) COMMENT 'File attachment path',
+                attachment_name VARCHAR(255) COMMENT 'Original filename',
+                attachment_type VARCHAR(50) COMMENT 'File type (pdf, image, audio, video)',
+                publish_date DATE COMMENT 'Publication date/የታተመበት ቀን',
+                author VARCHAR(255) COMMENT 'Author/study creator',
+                status VARCHAR(20) DEFAULT 'Published' COMMENT 'Published, Draft, Archived',
+                priority VARCHAR(20) DEFAULT 'Normal' COMMENT 'High, Normal, Low',
+                views_count INT DEFAULT 0 COMMENT 'Number of views',
+                downloads_count INT DEFAULT 0 COMMENT 'Attachment downloads',
+                is_featured TINYINT(1) DEFAULT 0 COMMENT 'Featured study flag',
+                tags TEXT COMMENT 'Tags/keywords for search',
+                created_by VARCHAR(50) COMMENT 'User who created',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES study_categories(id) ON DELETE RESTRICT,
+                INDEX idx_category (category_id),
+                INDEX idx_target_audience (target_audience),
+                INDEX idx_publish_date (publish_date),
+                INDEX idx_status (status),
+                INDEX idx_author (author),
+                INDEX idx_featured (is_featured)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Study materials/የትምህርት ጽሁፎች'
+        """)
+        
+        # Create study_read_status table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS study_read_status (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                study_id INT NOT NULL COMMENT 'Study reference',
+                member_id INT NOT NULL COMMENT 'Member who read the study',
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When study was read',
+                time_spent INT DEFAULT 0 COMMENT 'Time spent reading (seconds)',
+                UNIQUE KEY unique_read (study_id, member_id),
+                FOREIGN KEY (study_id) REFERENCES studies(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES member_registration(id) ON DELETE CASCADE,
+                INDEX idx_study (study_id),
+                INDEX idx_member (member_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Study read tracking/የተነበቡ ትምህርቶች'
+        """)
+        
         conn.commit()
         print("✓ RBAC tables initialized/verified successfully")
         print("✓ Library tables initialized/verified successfully")
@@ -673,6 +738,7 @@ def initialize_rbac_tables():
         print("✓ Fixed Assets tables initialized/verified successfully")
         print("✓ Department & Position tables initialized/verified successfully")
         print("✓ Posts & Announcements tables initialized/verified successfully")
+        print("✓ Study Materials tables initialized/verified successfully")
         return True
     except Exception as e:
         conn.rollback()
@@ -750,7 +816,11 @@ def initialize_default_roles_and_routes():
             ('Organizational Chart', 'organizational_chart', 'View org structure and positions'),
             ('Posts Management', 'posts_management', 'Manage posts and announcements'),
             ('Posts Report', 'posts_report', 'View posts statistics and reports'),
-            ('Member Posts View', 'member_posts_view', 'View posts assigned to member section')
+            ('Member Posts View', 'member_posts_view', 'View posts assigned to member section'),
+            ('Study Categories', 'study_categories', 'Manage study categories'),
+            ('Study Posting', 'study_posting', 'Create and manage study materials'),
+            ('Study Materials View', 'study_materials_view', 'View published study materials'),
+            ('Study Reports', 'study_reports', 'View study statistics and reports')
         ]
         
         for route_name, endpoint, description in default_routes:
@@ -943,6 +1013,31 @@ def initialize_default_roles_and_routes():
                 """, template)
             
             print("✓ Sample position templates inserted successfully")
+        
+        # Insert sample study categories if table is empty
+        cursor.execute("SELECT COUNT(*) FROM study_categories")
+        category_count = cursor.fetchone()[0]
+        
+        if category_count == 0:
+            sample_categories = [
+                ('Bible Study / የመጽሐፍ ቅዱስ ትምህርት', 'Biblical teachings and scripture studies', 'Active', 1, 'ADMIN001'),
+                ('Leadership / አመራር', 'Leadership development and management skills', 'Active', 2, 'ADMIN001'),
+                ('Prayer / ጸሎት', 'Prayer teachings and spiritual warfare', 'Active', 3, 'ADMIN001'),
+                ('Family Life / የቤተሰብ ሕይወት', 'Christian family and marriage guidance', 'Active', 4, 'ADMIN001'),
+                ('Youth Ministry / የወጣቶች አገልግሎት', 'Youth ministry and discipleship', 'Active', 5, 'ADMIN001'),
+                ('Theology / የእግዚአብሔር ምሕረት', 'Theological studies and doctrines', 'Active', 6, 'ADMIN001'),
+                ('Evangelism / ወንጌል መስበክ', 'Evangelism and outreach strategies', 'Active', 7, 'ADMIN001'),
+                ('Worship / አምልኮ', 'Worship and liturgy teachings', 'Active', 8, 'ADMIN001')
+            ]
+            
+            for category in sample_categories:
+                cursor.execute("""
+                    INSERT INTO study_categories (
+                        category_name, description, status, display_order, created_by
+                    ) VALUES (%s, %s, %s, %s, %s)
+                """, category)
+            
+            print("✓ Sample study categories inserted successfully")
         
         conn.commit()
         print("✓ Default roles and routes initialized successfully")

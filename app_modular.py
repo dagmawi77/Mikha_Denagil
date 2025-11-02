@@ -5926,6 +5926,647 @@ def get_posts_for_dashboard():
     
     return jsonify(posts)
 
+# ==================== STUDY MANAGEMENT SYSTEM ====================
+
+@app.route('/study_categories', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Study Coordinator')
+def study_categories():
+    """Manage study categories - CRUD operations"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    search = request.args.get('search', '')
+    status_filter = request.args.get('status', 'Active')
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                cursor.execute("""
+                    INSERT INTO study_categories (
+                        category_name, description, status, display_order, created_by
+                    ) VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    request.form.get('category_name'),
+                    request.form.get('description'),
+                    'Active',
+                    int(request.form.get('display_order', 0)),
+                    session.get('username', 'Unknown')
+                ))
+                conn.commit()
+                flash('Study category created successfully! / የትምህርት ምድብ በተሳካ ሁኔታ ተፈጥሯል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating category: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                cursor.execute("""
+                    UPDATE study_categories SET
+                        category_name = %s,
+                        description = %s,
+                        status = %s,
+                        display_order = %s
+                    WHERE id = %s
+                """, (
+                    request.form.get('category_name'),
+                    request.form.get('description'),
+                    request.form.get('status'),
+                    int(request.form.get('display_order', 0)),
+                    request.form.get('category_id')
+                ))
+                conn.commit()
+                flash('Category updated successfully! / ምድብ በተሳካ ሁኔታ ተስተካክሏል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating category: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                category_id = request.form.get('category_id')
+                # Check if category has studies
+                cursor.execute("SELECT COUNT(*) FROM studies WHERE category_id = %s", (category_id,))
+                study_count = cursor.fetchone()[0]
+                
+                if study_count > 0:
+                    flash(f'Cannot delete category: {study_count} studies are using this category', 'warning')
+                else:
+                    cursor.execute("DELETE FROM study_categories WHERE id = %s", (category_id,))
+                    conn.commit()
+                    flash('Category deleted successfully! / ምድብ በተሳካ ሁኔታ ተሰርዟል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting category: {str(e)}', 'danger')
+        
+        return redirect(url_for('study_categories'))
+    
+    # Get categories
+    query = "SELECT * FROM study_categories WHERE 1=1"
+    params = []
+    
+    if search:
+        query += " AND (category_name LIKE %s OR description LIKE %s)"
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param])
+    
+    if status_filter:
+        query += " AND status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY display_order, category_name"
+    
+    cursor.execute(query, params)
+    categories = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END) as active,
+            (SELECT COUNT(*) FROM studies) as total_studies
+        FROM study_categories
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('study_categories.html',
+                         categories=categories,
+                         stats=stats,
+                         search=search,
+                         status_filter=status_filter)
+
+
+@app.route('/study_posting', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Study Coordinator')
+def study_posting():
+    """Create and manage study materials with WYSIWYG editor"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    search = request.args.get('search', '')
+    category_filter = request.args.get('category', '')
+    audience_filter = request.args.get('audience', '')
+    status_filter = request.args.get('status', 'Published')
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                # Handle file upload
+                attachment_path = None
+                attachment_name = None
+                attachment_type = None
+                
+                if 'attachment' in request.files:
+                    file = request.files['attachment']
+                    if file and file.filename:
+                        from werkzeug.utils import secure_filename
+                        import os
+                        
+                        filename = secure_filename(file.filename)
+                        upload_folder = os.path.join('static', 'uploads', 'studies')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        file_ext = os.path.splitext(filename)[1]
+                        unique_filename = f"study_{timestamp}_{filename}"
+                        file_path = os.path.join(upload_folder, unique_filename)
+                        
+                        file.save(file_path)
+                        attachment_path = file_path.replace('\\', '/')
+                        attachment_name = filename
+                        
+                        # Determine file type
+                        if file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            attachment_type = 'image'
+                        elif file_ext.lower() == '.pdf':
+                            attachment_type = 'pdf'
+                        elif file_ext.lower() in ['.mp3', '.wav', '.m4a']:
+                            attachment_type = 'audio'
+                        elif file_ext.lower() in ['.mp4', '.avi', '.mov']:
+                            attachment_type = 'video'
+                        else:
+                            attachment_type = 'document'
+                
+                cursor.execute("""
+                    INSERT INTO studies (
+                        study_title, category_id, target_audience, content_body, summary,
+                        attachment_path, attachment_name, attachment_type, publish_date,
+                        author, status, priority, tags, created_by
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    request.form.get('study_title'),
+                    request.form.get('category_id'),
+                    request.form.get('target_audience'),
+                    request.form.get('content_body'),
+                    request.form.get('summary'),
+                    attachment_path,
+                    attachment_name,
+                    attachment_type,
+                    request.form.get('publish_date') or None,
+                    request.form.get('author'),
+                    request.form.get('status', 'Published'),
+                    request.form.get('priority', 'Normal'),
+                    request.form.get('tags'),
+                    session.get('username', 'Unknown')
+                ))
+                conn.commit()
+                flash('Study material created successfully! / የትምህርት ጽሑፍ በተሳካ ሁኔታ ተፈጥሯል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating study: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                study_id = request.form.get('study_id')
+                
+                # Handle file upload for update
+                attachment_path = request.form.get('existing_attachment_path')
+                attachment_name = request.form.get('existing_attachment_name')
+                attachment_type = request.form.get('existing_attachment_type')
+                
+                if 'attachment' in request.files:
+                    file = request.files['attachment']
+                    if file and file.filename:
+                        from werkzeug.utils import secure_filename
+                        import os
+                        
+                        filename = secure_filename(file.filename)
+                        upload_folder = os.path.join('static', 'uploads', 'studies')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        file_ext = os.path.splitext(filename)[1]
+                        unique_filename = f"study_{timestamp}_{filename}"
+                        file_path = os.path.join(upload_folder, unique_filename)
+                        
+                        file.save(file_path)
+                        attachment_path = file_path.replace('\\', '/')
+                        attachment_name = filename
+                        
+                        if file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            attachment_type = 'image'
+                        elif file_ext.lower() == '.pdf':
+                            attachment_type = 'pdf'
+                        elif file_ext.lower() in ['.mp3', '.wav', '.m4a']:
+                            attachment_type = 'audio'
+                        elif file_ext.lower() in ['.mp4', '.avi', '.mov']:
+                            attachment_type = 'video'
+                        else:
+                            attachment_type = 'document'
+                
+                cursor.execute("""
+                    UPDATE studies SET
+                        study_title = %s,
+                        category_id = %s,
+                        target_audience = %s,
+                        content_body = %s,
+                        summary = %s,
+                        attachment_path = %s,
+                        attachment_name = %s,
+                        attachment_type = %s,
+                        publish_date = %s,
+                        author = %s,
+                        status = %s,
+                        priority = %s,
+                        tags = %s
+                    WHERE id = %s
+                """, (
+                    request.form.get('study_title'),
+                    request.form.get('category_id'),
+                    request.form.get('target_audience'),
+                    request.form.get('content_body'),
+                    request.form.get('summary'),
+                    attachment_path,
+                    attachment_name,
+                    attachment_type,
+                    request.form.get('publish_date') or None,
+                    request.form.get('author'),
+                    request.form.get('status'),
+                    request.form.get('priority'),
+                    request.form.get('tags'),
+                    study_id
+                ))
+                conn.commit()
+                flash('Study updated successfully! / ትምህርት በተሳካ ሁኔታ ተስተካክሏል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating study: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                study_id = request.form.get('study_id')
+                
+                # Get attachment path to delete file
+                cursor.execute("SELECT attachment_path FROM studies WHERE id = %s", (study_id,))
+                result = cursor.fetchone()
+                if result and result[0]:
+                    import os
+                    try:
+                        if os.path.exists(result[0]):
+                            os.remove(result[0])
+                    except:
+                        pass
+                
+                cursor.execute("DELETE FROM studies WHERE id = %s", (study_id,))
+                conn.commit()
+                flash('Study deleted successfully! / ትምህርት በተሳካ ሁኔታ ተሰርዟል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting study: {str(e)}', 'danger')
+        
+        return redirect(url_for('study_posting'))
+    
+    # Get studies
+    query = """
+        SELECT 
+            s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+            s.content_body, s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+            s.publish_date, s.author, s.status, s.priority, s.views_count, s.downloads_count,
+            s.is_featured, s.tags, s.created_by, s.created_at
+        FROM studies s
+        JOIN study_categories sc ON s.category_id = sc.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if search:
+        query += " AND (s.study_title LIKE %s OR s.content_body LIKE %s OR s.author LIKE %s)"
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    if category_filter:
+        query += " AND s.category_id = %s"
+        params.append(category_filter)
+    
+    if audience_filter:
+        query += " AND s.target_audience = %s"
+        params.append(audience_filter)
+    
+    if status_filter:
+        query += " AND s.status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY s.is_featured DESC, s.created_at DESC"
+    
+    cursor.execute(query, params)
+    studies = cursor.fetchall()
+    
+    # Get categories for dropdown
+    cursor.execute("SELECT id, category_name FROM study_categories WHERE status = 'Active' ORDER BY display_order, category_name")
+    categories = cursor.fetchall()
+    
+    # Get sections for audience filter
+    cursor.execute("SELECT DISTINCT section_name FROM member_registration WHERE section_name IS NOT NULL ORDER BY section_name")
+    sections = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Published' THEN 1 ELSE 0 END) as published,
+            SUM(CASE WHEN status = 'Draft' THEN 1 ELSE 0 END) as drafts,
+            SUM(views_count) as total_views,
+            SUM(downloads_count) as total_downloads
+        FROM studies
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('study_posting.html',
+                         studies=studies,
+                         categories=categories,
+                         sections=sections,
+                         stats=stats,
+                         search=search,
+                         category_filter=category_filter,
+                         audience_filter=audience_filter,
+                         status_filter=status_filter)
+
+@app.route('/get_study/<int:study_id>', methods=['GET'])
+@login_required
+@role_required('Super Admin', 'Study Coordinator')
+def get_study(study_id):
+    """Get single study details for editing"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT 
+                s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+                s.content_body, s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+                s.publish_date, s.author, s.status, s.priority, s.views_count, s.downloads_count,
+                s.is_featured, s.tags
+            FROM studies s
+            JOIN study_categories sc ON s.category_id = sc.id
+            WHERE s.id = %s
+        """, (study_id,))
+        
+        study = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if study:
+            return jsonify({
+                'success': True,
+                'study': {
+                    'id': study[0],
+                    'study_title': study[1],
+                    'category_id': study[2],
+                    'category_name': study[3],
+                    'target_audience': study[4],
+                    'content_body': study[5],
+                    'summary': study[6],
+                    'attachment_path': study[7],
+                    'attachment_name': study[8],
+                    'attachment_type': study[9],
+                    'publish_date': str(study[10]) if study[10] else '',
+                    'author': study[11],
+                    'status': study[12],
+                    'priority': study[13],
+                    'views_count': study[14],
+                    'downloads_count': study[15],
+                    'is_featured': study[16],
+                    'tags': study[17]
+                }
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Study not found'}), 404
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/study_materials_view')
+@login_required
+def study_materials_view():
+    """View published study materials (member-facing)"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    search = request.args.get('search', '')
+    category_filter = request.args.get('category', '')
+    member_section = session.get('member_section', 'All Members')
+    
+    query = """
+        SELECT 
+            s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+            s.content_body, s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+            s.publish_date, s.author, s.views_count, s.downloads_count, s.is_featured,
+            s.tags, s.created_at
+        FROM studies s
+        JOIN study_categories sc ON s.category_id = sc.id
+        WHERE s.status = 'Published'
+        AND (s.target_audience = 'All Members' OR s.target_audience = %s)
+    """
+    params = [member_section]
+    
+    if search:
+        query += " AND (s.study_title LIKE %s OR s.content_body LIKE %s OR s.tags LIKE %s)"
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param, search_param])
+    
+    if category_filter:
+        query += " AND s.category_id = %s"
+        params.append(category_filter)
+    
+    query += " ORDER BY s.is_featured DESC, s.publish_date DESC, s.created_at DESC"
+    
+    cursor.execute(query, params)
+    studies = cursor.fetchall()
+    
+    # Get categories for filter
+    cursor.execute("SELECT id, category_name FROM study_categories WHERE status = 'Active' ORDER BY display_order")
+    categories = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('study_materials_view.html',
+                         studies=studies,
+                         categories=categories,
+                         search=search,
+                         category_filter=category_filter)
+
+
+@app.route('/study_details/<int:study_id>')
+@login_required
+def study_details(study_id):
+    """View full study details"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT 
+                s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+                s.content_body, s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+                s.publish_date, s.author, s.views_count, s.downloads_count, s.is_featured,
+                s.tags, s.created_at
+            FROM studies s
+            JOIN study_categories sc ON s.category_id = sc.id
+            WHERE s.id = %s
+        """, (study_id,))
+        
+        study = cursor.fetchone()
+        
+        if not study:
+            flash('Study not found', 'warning')
+            return redirect(url_for('study_materials_view'))
+        
+        # Increment view count
+        cursor.execute("UPDATE studies SET views_count = views_count + 1 WHERE id = %s", (study_id,))
+        
+        # Mark as read if member_id available
+        member_id = session.get('member_id')
+        if member_id:
+            cursor.execute("""
+                INSERT IGNORE INTO study_read_status (study_id, member_id)
+                VALUES (%s, %s)
+            """, (study_id, member_id))
+        
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('study_details.html', study=study)
+        
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        flash(f'Error loading study: {str(e)}', 'danger')
+        return redirect(url_for('study_materials_view'))
+
+
+@app.route('/download_study_attachment/<int:study_id>')
+@login_required
+def download_study_attachment(study_id):
+    """Download study attachment"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("SELECT attachment_path, attachment_name FROM studies WHERE id = %s", (study_id,))
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            # Increment download count
+            cursor.execute("UPDATE studies SET downloads_count = downloads_count + 1 WHERE id = %s", (study_id,))
+            conn.commit()
+            
+            return send_file(result[0], as_attachment=True, download_name=result[1])
+        else:
+            flash('Attachment not found', 'warning')
+            return redirect(url_for('study_materials_view'))
+    except Exception as e:
+        flash(f'Error downloading attachment: {str(e)}', 'danger')
+        return redirect(url_for('study_materials_view'))
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/study_reports')
+@login_required
+@role_required('Super Admin', 'Study Coordinator', 'Report Viewer')
+def study_reports():
+    """Generate study statistics and reports"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    category_filter = request.args.get('category', '')
+    
+    # Overall statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Published' THEN 1 ELSE 0 END) as published,
+            SUM(CASE WHEN status = 'Draft' THEN 1 ELSE 0 END) as drafts,
+            SUM(views_count) as total_views,
+            SUM(downloads_count) as total_downloads,
+            AVG(views_count) as avg_views
+        FROM studies
+    """)
+    overall_stats = cursor.fetchone()
+    
+    # Studies by category
+    cursor.execute("""
+        SELECT sc.category_name, COUNT(*) as count, SUM(s.views_count) as views
+        FROM studies s
+        JOIN study_categories sc ON s.category_id = sc.id
+        GROUP BY sc.category_name
+        ORDER BY count DESC
+    """)
+    by_category = cursor.fetchall()
+    
+    # Studies by audience
+    cursor.execute("""
+        SELECT target_audience, COUNT(*) as count
+        FROM studies
+        GROUP BY target_audience
+        ORDER BY count DESC
+    """)
+    by_audience = cursor.fetchall()
+    
+    # Recent studies
+    query = """
+        SELECT 
+            s.id, s.study_title, sc.category_name, s.target_audience, s.author,
+            s.publish_date, s.status, s.views_count, s.downloads_count, s.created_at
+        FROM studies s
+        JOIN study_categories sc ON s.category_id = sc.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if date_from:
+        query += " AND s.created_at >= %s"
+        params.append(date_from)
+    
+    if date_to:
+        query += " AND s.created_at <= %s"
+        params.append(date_to + ' 23:59:59')
+    
+    if category_filter:
+        query += " AND s.category_id = %s"
+        params.append(category_filter)
+    
+    query += " ORDER BY s.created_at DESC LIMIT 100"
+    
+    cursor.execute(query, params)
+    recent_studies = cursor.fetchall()
+    
+    # Get categories for filter
+    cursor.execute("SELECT id, category_name FROM study_categories ORDER BY category_name")
+    categories = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('study_reports.html',
+                         overall_stats=overall_stats,
+                         by_category=by_category,
+                         by_audience=by_audience,
+                         recent_studies=recent_studies,
+                         categories=categories,
+                         date_from=date_from,
+                         date_to=date_to,
+                         category_filter=category_filter)
+
 if __name__ == '__main__':
     # Initialize database and tables
     initialize_app()

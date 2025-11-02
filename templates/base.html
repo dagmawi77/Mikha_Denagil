@@ -356,6 +356,18 @@
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-graduation menu-icon"></i><span class="nav-text">Studies / ትምህርቶች</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('study_categories')}}">Study Categories / የትምህርት መደቦች</a></li>
+                                <li><a href="{{url_for('study_posting')}}">Post Study / ትምህርት ለጥፍ</a></li>
+                                <li><a href="{{url_for('study_materials_view')}}">Study Materials / የትምህርት ጽሁፎች</a></li>
+                                <li><a href="{{url_for('study_reports')}}">Study Reports / የትምህርት ሪፖርት</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
                                 <i class="icon-user menu-icon"></i><span class="nav-text">{{ t('user_management') }}</span>
                             </a>
                             <ul aria-expanded="false">

@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
 import '../models/member.dart';
 import '../models/post.dart';
+import '../models/study.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -195,6 +196,90 @@ class ApiService {
       }
     } catch (e) {
       return {'total_posts': 0, 'read_posts': 0, 'unread_posts': 0};
+    }
+  }
+
+  // ====================
+  // Study Materials
+  // ====================
+
+  Future<Map<String, dynamic>> getStudies({
+    int limit = 20,
+    int offset = 0,
+    int? categoryId,
+  }) async {
+    try {
+      final headers = await _getHeaders();
+      String url = '${ApiConfig.apiBaseUrl}/studies?limit=$limit&offset=$offset';
+      if (categoryId != null) {
+        url += '&category_id=$categoryId';
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'studies': (data['studies'] as List)
+              .map((json) => Study.fromJson(json))
+              .toList(),
+          'count': data['count'],
+        };
+      } else {
+        return {'success': false, 'error': 'Failed to load studies'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getStudyDetails(int studyId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/studies/$studyId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'study': Study.fromJson(data['study']),
+        };
+      } else {
+        return {'success': false, 'error': 'Study not found'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getStudyCategories() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}/study-categories'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'categories': (data['categories'] as List)
+              .map((json) => StudyCategory.fromJson(json))
+              .toList(),
+        };
+      } else {
+        return {'success': false, 'error': 'Failed to load categories'};
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
     }
   }
 

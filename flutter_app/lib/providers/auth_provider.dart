@@ -17,6 +17,19 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _isAuthenticated;
+  
+  // Get user data as Map (for compatibility)
+  Map<String, dynamic>? get userData {
+    if (_currentMember == null) return null;
+    return {
+      'full_name': _currentMember!.fullName,
+      'username': _currentMember!.username,
+      'section': _currentMember!.section,
+      'phone': _currentMember!.phone,
+      'email': _currentMember!.email,
+      'gender': _currentMember!.gender,
+    };
+  }
 
   // Login
   Future<bool> login(String username, String password) async {

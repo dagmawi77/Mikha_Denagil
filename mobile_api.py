@@ -616,6 +616,248 @@ def get_posts_stats(user_id, member_id):
         conn.close()
 
 #  =====================
+#  Study Materials Endpoints
+#  =====================
+
+@mobile_api.route('/studies', methods=['GET'])
+@token_required
+def get_studies(user_id, member_id):
+    """
+    Get study materials relevant to member's section
+    GET /api/v1/studies?limit=20&offset=0&category_id=1
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    category_id = request.args.get('category_id', '', type=str)
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        # Get member's section
+        cursor.execute("""
+            SELECT section_name FROM member_registration WHERE id = %s
+        """, (member_id,))
+        
+        member_info = cursor.fetchone()
+        if not member_info:
+            return jsonify({'error': 'Member not found'}), 404
+        
+        member_section = member_info[0]
+        
+        # Build query
+        query = """
+            SELECT 
+                s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+                s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+                s.publish_date, s.author, s.views_count, s.downloads_count,
+                s.is_featured, s.tags, s.created_at,
+                (SELECT COUNT(*) FROM study_read_status WHERE study_id = s.id AND member_id = %s) as is_read
+            FROM studies s
+            JOIN study_categories sc ON s.category_id = sc.id
+            WHERE s.status = 'Published'
+            AND (s.target_audience = 'All Members' OR s.target_audience = %s)
+        """
+        
+        params = [member_id, member_section]
+        
+        if category_id:
+            query += " AND s.category_id = %s"
+            params.append(category_id)
+        
+        query += " ORDER BY s.is_featured DESC, s.publish_date DESC, s.created_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, params)
+        studies = cursor.fetchall()
+        
+        return jsonify({
+            'studies': [
+                {
+                    'id': study[0],
+                    'title': study[1],
+                    'category_id': study[2],
+                    'category_name': study[3],
+                    'target_audience': study[4],
+                    'summary': study[5],
+                    'attachment_url': f"/{study[6]}" if study[6] else None,
+                    'attachment_name': study[7],
+                    'attachment_type': study[8],
+                    'publish_date': str(study[9]) if study[9] else None,
+                    'author': study[10],
+                    'views_count': study[11],
+                    'downloads_count': study[12],
+                    'is_featured': study[13] == 1,
+                    'tags': study[14],
+                    'created_at': study[15].strftime('%Y-%m-%d %H:%M:%S') if study[15] else None,
+                    'is_read': study[16] > 0
+                }
+                for study in studies
+            ],
+            'count': len(studies),
+            'limit': limit,
+            'offset': offset
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/studies/<int:study_id>', methods=['GET'])
+@token_required
+def get_study_details(user_id, member_id, study_id):
+    """
+    Get single study details with full content
+    GET /api/v1/studies/<study_id>
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT 
+                s.id, s.study_title, s.category_id, sc.category_name, s.target_audience,
+                s.content_body, s.summary, s.attachment_path, s.attachment_name, s.attachment_type,
+                s.publish_date, s.author, s.views_count, s.downloads_count,
+                s.is_featured, s.tags, s.created_at,
+                (SELECT COUNT(*) FROM study_read_status WHERE study_id = s.id AND member_id = %s) as is_read
+            FROM studies s
+            JOIN study_categories sc ON s.category_id = sc.id
+            WHERE s.id = %s AND s.status = 'Published'
+        """, (member_id, study_id))
+        
+        study = cursor.fetchone()
+        
+        if not study:
+            return jsonify({'error': 'Study not found'}), 404
+        
+        # Mark as read
+        cursor.execute("""
+            INSERT IGNORE INTO study_read_status (study_id, member_id)
+            VALUES (%s, %s)
+        """, (study_id, member_id))
+        
+        # Increment view count
+        cursor.execute("""
+            UPDATE studies SET views_count = views_count + 1 WHERE id = %s
+        """, (study_id,))
+        
+        conn.commit()
+        
+        return jsonify({
+            'study': {
+                'id': study[0],
+                'title': study[1],
+                'category_id': study[2],
+                'category_name': study[3],
+                'target_audience': study[4],
+                'content_body': study[5],
+                'summary': study[6],
+                'attachment_url': f"/{study[7]}" if study[7] else None,
+                'attachment_name': study[8],
+                'attachment_type': study[9],
+                'publish_date': str(study[10]) if study[10] else None,
+                'author': study[11],
+                'views_count': study[12] + 1,
+                'downloads_count': study[13],
+                'is_featured': study[14] == 1,
+                'tags': study[15],
+                'created_at': study[16].strftime('%Y-%m-%d %H:%M:%S') if study[16] else None,
+                'is_read': True
+            }
+        }), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/study-categories', methods=['GET'])
+@token_required
+def get_study_categories(user_id, member_id):
+    """
+    Get all active study categories
+    GET /api/v1/study-categories
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT id, category_name, description, display_order
+            FROM study_categories
+            WHERE status = 'Active'
+            ORDER BY display_order, category_name
+        """)
+        
+        categories = cursor.fetchall()
+        
+        return jsonify({
+            'categories': [
+                {
+                    'id': cat[0],
+                    'name': cat[1],
+                    'description': cat[2],
+                    'display_order': cat[3]
+                }
+                for cat in categories
+            ]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/studies/<int:study_id>/download', methods=['GET'])
+@token_required
+def download_study_attachment_mobile(user_id, member_id, study_id):
+    """
+    Download study attachment
+    GET /api/v1/studies/<study_id>/download
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT attachment_path, attachment_name 
+            FROM studies 
+            WHERE id = %s AND status = 'Published'
+        """, (study_id,))
+        
+        result = cursor.fetchone()
+        
+        if result and result[0]:
+            # Increment download count
+            cursor.execute("""
+                UPDATE studies SET downloads_count = downloads_count + 1 WHERE id = %s
+            """, (study_id,))
+            conn.commit()
+            
+            return jsonify({
+                'download_url': f"/{result[0]}",
+                'filename': result[1]
+            }), 200
+        else:
+            return jsonify({'error': 'Attachment not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+#  =====================
 #  Utility Endpoints
 #  =====================
 

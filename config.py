@@ -31,8 +31,8 @@ class Config:
     
     # Upload settings
     UPLOAD_FOLDER = 'uploads'
-    ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
+    ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'mp3', 'wav', 'm4a', 'mp4', 'avi', 'mov', 'doc', 'docx'}
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB max upload (for study materials with attachments)
     
     # Pagination
     ITEMS_PER_PAGE = 50

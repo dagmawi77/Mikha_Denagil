@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Bootstrap 4 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    .categories-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 4px solid #14860C;
+    }
+    
+    .stat-card .icon {
+        font-size: 40px;
+        color: #14860C;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card .label {
+        font-size: 14px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+    
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .table-modern thead {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .table-modern thead th {
+        padding: 12px;
+        font-weight: 600;
+        border: none;
+    }
+    
+    .table-modern tbody tr:hover {
+        background: #f8f9fa;
+    }
+</style>
+
+<div class="categories-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fa fa-list"></i>
+            Study Categories Management / የትምህርት መደቦች አስተዳደር
+        </h2>
+        <p>Organize study materials into categories / የትምህርት ጽሁፎችን በምድብ ያደራጁ</p>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-list"></i></div>
+            <div class="label">Total Categories / ጠቅላላ ምድቦች</div>
+            <div class="value">{{ stats[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-check-circle"></i></div>
+            <div class="label">Active / ንቁ</div>
+            <div class="value">{{ stats[1] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-book"></i></div>
+            <div class="label">Total Studies / ጠቅላላ ትምህርቶች</div>
+            <div class="value">{{ stats[2] or 0 }}</div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Filter & Add New -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-filter"></i> Filter & Search</h4>
+            <button class="btn btn-light" data-toggle="modal" data-target="#createCategoryModal">
+                <i class="fa fa-plus"></i> New Category / አዲስ ምድብ
+            </button>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" name="search" placeholder="Search categories..." value="{{ search }}">
+                </div>
+                <div class="col-md-4">
+                    <select class="form-control" name="status">
+                        <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active / ንቁ</option>
+                        <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive / ቦዝቅር</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success btn-block">
+                        <i class="fa fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Categories Table -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-th-list"></i> Categories / ምድቦች ({{ categories|length }})</h4>
+        </div>
+        <div class="card-body">
+            <table class="table table-modern table-hover">
+                <thead>
+                    <tr>
+                        <th>Order / ቅደም</th>
+                        <th>Category Name / የምድብ ስም</th>
+                        <th>Description / መግለጫ</th>
+                        <th>Studies / ትምህርቶች</th>
+                        <th>Status / ሁኔታ</th>
+                        <th>Created By</th>
+                        <th>Actions / ድርጊቶች</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if categories %}
+                        {% for cat in categories %}
+                        <tr>
+                            <td><strong>{{ cat[4] }}</strong></td>
+                            <td><strong>{{ cat[1] }}</strong></td>
+                            <td>{{ cat[2][:100] if cat[2] else '' }}</td>
+                            <td>
+                                <span class="badge badge-info">
+                                    {% set study_count = 0 %}
+                                    {{ study_count }} studies
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if cat[3] == 'Active' else 'secondary' }}">
+                                    {{ cat[3] }}
+                                </span>
+                            </td>
+                            <td>{{ cat[5] }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" 
+                                        onclick="editCategory({{ cat[0] }}, '{{ cat[1] }}', '{{ cat[2] }}', '{{ cat[3] }}', {{ cat[4] }})">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="deleteCategory({{ cat[0] }}, '{{ cat[1] }}')">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No categories found</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white;">
+                    <h5 class="modal-title">Create New Category / አዲስ ምድብ ፍጠር</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Category Name / የምድብ ስም *</label>
+                        <input type="text" class="form-control" name="category_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description / መግለጫ</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Display Order / ቅደም ተከተል</label>
+                        <input type="number" class="form-control" name="display_order" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Create / ፍጠር
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="category_id" id="editCategoryId">
+                <div class="modal-header" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white;">
+                    <h5 class="modal-title">Edit Category / ምድብ አርትዕ</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Category Name / የምድብ ስም *</label>
+                        <input type="text" class="form-control" name="category_name" id="editCategoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description / መግለጫ</label>
+                        <textarea class="form-control" name="description" id="editDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Display Order / ቅደም ተከተል</label>
+                        <input type="number" class="form-control" name="display_order" id="editDisplayOrder">
+                    </div>
+                    <div class="form-group">
+                        <label>Status / ሁኔታ</label>
+                        <select class="form-control" name="status" id="editStatus">
+                            <option value="Active">Active / ንቁ</option>
+                            <option value="Inactive">Inactive / ቦዝቅር</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Update / አዘምን
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Category Modal -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="category_id" id="deleteCategoryId">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Delete Category / ምድብ ሰርዝ</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this category?</p>
+                    <p class="font-weight-bold" id="deleteCategoryName"></p>
+                    <p class="text-danger"><small>This action cannot be undone!</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa fa-trash"></i> Delete / ሰርዝ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editCategory(id, name, desc, status, order) {
+    document.getElementById('editCategoryId').value = id;
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editDescription').value = desc || '';
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editDisplayOrder').value = order;
+    $('#editCategoryModal').modal('show');
+}
+
+function deleteCategory(id, name) {
+    document.getElementById('deleteCategoryId').value = id;
+    document.getElementById('deleteCategoryName').textContent = name;
+    $('#deleteCategoryModal').modal('show');
+}
+
+// Auto-dismiss alerts
+setTimeout(() => $('.alert').alert('close'), 5000);
+</script>
+
+{% endblock %}

@@ -1,0 +1,1036 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Bootstrap 4 and jQuery -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Quill Editor - Simple, Reliable, No API Key! (Used by Slack, LinkedIn, etc.) -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+<style>
+    .studies-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 4px solid #14860C;
+    }
+    
+    .stat-card .icon {
+        font-size: 36px;
+        color: #14860C;
+        margin-bottom: 10px;
+    }
+    
+    .stat-card .label {
+        font-size: 13px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+    
+    .stat-card .value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .study-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    
+    .study-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    /* Enhanced Quill Editor Styling */
+    #quill-editor {
+        box-shadow: 0 4px 15px rgba(20, 134, 12, 0.15);
+    }
+    
+    .ql-toolbar.ql-snow {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        border-bottom: 2px solid #14860C !important;
+        padding: 12px;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+    
+    .ql-container.ql-snow {
+        border: none;
+        font-size: 16px;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+    
+    .ql-editor {
+        min-height: 400px;
+        font-size: 16px;
+        line-height: 1.8;
+        padding: 20px;
+    }
+    
+    .ql-snow .ql-stroke {
+        stroke: #495057;
+    }
+    
+    .ql-snow .ql-fill {
+        fill: #495057;
+    }
+    
+    .ql-toolbar button:hover .ql-stroke,
+    .ql-toolbar button.ql-active .ql-stroke {
+        stroke: #14860C !important;
+    }
+    
+    .ql-toolbar button:hover .ql-fill,
+    .ql-toolbar button.ql-active .ql-fill {
+        fill: #14860C !important;
+    }
+    
+    .ql-snow.ql-toolbar button:hover,
+    .ql-snow .ql-toolbar button:hover,
+    .ql-snow.ql-toolbar button.ql-active,
+    .ql-snow .ql-toolbar button.ql-active {
+        background: rgba(20, 134, 12, 0.1);
+        border-radius: 4px;
+    }
+    
+    /* Enhanced Modal */
+    .modal-xl {
+        max-width: 95%;
+    }
+    
+    .modal-content {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 25px 30px;
+        border: none;
+    }
+    
+    .modal-title {
+        font-size: 24px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .modal-body {
+        padding: 30px;
+        background: #f8f9fa;
+    }
+    
+    .form-group label,
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px 15px;
+        transition: all 0.3s;
+        font-size: 15px;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.15);
+        background: white;
+    }
+    
+    .form-section {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .form-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #14860C;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-section-title i {
+        font-size: 20px;
+    }
+    
+    .modal-footer {
+        background: white;
+        border-top: 2px solid #e9ecef;
+        padding: 20px 30px;
+    }
+    
+    .btn {
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        border: none;
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(20, 134, 12, 0.4);
+    }
+    
+    /* Input Icons */
+    .input-icon {
+        position: relative;
+    }
+    
+    .input-icon i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #14860C;
+        font-size: 18px;
+    }
+    
+    .input-icon .form-control {
+        padding-left: 45px;
+    }
+    
+    /* Helper Text */
+    .form-text {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .required-badge {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .form-section {
+        animation: fadeInUp 0.5s ease-out;
+    }
+    
+    .form-section:nth-child(1) { animation-delay: 0.1s; }
+    .form-section:nth-child(2) { animation-delay: 0.2s; }
+    .form-section:nth-child(3) { animation-delay: 0.3s; }
+    .form-section:nth-child(4) { animation-delay: 0.4s; }
+    
+    /* Summernote Custom Styling */
+    .note-editor {
+        margin-top: 10px;
+    }
+    
+    .note-statusbar {
+        background: #f8f9fa;
+        border-top: 1px solid #14860C;
+    }
+    
+    /* Badge Enhancements */
+    .badge {
+        padding: 4px 8px;
+        font-size: 11px;
+        border-radius: 4px;
+        margin-right: 4px;
+    }
+    
+    /* Success alert styling */
+    .alert-success {
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.1) 0%, rgba(16, 107, 9, 0.1) 100%);
+        border: 1px solid #14860C;
+    }
+</style>
+
+<div class="studies-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fa fa-book"></i>
+            Study Materials Management / የትምህርት ጽሁፎች አስተዳደር
+        </h2>
+        <p>Create and manage study materials / የትምህርት ጽሁፎችን ፍጠር እና ያስተዳድር</p>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-book"></i></div>
+            <div class="label">Total Studies</div>
+            <div class="value">{{ stats[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-check"></i></div>
+            <div class="label">Published</div>
+            <div class="value">{{ stats[1] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-eye"></i></div>
+            <div class="label">Total Views</div>
+            <div class="value">{{ stats[3] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-download"></i></div>
+            <div class="label">Downloads</div>
+            <div class="value">{{ stats[4] or 0 }}</div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Filter Section -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-filter"></i> Filter & Search</h4>
+            <button class="btn btn-light" onclick="openCreateModal()">
+                <i class="fa fa-plus"></i> New Study / አዲስ ትምህርት
+            </button>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="search" placeholder="Search..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="category">
+                        <option value="">All Categories / ሁሉም ምድቦች</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat[0] }}" {% if category_filter == cat[0]|string %}selected{% endif %}>{{ cat[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="Published" {% if status_filter == 'Published' %}selected{% endif %}>Published</option>
+                        <option value="Draft" {% if status_filter == 'Draft' %}selected{% endif %}>Draft</option>
+                        <option value="Archived" {% if status_filter == 'Archived' %}selected{% endif %}>Archived</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-search"></i> Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Studies List -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-list"></i> Studies ({{ studies|length }})</h4>
+        </div>
+        <div class="card-body">
+            {% if studies %}
+                {% for study in studies %}
+                <div class="study-card">
+                    <h5>{{ study[1] }}</h5>
+                    <p class="text-muted mb-2">
+                        <span class="badge bg-info">{{ study[3] }}</span>
+                        <span class="badge bg-primary">{{ study[4] }}</span>
+                        <span class="badge bg-success">{{ study[12] }}</span>
+                        {% if study[16] == 1 %}<span class="badge bg-warning">Featured</span>{% endif %}
+                    </p>
+                    <p>{{ study[6][:200] if study[6] else '' }}...</p>
+                    <small class="text-muted">
+                        Author: {{ study[11] }} | Views: {{ study[14] }} | Downloads: {{ study[15] }}
+                    </small>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="editStudy({{ study[0] }})">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudy({{ study[0] }}, '{{ study[1] }}')">Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center text-muted">No studies found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Study Modal - Beautiful Enhanced UI -->
+<div class="modal fade" id="createStudyModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data" id="studyForm">
+                <input type="hidden" name="action" value="create" id="formAction">
+                <input type="hidden" name="study_id" id="studyIdInput">
+                <input type="hidden" name="existing_attachment_path" id="existingAttachmentPath">
+                <input type="hidden" name="existing_attachment_name" id="existingAttachmentName">
+                <input type="hidden" name="existing_attachment_type" id="existingAttachmentType">
+                
+                <!-- Modal Header with Icon -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
+                        <i class="fa fa-book"></i>
+                        <span id="modalTitleText">Create New Study / አዲስ ትምህርት ፍጠር</span>
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">
+                        <span style="font-size: 32px;">&times;</span>
+                    </button>
+                </div>
+                
+                <!-- Modal Body with Sections -->
+                <div class="modal-body">
+                    
+                    <!-- Section 1: Basic Information -->
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="fa fa-info-circle"></i>
+                            Basic Information / መሰረታዊ መረጃ
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label>Study Title / ትምህርት ርዕስ <span class="required-badge">*</span></label>
+                                <div class="input-icon">
+                                    <i class="fa fa-pencil"></i>
+                                    <input type="text" class="form-control" name="study_title" 
+                                           placeholder="e.g., Introduction to Prayer, የጸሎት መሰረታዊ ትምህርት" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label>Category / ምድብ <span class="required-badge">*</span></label>
+                                <select class="form-control" name="category_id" required>
+                                    <option value="">-- Select Category / ምድብ ይምረጡ --</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat[0] }}">{{ cat[1] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text">
+                                    <i class="fa fa-lightbulb-o text-warning"></i> Choose the most relevant category
+                                </small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label>Target Audience / ታዳሚ <span class="required-badge">*</span></label>
+                                <select class="form-control" name="target_audience">
+                                    <option value="All Members">👥 All Members / ሁሉም አባላት</option>
+                                    {% for section in sections %}
+                                    <option value="{{ section[0] }}">📍 {{ section[0] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text">
+                                    <i class="fa fa-users text-info"></i> Who should see this study?
+                                </small>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label>Summary / አጭር መግለጫ</label>
+                                <textarea class="form-control" name="summary" rows="2" 
+                                          placeholder="Brief description that will appear in study listings..."></textarea>
+                                <small class="form-text">
+                                    <i class="fa fa-info-circle text-muted"></i> Optional: 1-2 sentences summarizing the study
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 2: Rich Content Editor -->
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="fa fa-edit"></i>
+                            Study Content / የትምህርት ይዘት <span class="required-badge">*</span>
+                        </div>
+                        
+                        <!-- Manual Editor Control Buttons -->
+                        <div class="alert alert-info" style="border-left: 4px solid #17a2b8; margin-bottom: 15px;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fa fa-magic"></i>
+                                    <strong>Rich Text Editor Status:</strong>
+                                    <span id="editorStatus" class="badge badge-secondary">Loading...</span>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="manualInitEditor()" id="initEditorBtn">
+                                        <i class="fa fa-rocket"></i> Activate Rich Editor / የማርትዕ መሣሪያ አስነሳ
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="toggleFullscreen()" id="fullscreenBtn" style="display:none;">
+                                        <i class="fa fa-arrows-alt"></i> Fullscreen Mode / ሙሉ ስክሪን
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-success" style="border-left: 4px solid #14860C;">
+                            <i class="fa fa-magic"></i>
+                            <strong>Formatting Features Available:</strong>
+                            <ul class="mb-0" style="margin-top: 8px;">
+                                <li><strong>Style:</strong> Headings (H1-H6), Paragraph, Quote</li>
+                                <li><strong>Format:</strong> <strong>Bold</strong>, <em>Italic</em>, <u>Underline</u></li>
+                                <li><strong>Font:</strong> Size (8pt-64pt), Color, Family</li>
+                                <li><strong>Lists:</strong> Bulleted (•) and Numbered (1, 2, 3)</li>
+                                <li><strong>Insert:</strong> Multiple Images, Links, Tables, Videos</li>
+                                <li><strong>View:</strong> Fullscreen mode, Code view</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- BIG VISIBLE ACTIVATION BUTTON -->
+                        <div style="text-align: center; margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #14860C 0%, #106b09 100%); border-radius: 12px;">
+                            <button type="button" class="btn btn-warning btn-lg" onclick="manualInitEditor()" id="initEditorBtn" style="padding: 15px 40px; font-size: 18px; font-weight: bold;">
+                                <i class="fa fa-magic"></i> ✨ CLICK TO ACTIVATE RICH TEXT EDITOR ✨
+                            </button>
+                            <button type="button" class="btn btn-light btn-lg" onclick="toggleFullscreen()" id="fullscreenBtn" style="display:none; padding: 15px 40px; font-size: 18px; font-weight: bold;">
+                                <i class="fa fa-arrows-alt"></i> 🖥️ FULLSCREEN MODE
+                            </button>
+                            <p style="color: white; margin-top: 15px; margin-bottom: 0; font-size: 16px;">
+                                <strong>Status:</strong> <span id="editorStatus" class="badge badge-light" style="font-size: 16px; padding: 8px 15px;">Click yellow button above</span>
+                            </p>
+                        </div>
+                        
+                        <!-- Quill Editor Container -->
+                        <div id="quill-editor" style="min-height: 400px; background: white; border: 2px solid #14860C; border-radius: 12px; display: none;"></div>
+                        
+                        <!-- Hidden textarea to store content (required for form submission) -->
+                        <textarea name="content_body" id="content_body_create" style="display: none;"></textarea>
+                        
+                        <small class="form-text mt-2">
+                            <i class="fa fa-info-circle text-primary"></i> 
+                            <strong>Tips:</strong> If toolbar doesn't appear, click the "Activate Rich Editor" button above | 
+                            Use fullscreen for better writing experience
+                        </small>
+                    </div>
+                    
+                    <!-- Section 3: Author & Publishing Settings -->
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="fa fa-user-circle"></i>
+                            Author & Publishing Settings / ደራሲ እና የማትመት ቅንብሮች
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>Author / ደራሲ <span class="required-badge">*</span></label>
+                                <div class="input-icon">
+                                    <i class="fa fa-user"></i>
+                                    <input type="text" class="form-control" name="author" 
+                                           value="{{ session.get('username', '') }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label>Publish Date / የታተመበት ቀን</label>
+                                <div class="input-icon">
+                                    <i class="fa fa-calendar"></i>
+                                    <input type="date" class="form-control" name="publish_date">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label>Status / ሁኔታ</label>
+                                <select class="form-control" name="status">
+                                    <option value="Published">✓ Published / ታትሟል</option>
+                                    <option value="Draft">📝 Draft / ረቂቅ</option>
+                                    <option value="Archived">📦 Archived / የተቀመጠ</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label>Priority / ቅድሚያ</label>
+                                <select class="form-control" name="priority">
+                                    <option value="Normal">⭐ Normal / መደበኛ</option>
+                                    <option value="High">🔥 High Priority / ከፍተኛ ቅድሚያ</option>
+                                    <option value="Low">📌 Low / ዝቅተኛ</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label>Featured Study? / ተለይቶ የቀረበ?</label>
+                                <select class="form-control" name="is_featured">
+                                    <option value="0">No / አይደለም</option>
+                                    <option value="1">⭐ Yes / አዎ (Show at top)</option>
+                                </select>
+                                <small class="form-text">Featured studies appear first</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 4: Attachments & Tags -->
+                    <div class="form-section">
+                        <div class="form-section-title">
+                            <i class="fa fa-paperclip"></i>
+                            Attachments & Search Tags / አባሪዎች እና መለያዎች
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label>Tags / ቁልፍ ቃላት (Search Keywords)</label>
+                                <div class="input-icon">
+                                    <i class="fa fa-tags"></i>
+                                    <input type="text" class="form-control" name="tags" 
+                                           placeholder="prayer, worship, family, youth, bible, leadership">
+                                </div>
+                                <small class="form-text">
+                                    <i class="fa fa-info-circle text-info"></i>
+                                    Separate tags with commas. These help members find your study through search.
+                                </small>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label>Attachment / አባሪ (Optional)</label>
+                                <input type="file" class="form-control" name="attachment" 
+                                       accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4,.doc,.docx,.avi,.mov,.m4a,.wav">
+                                <small class="form-text">
+                                    <i class="fa fa-file text-success"></i> <strong>Supported Files:</strong>
+                                    <span class="badge badge-primary">PDF</span>
+                                    <span class="badge badge-info">Images</span>
+                                    <span class="badge badge-warning">Audio (MP3)</span>
+                                    <span class="badge badge-danger">Video (MP4)</span>
+                                    <span class="badge badge-secondary">Documents</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Modal Footer with Enhanced Buttons -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-lg" data-dismiss="modal">
+                        <i class="fa fa-times"></i> Cancel / ሰርዝ
+                    </button>
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="fa fa-rocket"></i> Publish Study / ትምህርት አትም
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global Quill editor instance
+let quillEditor = null;
+
+// Initialize when page loads
+$(document).ready(function() {
+    console.log('✅ Page loaded');
+    console.log('✅ jQuery version:', $.fn.jquery);
+    console.log('✅ Quill available:', typeof Quill !== 'undefined');
+    
+    // Update status
+    if (typeof Quill !== 'undefined') {
+        $('#editorStatus').removeClass('badge-secondary').addClass('badge-success').text('✅ Ready!');
+    } else {
+        $('#editorStatus').removeClass('badge-secondary').addClass('badge-danger').text('❌ Error');
+    }
+});
+
+// Function to initialize Quill Editor (Simple & Reliable!)
+function initializeSummernote() {
+    console.log('🎨 Initializing Quill Editor...');
+    
+    try {
+        // Show editor container
+        $('#quill-editor').show();
+        
+        // Initialize Quill with FULL toolbar
+        quillEditor = new Quill('#quill-editor', {
+            theme: 'snow',
+            placeholder: '✍️ Start writing your study content here...\n\n🎨 Use the toolbar to:\n• Add headings (H1-H6)\n• Format text (Bold, Italic, Underline)\n• Change colors\n• Create lists\n• Insert links and images\n• And more!',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],  // Headings H1-H6
+                    [{ 'size': ['small', false, 'large', 'huge'] }],  // Font sizes
+                    ['bold', 'italic', 'underline', 'strike'],        // Formatting
+                    [{ 'color': [] }, { 'background': [] }],          // Colors
+                    [{ 'script': 'sub' }, { 'script': 'super' }],     // Subscript/Superscript
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],    // Lists
+                    [{ 'indent': '-1' }, { 'indent': '+1' }],         // Indentation
+                    [{ 'align': [] }],                                 // Alignment
+                    ['link', 'image', 'video'],                       // Insert
+                    ['blockquote', 'code-block'],                     // Blocks
+                    ['clean']                                          // Clear formatting
+                ]
+            }
+        });
+        
+        console.log('✅✅✅ QUILL EDITOR LOADED! TOOLBAR IS VISIBLE!');
+        
+        // Update UI
+        $('#editorStatus').removeClass('badge-warning badge-info').addClass('badge-success').text('✅ Active');
+        $('#initEditorBtn').hide();
+        $('#fullscreenBtn').show();
+        
+        // Show success message
+        setTimeout(function() {
+            alert('✅ Rich Text Editor Activated!\n\nአርትዖት መሣሪያ ተሰራች!\n\n✨ Full Features Available:\n✓ Multiple headings (H1-H6)\n✓ Bold, Italic, Underline, Strike\n✓ Text & background colors\n✓ Bullet & numbered lists\n✓ Insert images, links, videos\n✓ Blockquotes & code blocks\n\n👉 Use the toolbar above the text area!');
+        }, 300);
+        
+    } catch (error) {
+        console.error('❌ Quill error:', error);
+        $('#editorStatus').removeClass('badge-warning').addClass('badge-danger').text('❌ Error');
+        alert('❌ Error: ' + error.message);
+    }
+}
+
+// When modal opens
+$('#createStudyModal').on('shown.bs.modal', function () {
+    console.log('📖 Modal opened');
+    if (quillEditor) {
+        $('#editorStatus').addClass('badge-success').text('✅ Active');
+        $('#fullscreenBtn').show();
+        $('#initEditorBtn').hide();
+    }
+});
+
+// When modal closes - clear content
+$('#createStudyModal').on('hidden.bs.modal', function () {
+    console.log('📕 Modal closed');
+    if (quillEditor) {
+        quillEditor.setText('');
+    }
+});
+
+// Before form submit - convert Quill content to HTML and save to hidden textarea
+$('form').on('submit', function(e) {
+    if (quillEditor) {
+        const html = quillEditor.root.innerHTML;
+        $('#content_body_create').val(html);
+        console.log('📝 Saving content, length:', html.length);
+    } else {
+        // Use plain textarea value
+        console.log('⚠️ No editor, using plain text');
+    }
+});
+
+// Manual Editor Activation Function
+function manualInitEditor() {
+    console.log('🚀 Manual editor activation clicked!');
+    
+    try {
+        // Check if Quill is available
+        if (typeof Quill === 'undefined') {
+            alert('❌ Quill library not loaded!\n\nConnection issue.\nPlease refresh (F5) and try again.');
+            $('#editorStatus').addClass('badge-danger').text('❌ Error');
+            return;
+        }
+        
+        // Check if already initialized
+        if (quillEditor) {
+            console.log('⚠️ Editor already active');
+            alert('✅ Editor is already active!\n\nአርትዖት መሣሪያ ቀድሞውኑ ንቁ ነው!');
+            quillEditor.focus();
+            return;
+        }
+        
+        console.log('🎨 Initializing Quill Editor...');
+        $('#editorStatus').text('⏳ Loading...');
+        $('#initEditorBtn').html('<i class="fa fa-spinner fa-spin"></i> Loading...').prop('disabled', true);
+        
+        // Initialize editor
+        initializeSummernote();
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        $('#editorStatus').addClass('badge-danger').text('❌ Error');
+        $('#initEditorBtn').html('<i class="fa fa-rocket"></i> Try Again').prop('disabled', false);
+        alert('❌ Error: ' + error.message);
+    }
+}
+
+// Fullscreen Function
+function toggleFullscreen() {
+    if (!quillEditor) {
+        alert('Please activate the editor first!\n\nእባክዎ መጀመሪያ አርታዒውን ያስነሱ!');
+        return;
+    }
+    
+    const container = document.querySelector('#quill-editor').parentElement;
+    
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().then(() => {
+            console.log('🖥️ Fullscreen ON');
+            $('#fullscreenBtn').html('<i class="fa fa-compress"></i> Exit Fullscreen / ውጣ');
+            document.querySelector('#quill-editor .ql-editor').style.minHeight = '85vh';
+        }).catch(err => {
+            alert('Fullscreen not supported on this browser');
+        });
+    } else {
+        document.exitFullscreen();
+        $('#fullscreenBtn').html('<i class="fa fa-arrows-alt"></i> 🖥️ FULLSCREEN MODE');
+        document.querySelector('#quill-editor .ql-editor').style.minHeight = '400px';
+    }
+}
+
+// Quick Insert Helper Functions (Quill)
+function insertSampleHeading() {
+    if (quillEditor) {
+        const range = quillEditor.getSelection(true);
+        quillEditor.insertText(range.index, 'Section Heading\n', 'user');
+        quillEditor.formatText(range.index, 16, {'header': 2});
+    }
+}
+
+function insertBulletList() {
+    if (quillEditor) {
+        const range = quillEditor.getSelection(true);
+        quillEditor.insertText(range.index, 'First point\nSecond point\nThird point\n', 'user');
+        quillEditor.formatLine(range.index, 50, {'list': 'bullet'});
+    }
+}
+
+function insertNumberList() {
+    if (quillEditor) {
+        const range = quillEditor.getSelection(true);
+        quillEditor.insertText(range.index, 'Step one\nStep two\nStep three\n', 'user');
+        quillEditor.formatLine(range.index, 50, {'list': 'ordered'});
+    }
+}
+
+function insertQuote() {
+    if (quillEditor) {
+        const range = quillEditor.getSelection(true);
+        quillEditor.insertText(range.index, 'This is a quote or important note...\n', 'user');
+        quillEditor.formatLine(range.index, 50, {'blockquote': true});
+    }
+}
+
+// Open modal for creating new study
+function openCreateModal() {
+    console.log('➕ Opening create modal');
+    
+    // Reset form
+    $('#studyForm')[0].reset();
+    $('#formAction').val('create');
+    $('#studyIdInput').val('');
+    $('#existingAttachmentPath').val('');
+    $('#existingAttachmentName').val('');
+    $('#existingAttachmentType').val('');
+    $('#modalTitleText').text('Create New Study / አዲስ ትምህርት ፍጠር');
+    
+    // Remove attachment info if exists
+    $('#existingAttachmentInfo').remove();
+    
+    // Clear Quill editor
+    if (quillEditor) {
+        quillEditor.root.innerHTML = '';
+    }
+    
+    // Show editor activation status
+    if (!quillEditor) {
+        $('#editorStatus').removeClass('badge-secondary badge-danger').addClass('badge-success').text('✅ Ready!');
+    } else {
+        $('#editorStatus').removeClass('badge-warning badge-info').addClass('badge-success').text('✅ Active');
+        $('#initEditorBtn').hide();
+        $('#fullscreenBtn').show();
+    }
+    
+    // Open modal
+    $('#createStudyModal').modal('show');
+}
+
+function editStudy(id) {
+    console.log('📝 Editing study ID:', id);
+    
+    // Fetch study data
+    $.ajax({
+        url: '/get_study/' + id,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const study = response.study;
+                console.log('✅ Study data loaded:', study);
+                
+                // Change modal title
+                $('#modalTitleText').text('Edit Study / ትምህርት አርትዕ');
+                
+                // Change form action
+                $('#formAction').val('update');
+                $('#studyIdInput').val(study.id);
+                
+                // Populate basic fields
+                $('input[name="study_title"]').val(study.study_title);
+                $('select[name="category_id"]').val(study.category_id);
+                $('select[name="target_audience"]').val(study.target_audience);
+                $('textarea[name="summary"]').val(study.summary);
+                $('input[name="publish_date"]').val(study.publish_date);
+                $('input[name="author"]').val(study.author);
+                $('select[name="status"]').val(study.status);
+                $('select[name="priority"]').val(study.priority);
+                $('input[name="tags"]').val(study.tags);
+                
+                // Store existing attachment info
+                $('#existingAttachmentPath').val(study.attachment_path || '');
+                $('#existingAttachmentName').val(study.attachment_name || '');
+                $('#existingAttachmentType').val(study.attachment_type || '');
+                
+                // Show attachment info if exists
+                if (study.attachment_name) {
+                    $('input[name="attachment"]').after(
+                        '<div class="alert alert-info mt-2" id="existingAttachmentInfo">' +
+                        '<i class="fa fa-paperclip"></i> Current: <strong>' + study.attachment_name + '</strong>' +
+                        '<br><small>Upload a new file to replace it, or leave empty to keep current.</small>' +
+                        '</div>'
+                    );
+                }
+                
+                // Initialize Quill editor if not already initialized
+                if (!quillEditor) {
+                    initializeSummernote();
+                    // Wait a moment for editor to initialize
+                    setTimeout(function() {
+                        if (quillEditor && study.content_body) {
+                            quillEditor.root.innerHTML = study.content_body;
+                        }
+                    }, 500);
+                } else {
+                    // Editor already exists, just set content
+                    if (study.content_body) {
+                        quillEditor.root.innerHTML = study.content_body;
+                    }
+                    // Update UI to show editor is active
+                    $('#editorStatus').removeClass('badge-warning badge-info').addClass('badge-success').text('✅ Active');
+                    $('#initEditorBtn').hide();
+                    $('#fullscreenBtn').show();
+                    $('#quill-editor').show();
+                }
+                
+                // Open modal
+                $('#createStudyModal').modal('show');
+                
+            } else {
+                alert('❌ Error: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ AJAX Error:', error);
+            alert('Failed to load study data: ' + error);
+        }
+    });
+}
+
+// Reset form when modal is closed
+$('#createStudyModal').on('hidden.bs.modal', function() {
+    // Reset form
+    $('#studyForm')[0].reset();
+    $('#formAction').val('create');
+    $('#studyIdInput').val('');
+    $('#existingAttachmentPath').val('');
+    $('#existingAttachmentName').val('');
+    $('#existingAttachmentType').val('');
+    $('#modalTitleText').text('Create New Study / አዲስ ትምህርት ፍጠር');
+    
+    // Remove attachment info
+    $('#existingAttachmentInfo').remove();
+    
+    // Clear Quill editor
+    if (quillEditor) {
+        quillEditor.root.innerHTML = '';
+    }
+});
+
+function deleteStudy(id, title) {
+    if (confirm('Delete study: ' + title + '?\n\nየትምህርቱን ሰርዝ: ' + title + '?')) {
+        let form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = '<input name="action" value="delete"><input name="study_id" value="' + id + '">';
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-dismiss alerts
+setTimeout(() => $('.alert').alert('close'), 5000);
+</script>
+
+{% endblock %}
+
