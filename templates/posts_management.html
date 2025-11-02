@@ -1,0 +1,672 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Bootstrap 4 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<!-- Ensure jQuery is loaded -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap 4 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+    .posts-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .page-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 16px;
+    }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 4px solid #14860C;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card .icon {
+        font-size: 40px;
+        color: #14860C;
+        margin-bottom: 15px;
+    }
+    
+    .stat-card .label {
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    
+    .stat-card .value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
+    
+    .post-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    
+    .post-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+    
+    .post-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .post-meta {
+        font-size: 13px;
+        color: #6c757d;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .post-content {
+        color: #495057;
+        margin-bottom: 15px;
+        line-height: 1.6;
+    }
+    
+    .post-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 15px;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .post-badges {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .post-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .badge-priority-high {
+        background: #dc3545;
+    }
+    
+    .badge-priority-normal {
+        background: #17a2b8;
+    }
+    
+    .badge-priority-low {
+        background: #6c757d;
+    }
+    
+    .attachment-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        font-size: 12px;
+    }
+    
+    .btn-action {
+        padding: 8px 15px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .no-posts {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+    
+    .no-posts i {
+        font-size: 80px;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="posts-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fa fa-bullhorn"></i>
+            Posts & Announcements Management / የማስታወቂያዎች አስተዳደር
+        </h2>
+        <p>Manage posts, events, and announcements for members / የአባላት ማስታወቂያዎችን ያስተዳድሩ</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-list"></i></div>
+            <div class="label">Total Posts / ጠቅላላ ማስታወቂያዎች</div>
+            <div class="value">{{ stats[0] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-check-circle"></i></div>
+            <div class="label">Active / ንቁ</div>
+            <div class="value">{{ stats[1] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-calendar"></i></div>
+            <div class="label">Events / ዝግጅቶች</div>
+            <div class="value">{{ stats[3] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-bullhorn"></i></div>
+            <div class="label">Announcements / ማስታወቂያዎች</div>
+            <div class="value">{{ stats[4] or 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon"><i class="fa fa-eye"></i></div>
+            <div class="label">Total Views / ጠቅላላ እይታዎች</div>
+            <div class="value">{{ stats[5] or 0 }}</div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Filter and Search Section -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-filter"></i> Filter & Search / ማጣሪያ እና ፍለጋ</h4>
+            <button class="btn btn-light" data-toggle="modal" data-target="#createPostModal">
+                <i class="fa fa-plus"></i> New Post / አዲስ ማስታወቂያ
+            </button>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Search posts... / ይፈልጉ..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="post_type">
+                        <option value="">All Types / ሁሉም ዓይነቶች</option>
+                        <option value="Event" {% if post_type_filter == 'Event' %}selected{% endif %}>Event / ዝግጅት</option>
+                        <option value="Announcement" {% if post_type_filter == 'Announcement' %}selected{% endif %}>Announcement / ማስታወቂያ</option>
+                        <option value="General Info" {% if post_type_filter == 'General Info' %}selected{% endif %}>General Info / አጠቃላይ መረጃ</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="section">
+                        <option value="">All Sections / ሁሉም ክፍሎች</option>
+                        <option value="All Sections" {% if section_filter == 'All Sections' %}selected{% endif %}>All Sections / ሁሉም ክፍሎች</option>
+                        {% for section in sections %}
+                        <option value="{{ section[0] }}" {% if section_filter == section[0] %}selected{% endif %}>
+                            {{ section[0] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="status">
+                        <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active / ንቁ</option>
+                        <option value="Expired" {% if status_filter == 'Expired' %}selected{% endif %}>Expired / ያለፈ</option>
+                        <option value="Draft" {% if status_filter == 'Draft' %}selected{% endif %}>Draft / ረቂቅ</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fa fa-search"></i> Filter / አጣራ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Posts List -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-list"></i> Posts List / የማስታወቂያዎች ዝርዝር ({{ posts|length }})</h4>
+        </div>
+        <div class="card-body">
+            {% if posts %}
+                {% for post in posts %}
+                <div class="post-card">
+                    <div class="post-header">
+                        <div>
+                            <div class="post-title">{{ post[1] }}</div>
+                            <div class="post-meta">
+                                <span><i class="fa fa-user"></i> {{ post[15] }}</span>
+                                <span><i class="fa fa-clock"></i> {{ post[16].strftime('%Y-%m-%d %H:%M') if post[16] else 'N/A' }}</span>
+                                <span><i class="fa fa-eye"></i> {{ post[14] }} views</span>
+                            </div>
+                        </div>
+                        <div class="post-badges">
+                            <span class="badge badge-priority-{{ post[12]|lower }}">{{ post[12] }}</span>
+                            <span class="badge {% if post[13] == 'Active' %}bg-success{% elif post[13] == 'Expired' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                {{ post[13] }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="post-content">
+                        {{ post[2][:200] }}{% if post[2]|length > 200 %}...{% endif %}
+                    </div>
+                    
+                    <div class="post-footer">
+                        <div class="post-badges">
+                            <span class="badge bg-info">{{ post[3] }}</span>
+                            <span class="badge bg-primary">{{ post[4] or 'All Sections' }}</span>
+                            {% if post[6] %}
+                            <span class="badge bg-secondary">{{ post[6] }}</span>
+                            {% endif %}
+                            {% if post[7] %}
+                            <span class="badge bg-success">Start: {{ post[7] }}</span>
+                            {% endif %}
+                            {% if post[8] %}
+                            <span class="badge bg-danger">End: {{ post[8] }}</span>
+                            {% endif %}
+                            {% if post[9] %}
+                            <div class="attachment-indicator">
+                                <i class="fa fa-paperclip"></i> Attachment
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="post-actions">
+                            <button class="btn btn-sm btn-primary btn-action" 
+                                    onclick="editPost({{ post[0] }}, '{{ post[1] }}', '{{ post[2] }}', '{{ post[3] }}', '{{ post[4] }}', {{ post[5] or 'null' }}, '{{ post[7] }}', '{{ post[8] }}', '{{ post[9] }}', '{{ post[10] }}', '{{ post[11] }}', '{{ post[12] }}', '{{ post[13] }}')">
+                                <i class="fa fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-sm btn-danger btn-action" 
+                                    onclick="deletePost({{ post[0] }}, '{{ post[1] }}')">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-posts">
+                    <i class="fa fa-inbox"></i>
+                    <h4>No posts found / ምንም ማስታወቂያዎች አልተገኙም</h4>
+                    <p>Create your first post to get started / የመጀመሪያውን ማስታወቂያ ይፍጠሩ</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Post Modal -->
+<div class="modal fade" id="createPostModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-plus"></i> Create New Post / አዲስ ማስታወቂያ ፍጠር</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Post Title / ርዕስ *</label>
+                            <input type="text" class="form-control" name="post_title" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Post Type / ዓይነት *</label>
+                            <select class="form-select" name="post_type" required>
+                                <option value="Event">Event / ዝግጅት</option>
+                                <option value="Announcement">Announcement / ማስታወቂያ</option>
+                                <option value="General Info">General Info / አጠቃላይ መረጃ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Priority / ቅድሚያ</label>
+                            <select class="form-select" name="priority">
+                                <option value="Normal">Normal / መደበኛ</option>
+                                <option value="High">High / ከፍተኛ</option>
+                                <option value="Low">Low / ዝቅተኛ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Target Section / የታለመ ክፍል *</label>
+                            <select class="form-select" name="target_section" id="createTargetSection" required>
+                                <option value="All Sections">All Sections / ሁሉም ክፍሎች</option>
+                                {% for section in sections %}
+                                <option value="{{ section[0] }}">{{ section[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Target Medebe / የታለመ ምድብ (Optional)</label>
+                            <select class="form-select" name="target_medebe_id">
+                                <option value="">None / የለም</option>
+                                {% for medebe in medebes %}
+                                <option value="{{ medebe[0] }}">{{ medebe[1] }} ({{ medebe[2] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date / የጅማሬ ቀን</label>
+                            <input type="date" class="form-control" name="start_date">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">End Date / የማብቂያ ቀን</label>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label">Post Content / ይዘት *</label>
+                            <textarea class="form-control" name="post_content" rows="6" required></textarea>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label">Attachment / አባሪ (Image, PDF, or Document)</label>
+                            <input type="file" class="form-control" name="attachment" 
+                                   accept="image/*,.pdf,.doc,.docx">
+                            <small class="text-muted">Supported: Images, PDF, Word documents</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Create Post / አስቀምጥ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Post Modal -->
+<div class="modal fade" id="editPostModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="post_id" id="editPostId">
+                <input type="hidden" name="existing_attachment_path" id="existingAttachmentPath">
+                <input type="hidden" name="existing_attachment_name" id="existingAttachmentName">
+                <input type="hidden" name="existing_attachment_type" id="existingAttachmentType">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-edit"></i> Edit Post / ማስታወቂያ አርትዕ</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Post Title / ርዕስ *</label>
+                            <input type="text" class="form-control" name="post_title" id="editPostTitle" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Post Type / ዓይነት *</label>
+                            <select class="form-select" name="post_type" id="editPostType" required>
+                                <option value="Event">Event / ዝግጅት</option>
+                                <option value="Announcement">Announcement / ማስታወቂያ</option>
+                                <option value="General Info">General Info / አጠቃላይ መረጃ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Priority / ቅድሚያ</label>
+                            <select class="form-select" name="priority" id="editPriority">
+                                <option value="Normal">Normal / መደበኛ</option>
+                                <option value="High">High / ከፍተኛ</option>
+                                <option value="Low">Low / ዝቅተኛ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Target Section / የታለመ ክፍል *</label>
+                            <select class="form-select" name="target_section" id="editTargetSection" required>
+                                <option value="All Sections">All Sections / ሁሉም ክፍሎች</option>
+                                {% for section in sections %}
+                                <option value="{{ section[0] }}">{{ section[0] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Target Medebe / የታለመ ምድብ</label>
+                            <select class="form-select" name="target_medebe_id" id="editTargetMedebe">
+                                <option value="">None / የለም</option>
+                                {% for medebe in medebes %}
+                                <option value="{{ medebe[0] }}">{{ medebe[1] }} ({{ medebe[2] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date / የጅማሬ ቀን</label>
+                            <input type="date" class="form-control" name="start_date" id="editStartDate">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">End Date / የማብቂያ ቀን</label>
+                            <input type="date" class="form-control" name="end_date" id="editEndDate">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Status / ሁኔታ</label>
+                            <select class="form-select" name="status" id="editStatus">
+                                <option value="Active">Active / ንቁ</option>
+                                <option value="Expired">Expired / ያለፈ</option>
+                                <option value="Draft">Draft / ረቂቅ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label">Post Content / ይዘት *</label>
+                            <textarea class="form-control" name="post_content" id="editPostContent" rows="6" required></textarea>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label">New Attachment / አዲስ አባሪ (Optional - replaces existing)</label>
+                            <input type="file" class="form-control" name="attachment" 
+                                   accept="image/*,.pdf,.doc,.docx">
+                            <small class="text-muted" id="currentAttachment"></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-save"></i> Update Post / አስተካክል
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deletePostModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="post_id" id="deletePostId">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fa fa-trash"></i> Delete Post / ማስታወቂያ ሰርዝ</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this post?</p>
+                    <p class="fw-bold" id="deletePostTitle"></p>
+                    <p class="text-danger"><small>This action cannot be undone!</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel / ሰርዝ</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa fa-trash"></i> Delete / ሰርዝ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editPost(id, title, content, type, section, medebeId, startDate, endDate, attachPath, attachName, attachType, priority, status) {
+    document.getElementById('editPostId').value = id;
+    document.getElementById('editPostTitle').value = title;
+    document.getElementById('editPostContent').value = content;
+    document.getElementById('editPostType').value = type;
+    document.getElementById('editTargetSection').value = section;
+    document.getElementById('editTargetMedebe').value = medebeId || '';
+    document.getElementById('editStartDate').value = startDate || '';
+    document.getElementById('editEndDate').value = endDate || '';
+    document.getElementById('editPriority').value = priority;
+    document.getElementById('editStatus').value = status;
+    
+    document.getElementById('existingAttachmentPath').value = attachPath || '';
+    document.getElementById('existingAttachmentName').value = attachName || '';
+    document.getElementById('existingAttachmentType').value = attachType || '';
+    
+    if (attachName) {
+        document.getElementById('currentAttachment').textContent = 'Current: ' + attachName;
+    } else {
+        document.getElementById('currentAttachment').textContent = '';
+    }
+    
+    $('#editPostModal').modal('show');
+}
+
+function deletePost(id, title) {
+    document.getElementById('deletePostId').value = id;
+    document.getElementById('deletePostTitle').textContent = title;
+    $('#deletePostModal').modal('show');
+}
+
+// Auto-dismiss alerts
+setTimeout(function() {
+    $('.alert').alert('close');
+}, 5000);
+</script>
+
+{% endblock %}
+

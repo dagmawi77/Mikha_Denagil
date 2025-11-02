@@ -345,6 +345,17 @@
                         
                         <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-info menu-icon"></i><span class="nav-text">Posts & Announcements / ማስታወቂያዎች</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('posts_management')}}">Manage Posts / ማስታወቂያዎች አስተዳድር</a></li>
+                                <li><a href="{{url_for('member_posts_view')}}">View Posts / ማስታወቂያዎች አሳይ</a></li>
+                                <li><a href="{{url_for('posts_report')}}">Posts Report / የማስታወቂያዎች ሪፖርት</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
                                 <i class="icon-user menu-icon"></i><span class="nav-text">{{ t('user_management') }}</span>
                             </a>
                             <ul aria-expanded="false">

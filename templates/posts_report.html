@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .report-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-box {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 4px solid #14860C;
+        transition: transform 0.2s;
+    }
+    
+    .stat-box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .stat-box .icon {
+        font-size: 36px;
+        color: #14860C;
+        margin-bottom: 10px;
+    }
+    
+    .stat-box .label {
+        font-size: 13px;
+        color: #6c757d;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    
+    .stat-box .value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .modern-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    
+    .modern-card .card-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 20px 30px;
+    }
+    
+    .modern-card .card-header h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+    
+    .modern-card .card-body {
+        padding: 30px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .table-modern {
+        width: 100%;
+        margin-top: 20px;
+    }
+    
+    .table-modern thead {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .table-modern thead th {
+        padding: 12px;
+        font-weight: 600;
+        border: none;
+    }
+    
+    .table-modern tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .table-modern td {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+</style>
+
+<div class="report-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fa fa-chart-bar"></i>
+            Posts & Announcements Report / የማስታወቂያዎች ሪፖርት
+        </h2>
+        <p>Comprehensive statistics and analysis / አጠቃላይ ስታትስቲክስ እና ትንተና</p>
+    </div>
+
+    <!-- Overall Statistics -->
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-list"></i></div>
+            <div class="label">Total Posts</div>
+            <div class="value">{{ overall_stats[0] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-check-circle"></i></div>
+            <div class="label">Active Posts</div>
+            <div class="value">{{ overall_stats[1] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-clock"></i></div>
+            <div class="label">Expired Posts</div>
+            <div class="value">{{ overall_stats[2] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-calendar"></i></div>
+            <div class="label">Events</div>
+            <div class="value">{{ overall_stats[4] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-bullhorn"></i></div>
+            <div class="label">Announcements</div>
+            <div class="value">{{ overall_stats[5] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-eye"></i></div>
+            <div class="label">Total Views</div>
+            <div class="value">{{ overall_stats[7] or 0 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="icon"><i class="fa fa-chart-line"></i></div>
+            <div class="label">Avg Views/Post</div>
+            <div class="value">{{ "%.1f"|format(overall_stats[8] or 0) }}</div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-filter"></i> Filter Report / ሪፖርት ያጣሩ</h4>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Date From / ከቀን</label>
+                    <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date To / እስከ</label>
+                    <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Post Type / ዓይነት</label>
+                    <select class="form-select" name="post_type">
+                        <option value="">All Types / ሁሉም</option>
+                        <option value="Event" {% if post_type_filter == 'Event' %}selected{% endif %}>Event</option>
+                        <option value="Announcement" {% if post_type_filter == 'Announcement' %}selected{% endif %}>Announcement</option>
+                        <option value="General Info" {% if post_type_filter == 'General Info' %}selected{% endif %}>General Info</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Section / ክፍል</label>
+                    <select class="form-select" name="section">
+                        <option value="">All Sections / ሁሉም</option>
+                        {% for section in sections %}
+                        <option value="{{ section[0] }}" {% if section_filter == section[0] %}selected{% endif %}>
+                            {{ section[0] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa fa-filter"></i> Apply Filter / አጣራ
+                    </button>
+                    <a href="{{ url_for('posts_report') }}" class="btn btn-secondary">
+                        <i class="fa fa-redo"></i> Reset / ዳግም አስጀምር
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h4><i class="fa fa-pie-chart"></i> Posts by Type / በዓይነት</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="postsByTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="modern-card">
+                <div class="card-header">
+                    <h4><i class="fa fa-chart-bar"></i> Posts by Section / በክፍል</h4>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="postsBySectionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Viewed Posts -->
+    <div class="modern-card">
+        <div class="card-header">
+            <h4><i class="fa fa-fire"></i> Most Viewed Posts / በጣም የተተየቱ ማስታወቂያዎች</h4>
+        </div>
+        <div class="card-body">
+            <table class="table table-modern table-hover">
+                <thead>
+                    <tr>
+                        <th>Title / ርዕስ</th>
+                        <th>Type / ዓይነት</th>
+                        <th>Section / ክፍል</th>
+                        <th>Views / እይታዎች</th>
+                        <th>Created / የተፈጠረበት</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if most_viewed %}
+                        {% for post in most_viewed %}
+                        <tr>
+                            <td>{{ post[1] }}</td>
+                            <td><span class="badge bg-info">{{ post[2] }}</span></td>
+                            <td><span class="badge bg-primary">{{ post[3] or 'All' }}</span></td>
+                            <td><strong>{{ post[4] }}</strong></td>
+                            <td>{{ post[5].strftime('%Y-%m-%d') if post[5] else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No data available</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Posts -->
+    <div class="modern-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4><i class="fa fa-clock"></i> Recent Posts / የቅርብ ጊዜ ማስታወቂያዎች</h4>
+            <div class="export-buttons">
+                <button class="btn btn-light btn-sm" onclick="exportToPDF()">
+                    <i class="fa fa-file-pdf"></i> PDF
+                </button>
+                <button class="btn btn-light btn-sm" onclick="exportToExcel()">
+                    <i class="fa fa-file-excel"></i> Excel
+                </button>
+                <button class="btn btn-light btn-sm" onclick="exportToCSV()">
+                    <i class="fa fa-file-csv"></i> CSV
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <table class="table table-modern table-hover" id="recentPostsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title / ርዕስ</th>
+                        <th>Type / ዓይነት</th>
+                        <th>Section / ክፍል</th>
+                        <th>Medebe / ምድብ</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th>Views</th>
+                        <th>Created By</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_posts %}
+                        {% for post in recent_posts %}
+                        <tr>
+                            <td>{{ post[0] }}</td>
+                            <td>{{ post[1] }}</td>
+                            <td><span class="badge bg-info">{{ post[2] }}</span></td>
+                            <td><span class="badge bg-primary">{{ post[3] or 'All' }}</span></td>
+                            <td>{{ post[4] or '-' }}</td>
+                            <td>{{ post[5] or '-' }}</td>
+                            <td>{{ post[6] or '-' }}</td>
+                            <td>
+                                <span class="badge {% if post[7] == 'Active' %}bg-success{% elif post[7] == 'Expired' %}bg-secondary{% else %}bg-warning{% endif %}">
+                                    {{ post[7] }}
+                                </span>
+                            </td>
+                            <td>{{ post[8] }}</td>
+                            <td>{{ post[9] }}</td>
+                            <td>{{ post[10].strftime('%Y-%m-%d %H:%M') if post[10] else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted">No posts found matching filters</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Posts by Type Chart
+const postsByTypeCtx = document.getElementById('postsByTypeChart').getContext('2d');
+new Chart(postsByTypeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for post in posts_by_type %}'{{ post[0] }}',{% endfor %}],
+        datasets: [{
+            data: [{% for post in posts_by_type %}{{ post[1] }},{% endfor %}],
+            backgroundColor: [
+                '#17a2b8',
+                '#ffc107',
+                '#28a745',
+                '#dc3545',
+                '#6c757d'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Posts by Section Chart
+const postsBySectionCtx = document.getElementById('postsBySectionChart').getContext('2d');
+new Chart(postsBySectionCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for post in posts_by_section %}'{{ post[0] }}',{% endfor %}],
+        datasets: [{
+            label: 'Number of Posts',
+            data: [{% for post in posts_by_section %}{{ post[1] }},{% endfor %}],
+            backgroundColor: '#14860C'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+
+// Export functions (placeholders - implement as needed)
+function exportToPDF() {
+    alert('PDF export functionality - to be implemented');
+}
+
+function exportToExcel() {
+    alert('Excel export functionality - to be implemented');
+}
+
+function exportToCSV() {
+    // Simple CSV export
+    let csv = [];
+    let rows = document.querySelectorAll('#recentPostsTable tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll('td, th');
+        for (let j = 0; j < cols.length; j++) {
+            row.push(cols[j].innerText);
+        }
+        csv.push(row.join(','));
+    }
+    
+    let csvContent = csv.join('\n');
+    let blob = new Blob([csvContent], { type: 'text/csv' });
+    let url = window.URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'posts_report.csv';
+    a.click();
+}
+</script>
+
+{% endblock %}
+

@@ -501,6 +501,26 @@
                 </div>
             </div>
 
+            <!-- Posts & Announcements Widget -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card shadow-sm" style="border-radius: 15px; overflow: hidden;">
+                        <div class="card-header" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; padding: 20px;">
+                            <h4 class="mb-0 d-flex align-items-center justify-content-between">
+                                <span><i class="fa fa-bullhorn me-2"></i>Latest Posts & Announcements / የቅርብ ጊዜ ማስታወቂያዎች</span>
+                                <a href="{{ url_for('member_posts_view') }}" class="btn btn-light btn-sm">View All / ሁሉም አሳይ</a>
+                            </h4>
+                        </div>
+                        <div class="card-body" id="postsWidget" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-center py-4">
+                                <i class="fa fa-spinner fa-spin fa-2x text-success"></i>
+                                <p class="mt-2">Loading posts... / እየተጫነ ነው...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Section Header with Export Button -->
             <div class="row mt-4">
                 <div class="col-12">
@@ -1103,6 +1123,66 @@
         // Clean up on page unload
         window.addEventListener('beforeunload', function() {
             clearInterval(updateInterval);
+        });
+
+        // Load posts for dashboard widget
+        function loadPostsWidget() {
+            fetch('/get_posts_for_dashboard')
+                .then(response => response.json())
+                .then(posts => {
+                    const widget = document.getElementById('postsWidget');
+                    if (posts.length === 0) {
+                        widget.innerHTML = `
+                            <div class="text-center py-4 text-muted">
+                                <i class="fa fa-inbox fa-2x mb-3"></i>
+                                <p>No posts available / ምንም ማስታወቂያዎች የሉም</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    let html = '';
+                    posts.forEach(post => {
+                        const priorityColor = post.priority === 'High' ? 'danger' : post.priority === 'Low' ? 'secondary' : 'info';
+                        const typeIcon = post.type === 'Event' ? 'calendar' : post.type === 'Announcement' ? 'bullhorn' : 'info-circle';
+                        
+                        html += `
+                            <div class="border-bottom pb-3 mb-3" style="cursor: pointer;" onclick="window.location.href='{{ url_for('member_posts_view') }}'">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-1" style="color: #2c3e50; font-weight: 600;">
+                                        <i class="fa fa-${typeIcon} me-2 text-${priorityColor}"></i>${post.title}
+                                    </h6>
+                                    <small class="text-muted">${post.created_at}</small>
+                                </div>
+                                <p class="mb-2 text-muted" style="font-size: 14px;">${post.content}</p>
+                                <div class="d-flex gap-2">
+                                    <span class="badge bg-${priorityColor}">${post.type}</span>
+                                    ${post.priority === 'High' ? '<span class="badge bg-danger">High Priority</span>' : ''}
+                                    ${post.has_attachment ? '<span class="badge bg-success"><i class="fa fa-paperclip"></i> Attachment</span>' : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    widget.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading posts:', error);
+                    const widget = document.getElementById('postsWidget');
+                    widget.innerHTML = `
+                        <div class="text-center py-4 text-danger">
+                            <i class="fa fa-exclamation-circle fa-2x mb-3"></i>
+                            <p>Error loading posts / ማስታወቂያዎችን ለመጫን ሲሞክር ስህተት ተፈጥሯል</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // Load posts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPostsWidget();
+            // Refresh posts every 5 minutes
+            setInterval(loadPostsWidget, 300000);
         });
     </script>
     {% endblock %}

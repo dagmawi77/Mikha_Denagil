@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .posts-view-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 30px;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 15px rgba(20, 134, 12, 0.3);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 700;
+    }
+    
+    .post-item {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        border-left: 4px solid #14860C;
+    }
+    
+    .post-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .post-item.priority-high {
+        border-left-color: #dc3545;
+    }
+    
+    .post-item.priority-low {
+        border-left-color: #6c757d;
+    }
+    
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+    }
+    
+    .post-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    
+    .post-badges {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .post-meta {
+        font-size: 13px;
+        color: #6c757d;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+    }
+    
+    .post-content {
+        color: #495057;
+        line-height: 1.7;
+        font-size: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .post-attachment {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .post-attachment img {
+        max-width: 100%;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+    
+    .post-dates {
+        display: flex;
+        gap: 20px;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .date-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+    
+    .no-posts {
+        text-align: center;
+        padding: 80px 20px;
+        color: #6c757d;
+    }
+    
+    .no-posts i {
+        font-size: 100px;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+    
+    .badge-type {
+        padding: 8px 15px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+</style>
+
+<div class="posts-view-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>
+            <i class="fa fa-bullhorn"></i>
+            Posts & Announcements / ማስታወቂያዎች
+        </h2>
+        <p>View posts and announcements for your section / ለእርስዎ ክፍል ማስታወቂያዎችን ይመልከቱ</p>
+    </div>
+
+    <!-- Posts List -->
+    {% if posts %}
+        {% for post in posts %}
+        <div class="post-item priority-{{ post[10]|lower }}" data-post-id="{{ post[0] }}">
+            <div class="post-header">
+                <div class="post-title">
+                    {{ post[1] }}
+                </div>
+                <div class="post-badges">
+                    <span class="badge bg-info badge-type">{{ post[3] }}</span>
+                    {% if post[10] == 'High' %}
+                    <span class="badge bg-danger badge-type">
+                        <i class="fa fa-exclamation-circle"></i> High Priority
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="post-meta">
+                <span><i class="fa fa-user"></i> {{ post[12] }}</span>
+                <span><i class="fa fa-clock"></i> {{ post[11].strftime('%B %d, %Y at %H:%M') if post[11] else 'N/A' }}</span>
+                <span><i class="fa fa-users"></i> {{ post[4] or 'All Sections' }}</span>
+            </div>
+            
+            <div class="post-content">
+                {{ post[2] }}
+            </div>
+            
+            {% if post[7] %}
+            <div class="post-attachment">
+                <i class="fa fa-paperclip"></i> 
+                <strong>Attachment:</strong> {{ post[8] }}
+                
+                {% if post[9] == 'image' %}
+                <img src="/{{ post[7] }}" alt="Post attachment">
+                {% elif post[9] == 'pdf' %}
+                <div class="mt-2">
+                    <a href="/{{ post[7] }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fa fa-file-pdf"></i> View PDF
+                    </a>
+                </div>
+                {% else %}
+                <div class="mt-2">
+                    <a href="/{{ post[7] }}" target="_blank" class="btn btn-sm btn-outline-success">
+                        <i class="fa fa-download"></i> Download Document
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if post[5] or post[6] %}
+            <div class="post-dates">
+                {% if post[5] %}
+                <div class="date-info">
+                    <i class="fa fa-calendar-check text-success"></i>
+                    <span><strong>Start:</strong> {{ post[5] }}</span>
+                </div>
+                {% endif %}
+                {% if post[6] %}
+                <div class="date-info">
+                    <i class="fa fa-calendar-times text-danger"></i>
+                    <span><strong>End:</strong> {{ post[6] }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-posts">
+            <i class="fa fa-inbox"></i>
+            <h3>No Posts Available / ምንም ማስታወቂያዎች የሉም</h3>
+            <p>There are currently no posts or announcements for your section.</p>
+            <p>በአሁኑ ጊዜ ለእርስዎ ክፍል ምንም ማስታወቂያዎች የሉም።</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Mark posts as read when viewed
+document.addEventListener('DOMContentLoaded', function() {
+    let postItems = document.querySelectorAll('.post-item');
+    
+    postItems.forEach(function(item) {
+        let postId = item.dataset.postId;
+        
+        // Mark as read after viewing for 3 seconds
+        setTimeout(function() {
+            fetch('/mark_post_read/' + postId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Post ' + postId + ' marked as read');
+                    }
+                })
+                .catch(error => console.log('Error marking post as read'));
+        }, 3000);
+    });
+});
+</script>
+
+{% endblock %}
+

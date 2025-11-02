@@ -48,7 +48,8 @@ from threading import Thread
 from collections import defaultdict
 from datetime import date, timedelta
 
-
+# Import translations module for bilingual support
+from translations import get_text
 
 app = Flask(__name__)
 
@@ -460,6 +461,23 @@ def utility_processor():
         conn.close()
         return routes
     return dict(get_assigned_routes=get_assigned_routes)
+
+@app.context_processor
+def inject_translation():
+    """Inject translation function into all templates"""
+    def t(key):
+        lang = session.get('language', 'am')  # Default to Amharic
+        return get_text(key, lang)
+    return dict(t=t)
+
+@app.route('/set_language/<lang>')
+def set_language(lang):
+    """Set the language preference in session"""
+    if lang in ['am', 'en']:
+        session['language'] = lang
+        session.permanent = True
+    # Redirect back to the previous page or to navigation
+    return redirect(request.referrer or url_for('navigation'))
 
 @app.route('/manage_roles')
 @login_required

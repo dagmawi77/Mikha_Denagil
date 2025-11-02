@@ -362,6 +362,260 @@ def get_my_contributions(user_id, member_id):
         conn.close()
 
 #  =====================
+#  Posts & Announcements Endpoints
+#  =====================
+
+@mobile_api.route('/posts', methods=['GET'])
+@token_required
+def get_posts(user_id, member_id):
+    """
+    Get posts relevant to member's section
+    GET /api/v1/posts?limit=20&offset=0&type=Event
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    post_type = request.args.get('type', '', type=str)
+    
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        # Get member's section and medebe
+        cursor.execute("""
+            SELECT m.section_name, mma.medebe_id
+            FROM member_registration m
+            LEFT JOIN member_medebe_assignment mma ON m.id = mma.member_id
+            WHERE m.id = %s
+        """, (member_id,))
+        
+        member_info = cursor.fetchone()
+        if not member_info:
+            return jsonify({'error': 'Member not found'}), 404
+        
+        member_section, member_medebe_id = member_info
+        
+        # Build query
+        query = """
+            SELECT 
+                p.id, p.post_title, p.post_content, p.post_type, p.target_section,
+                p.start_date, p.end_date, p.attachment_path, p.attachment_name,
+                p.attachment_type, p.priority, p.created_at, p.created_by,
+                p.views_count, m.medebe_name,
+                (SELECT COUNT(*) FROM post_read_status WHERE post_id = p.id AND member_id = %s) as is_read
+            FROM posts p
+            LEFT JOIN medebe m ON p.target_medebe_id = m.id
+            WHERE p.status = 'Active'
+            AND (
+                p.target_section = 'All Sections'
+                OR p.target_section = %s
+                OR (p.target_medebe_id = %s AND p.target_medebe_id IS NOT NULL)
+            )
+            AND (
+                p.start_date IS NULL 
+                OR p.start_date <= CURDATE()
+            )
+            AND (
+                p.end_date IS NULL 
+                OR p.end_date >= CURDATE()
+            )
+        """
+        
+        params = [member_id, member_section, member_medebe_id]
+        
+        if post_type:
+            query += " AND p.post_type = %s"
+            params.append(post_type)
+        
+        query += " ORDER BY p.priority DESC, p.created_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, params)
+        posts = cursor.fetchall()
+        
+        return jsonify({
+            'posts': [
+                {
+                    'id': post[0],
+                    'title': post[1],
+                    'content': post[2],
+                    'type': post[3],
+                    'target_section': post[4],
+                    'start_date': str(post[5]) if post[5] else None,
+                    'end_date': str(post[6]) if post[6] else None,
+                    'attachment_url': f"/{post[7]}" if post[7] else None,
+                    'attachment_name': post[8],
+                    'attachment_type': post[9],
+                    'priority': post[10],
+                    'created_at': post[11].strftime('%Y-%m-%d %H:%M:%S') if post[11] else None,
+                    'created_by': post[12],
+                    'views_count': post[13],
+                    'medebe_name': post[14],
+                    'is_read': post[15] > 0
+                }
+                for post in posts
+            ],
+            'count': len(posts),
+            'limit': limit,
+            'offset': offset
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/posts/<int:post_id>', methods=['GET'])
+@token_required
+def get_post_details(user_id, member_id, post_id):
+    """
+    Get single post details
+    GET /api/v1/posts/<post_id>
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT 
+                p.id, p.post_title, p.post_content, p.post_type, p.target_section,
+                p.start_date, p.end_date, p.attachment_path, p.attachment_name,
+                p.attachment_type, p.priority, p.created_at, p.created_by,
+                p.views_count, m.medebe_name,
+                (SELECT COUNT(*) FROM post_read_status WHERE post_id = p.id AND member_id = %s) as is_read
+            FROM posts p
+            LEFT JOIN medebe m ON p.target_medebe_id = m.id
+            WHERE p.id = %s AND p.status = 'Active'
+        """, (member_id, post_id))
+        
+        post = cursor.fetchone()
+        
+        if not post:
+            return jsonify({'error': 'Post not found'}), 404
+        
+        # Mark as read
+        cursor.execute("""
+            INSERT IGNORE INTO post_read_status (post_id, member_id)
+            VALUES (%s, %s)
+        """, (post_id, member_id))
+        
+        # Increment view count
+        cursor.execute("""
+            UPDATE posts SET views_count = views_count + 1 WHERE id = %s
+        """, (post_id,))
+        
+        conn.commit()
+        
+        return jsonify({
+            'post': {
+                'id': post[0],
+                'title': post[1],
+                'content': post[2],
+                'type': post[3],
+                'target_section': post[4],
+                'start_date': str(post[5]) if post[5] else None,
+                'end_date': str(post[6]) if post[6] else None,
+                'attachment_url': f"/{post[7]}" if post[7] else None,
+                'attachment_name': post[8],
+                'attachment_type': post[9],
+                'priority': post[10],
+                'created_at': post[11].strftime('%Y-%m-%d %H:%M:%S') if post[11] else None,
+                'created_by': post[12],
+                'views_count': post[13] + 1,
+                'medebe_name': post[14],
+                'is_read': True
+            }
+        }), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/posts/<int:post_id>/mark-read', methods=['POST'])
+@token_required
+def mark_post_read_mobile(user_id, member_id, post_id):
+    """
+    Mark a post as read
+    POST /api/v1/posts/<post_id>/mark-read
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        cursor.execute("""
+            INSERT IGNORE INTO post_read_status (post_id, member_id)
+            VALUES (%s, %s)
+        """, (post_id, member_id))
+        
+        cursor.execute("""
+            UPDATE posts SET views_count = views_count + 1 WHERE id = %s
+        """, (post_id,))
+        
+        conn.commit()
+        
+        return jsonify({'message': 'Post marked as read', 'success': True}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@mobile_api.route('/posts/stats', methods=['GET'])
+@token_required
+def get_posts_stats(user_id, member_id):
+    """
+    Get posts statistics for member
+    GET /api/v1/posts/stats
+    Headers: {"Authorization": "Bearer <token>"}
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        # Get member's section
+        cursor.execute("""
+            SELECT section_name FROM member_registration WHERE id = %s
+        """, (member_id,))
+        member_section = cursor.fetchone()[0]
+        
+        # Get total posts for member
+        cursor.execute("""
+            SELECT COUNT(*) FROM posts
+            WHERE status = 'Active'
+            AND (target_section = 'All Sections' OR target_section = %s)
+        """, (member_section,))
+        total_posts = cursor.fetchone()[0]
+        
+        # Get read posts
+        cursor.execute("""
+            SELECT COUNT(*) FROM post_read_status WHERE member_id = %s
+        """, (member_id,))
+        read_posts = cursor.fetchone()[0]
+        
+        # Get unread posts
+        unread_posts = total_posts - read_posts if total_posts > read_posts else 0
+        
+        return jsonify({
+            'total_posts': total_posts,
+            'read_posts': read_posts,
+            'unread_posts': unread_posts
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+#  =====================
 #  Utility Endpoints
 #  =====================
 
@@ -378,17 +632,22 @@ def health_check():
 def version():
     """Get API version"""
     return jsonify({
-        'api_version': '1.0.0',
+        'api_version': '1.1.0',
         'min_app_version': '1.0.0',
         'features': [
             'authentication',
             'profile',
             'positions',
             'attendance',
-            'contributions'
+            'contributions',
+            'posts',
+            'announcements',
+            'events'
         ]
     }), 200
 
 # Export blueprint
 __all__ = ['mobile_api']
+
+
 

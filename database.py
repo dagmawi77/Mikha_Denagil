@@ -620,12 +620,59 @@ def initialize_rbac_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Member login history/የአባላት መግቢያ ታሪክ'
         """)
         
+        # Create posts/announcements table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS posts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                post_title VARCHAR(500) NOT NULL COMMENT 'Post title/ርዕስ',
+                post_content TEXT NOT NULL COMMENT 'Post content/ይዘት',
+                post_type VARCHAR(50) NOT NULL COMMENT 'Event, Announcement, General Info',
+                target_section VARCHAR(100) COMMENT 'Target section (ክፍል) - All Sections, የሕፃናት ክፍል, etc.',
+                target_medebe_id INT COMMENT 'Target medebe (ምድብ) if specific',
+                start_date DATE COMMENT 'Post start date/የጅማሬ ቀን',
+                end_date DATE COMMENT 'Post end date/የማብቂያ ቀን',
+                attachment_path VARCHAR(500) COMMENT 'File attachment path',
+                attachment_name VARCHAR(255) COMMENT 'Original filename',
+                attachment_type VARCHAR(50) COMMENT 'File type (image, pdf, doc)',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                status VARCHAR(20) DEFAULT 'Active' COMMENT 'Active, Expired, Draft',
+                priority VARCHAR(20) DEFAULT 'Normal' COMMENT 'High, Normal, Low',
+                views_count INT DEFAULT 0 COMMENT 'Number of views',
+                created_by VARCHAR(50) COMMENT 'User who created the post',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (target_medebe_id) REFERENCES medebe(id) ON DELETE SET NULL,
+                INDEX idx_post_type (post_type),
+                INDEX idx_target_section (target_section),
+                INDEX idx_target_medebe (target_medebe_id),
+                INDEX idx_dates (start_date, end_date),
+                INDEX idx_status (status),
+                INDEX idx_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Posts and announcements/ማስታወቂያዎች'
+        """)
+        
+        # Create post_read_status table to track which members have read posts
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS post_read_status (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                post_id INT NOT NULL COMMENT 'Post reference',
+                member_id INT NOT NULL COMMENT 'Member who read the post',
+                read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'When post was read',
+                UNIQUE KEY unique_read (post_id, member_id),
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES member_registration(id) ON DELETE CASCADE,
+                INDEX idx_post (post_id),
+                INDEX idx_member (member_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Post read tracking/የተነበቡ ማስታወቂያዎች'
+        """)
+        
         conn.commit()
         print("✓ RBAC tables initialized/verified successfully")
         print("✓ Library tables initialized/verified successfully")
         print("✓ Inventory tables initialized/verified successfully")
         print("✓ Fixed Assets tables initialized/verified successfully")
         print("✓ Department & Position tables initialized/verified successfully")
+        print("✓ Posts & Announcements tables initialized/verified successfully")
         return True
     except Exception as e:
         conn.rollback()
@@ -700,7 +747,10 @@ def initialize_default_roles_and_routes():
             ('Department Management', 'manage_departments', 'Manage organizational departments'),
             ('Position Management', 'manage_positions', 'Manage job positions'),
             ('Member Position Assignment', 'assign_member_positions', 'Assign members to positions'),
-            ('Organizational Chart', 'organizational_chart', 'View org structure and positions')
+            ('Organizational Chart', 'organizational_chart', 'View org structure and positions'),
+            ('Posts Management', 'posts_management', 'Manage posts and announcements'),
+            ('Posts Report', 'posts_report', 'View posts statistics and reports'),
+            ('Member Posts View', 'member_posts_view', 'View posts assigned to member section')
         ]
         
         for route_name, endpoint, description in default_routes:

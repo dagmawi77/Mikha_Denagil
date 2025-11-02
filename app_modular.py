@@ -5413,6 +5413,519 @@ def member_login_history(account_id):
                          history=history,
                          stats=stats)
 
+# ==================== POSTS / ANNOUNCEMENTS MANAGEMENT ====================
+
+@app.route('/posts_management', methods=['GET', 'POST'])
+@login_required
+@role_required('Super Admin', 'Communication Manager')
+def posts_management():
+    """Manage posts and announcements - CRUD operations"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get search and filter parameters
+    search = request.args.get('search', '')
+    post_type_filter = request.args.get('post_type', '')
+    section_filter = request.args.get('section', '')
+    status_filter = request.args.get('status', 'Active')
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'create':
+            try:
+                # Handle file upload
+                attachment_path = None
+                attachment_name = None
+                attachment_type = None
+                
+                if 'attachment' in request.files:
+                    file = request.files['attachment']
+                    if file and file.filename:
+                        from werkzeug.utils import secure_filename
+                        import os
+                        
+                        filename = secure_filename(file.filename)
+                        # Create uploads directory if it doesn't exist
+                        upload_folder = os.path.join('static', 'uploads', 'posts')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        # Generate unique filename with timestamp
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        file_ext = os.path.splitext(filename)[1]
+                        unique_filename = f"post_{timestamp}_{filename}"
+                        file_path = os.path.join(upload_folder, unique_filename)
+                        
+                        file.save(file_path)
+                        attachment_path = file_path.replace('\\', '/')
+                        attachment_name = filename
+                        
+                        # Determine file type
+                        if file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            attachment_type = 'image'
+                        elif file_ext.lower() == '.pdf':
+                            attachment_type = 'pdf'
+                        else:
+                            attachment_type = 'document'
+                
+                data = {
+                    'post_title': request.form.get('post_title'),
+                    'post_content': request.form.get('post_content'),
+                    'post_type': request.form.get('post_type'),
+                    'target_section': request.form.get('target_section'),
+                    'target_medebe_id': request.form.get('target_medebe_id') or None,
+                    'start_date': request.form.get('start_date') or None,
+                    'end_date': request.form.get('end_date') or None,
+                    'attachment_path': attachment_path,
+                    'attachment_name': attachment_name,
+                    'attachment_type': attachment_type,
+                    'priority': request.form.get('priority', 'Normal'),
+                    'status': 'Active',
+                    'created_by': session.get('username', 'Unknown')
+                }
+                
+                cursor.execute("""
+                    INSERT INTO posts (
+                        post_title, post_content, post_type, target_section, target_medebe_id,
+                        start_date, end_date, attachment_path, attachment_name, attachment_type,
+                        priority, status, created_by
+                    ) VALUES (
+                        %(post_title)s, %(post_content)s, %(post_type)s, %(target_section)s, 
+                        %(target_medebe_id)s, %(start_date)s, %(end_date)s, %(attachment_path)s,
+                        %(attachment_name)s, %(attachment_type)s, %(priority)s, %(status)s, %(created_by)s
+                    )
+                """, data)
+                conn.commit()
+                flash('Post created successfully! / ማስታወቂያ በተሳካ ሁኔታ ተፈጥሯል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error creating post: {str(e)}', 'danger')
+        
+        elif action == 'update':
+            try:
+                post_id = request.form.get('post_id')
+                
+                # Handle file upload for update
+                attachment_path = request.form.get('existing_attachment_path')
+                attachment_name = request.form.get('existing_attachment_name')
+                attachment_type = request.form.get('existing_attachment_type')
+                
+                if 'attachment' in request.files:
+                    file = request.files['attachment']
+                    if file and file.filename:
+                        from werkzeug.utils import secure_filename
+                        import os
+                        
+                        filename = secure_filename(file.filename)
+                        upload_folder = os.path.join('static', 'uploads', 'posts')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        file_ext = os.path.splitext(filename)[1]
+                        unique_filename = f"post_{timestamp}_{filename}"
+                        file_path = os.path.join(upload_folder, unique_filename)
+                        
+                        file.save(file_path)
+                        attachment_path = file_path.replace('\\', '/')
+                        attachment_name = filename
+                        
+                        if file_ext.lower() in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            attachment_type = 'image'
+                        elif file_ext.lower() == '.pdf':
+                            attachment_type = 'pdf'
+                        else:
+                            attachment_type = 'document'
+                
+                data = {
+                    'id': post_id,
+                    'post_title': request.form.get('post_title'),
+                    'post_content': request.form.get('post_content'),
+                    'post_type': request.form.get('post_type'),
+                    'target_section': request.form.get('target_section'),
+                    'target_medebe_id': request.form.get('target_medebe_id') or None,
+                    'start_date': request.form.get('start_date') or None,
+                    'end_date': request.form.get('end_date') or None,
+                    'attachment_path': attachment_path,
+                    'attachment_name': attachment_name,
+                    'attachment_type': attachment_type,
+                    'priority': request.form.get('priority', 'Normal'),
+                    'status': request.form.get('status', 'Active')
+                }
+                
+                cursor.execute("""
+                    UPDATE posts SET
+                        post_title = %(post_title)s,
+                        post_content = %(post_content)s,
+                        post_type = %(post_type)s,
+                        target_section = %(target_section)s,
+                        target_medebe_id = %(target_medebe_id)s,
+                        start_date = %(start_date)s,
+                        end_date = %(end_date)s,
+                        attachment_path = %(attachment_path)s,
+                        attachment_name = %(attachment_name)s,
+                        attachment_type = %(attachment_type)s,
+                        priority = %(priority)s,
+                        status = %(status)s
+                    WHERE id = %(id)s
+                """, data)
+                conn.commit()
+                flash('Post updated successfully! / ማስታወቂያ በተሳካ ሁኔታ ተስተካክሏል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error updating post: {str(e)}', 'danger')
+        
+        elif action == 'delete':
+            try:
+                post_id = request.form.get('post_id')
+                
+                # Get attachment path to delete file
+                cursor.execute("SELECT attachment_path FROM posts WHERE id = %s", (post_id,))
+                result = cursor.fetchone()
+                if result and result[0]:
+                    import os
+                    try:
+                        if os.path.exists(result[0]):
+                            os.remove(result[0])
+                    except:
+                        pass
+                
+                cursor.execute("DELETE FROM posts WHERE id = %s", (post_id,))
+                conn.commit()
+                flash('Post deleted successfully! / ማስታወቂያ በተሳካ ሁኔታ ተሰርዟል!', 'success')
+            except Exception as e:
+                conn.rollback()
+                flash(f'Error deleting post: {str(e)}', 'danger')
+        
+        return redirect(url_for('posts_management'))
+    
+    # Build query with filters
+    query = """
+        SELECT 
+            p.id, p.post_title, p.post_content, p.post_type, p.target_section,
+            p.target_medebe_id, m.medebe_name, p.start_date, p.end_date,
+            p.attachment_path, p.attachment_name, p.attachment_type,
+            p.priority, p.status, p.views_count, p.created_by, p.created_at
+        FROM posts p
+        LEFT JOIN medebe m ON p.target_medebe_id = m.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if search:
+        query += " AND (p.post_title LIKE %s OR p.post_content LIKE %s)"
+        search_param = f'%{search}%'
+        params.extend([search_param, search_param])
+    
+    if post_type_filter:
+        query += " AND p.post_type = %s"
+        params.append(post_type_filter)
+    
+    if section_filter:
+        query += " AND (p.target_section = %s OR p.target_section = 'All Sections')"
+        params.append(section_filter)
+    
+    if status_filter:
+        query += " AND p.status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY p.created_at DESC"
+    
+    cursor.execute(query, params)
+    posts = cursor.fetchall()
+    
+    # Get distinct sections for filter dropdown
+    cursor.execute("""
+        SELECT DISTINCT section_name 
+        FROM member_registration 
+        WHERE section_name IS NOT NULL AND section_name != ''
+        ORDER BY section_name
+    """)
+    sections = cursor.fetchall()
+    
+    # Get all medebe for dropdown
+    cursor.execute("""
+        SELECT id, medebe_name, section_name 
+        FROM medebe 
+        ORDER BY section_name, medebe_name
+    """)
+    medebes = cursor.fetchall()
+    
+    # Get statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_posts,
+            COUNT(CASE WHEN status = 'Active' THEN 1 END) as active_posts,
+            COUNT(CASE WHEN status = 'Expired' THEN 1 END) as expired_posts,
+            COUNT(CASE WHEN post_type = 'Event' THEN 1 END) as events,
+            COUNT(CASE WHEN post_type = 'Announcement' THEN 1 END) as announcements,
+            SUM(views_count) as total_views
+        FROM posts
+    """)
+    stats = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('posts_management.html',
+                         posts=posts,
+                         sections=sections,
+                         medebes=medebes,
+                         stats=stats,
+                         search=search,
+                         post_type_filter=post_type_filter,
+                         section_filter=section_filter,
+                         status_filter=status_filter)
+
+
+@app.route('/member_posts_view')
+@login_required
+def member_posts_view():
+    """View posts relevant to logged-in member's section"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get member's section and medebe (if logged in as member)
+    # For now, we'll show all active posts
+    # In production, filter by member's section from session
+    
+    member_section = session.get('member_section', None)
+    member_medebe_id = session.get('member_medebe_id', None)
+    
+    # Build query to get posts for member's section
+    query = """
+        SELECT 
+            p.id, p.post_title, p.post_content, p.post_type, p.target_section,
+            p.start_date, p.end_date, p.attachment_path, p.attachment_name, 
+            p.attachment_type, p.priority, p.created_at, p.created_by
+        FROM posts p
+        WHERE p.status = 'Active'
+        AND (
+            p.target_section = 'All Sections'
+            OR p.target_section = %s
+            OR (p.target_medebe_id = %s AND p.target_medebe_id IS NOT NULL)
+        )
+        AND (
+            p.start_date IS NULL 
+            OR p.start_date <= CURDATE()
+        )
+        AND (
+            p.end_date IS NULL 
+            OR p.end_date >= CURDATE()
+        )
+        ORDER BY p.priority DESC, p.created_at DESC
+    """
+    
+    cursor.execute(query, (member_section or 'All Sections', member_medebe_id))
+    posts = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('member_posts_view.html', posts=posts)
+
+
+@app.route('/mark_post_read/<int:post_id>')
+@login_required
+def mark_post_read(post_id):
+    """Mark a post as read by the current member"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        member_id = session.get('member_id')
+        if member_id:
+            # Insert read status (ignore if already exists)
+            cursor.execute("""
+                INSERT IGNORE INTO post_read_status (post_id, member_id)
+                VALUES (%s, %s)
+            """, (post_id, member_id))
+            
+            # Increment view count
+            cursor.execute("""
+                UPDATE posts SET views_count = views_count + 1
+                WHERE id = %s
+            """, (post_id,))
+            
+            conn.commit()
+            return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.route('/posts_report')
+@login_required
+@role_required('Super Admin', 'Communication Manager', 'Report Viewer')
+def posts_report():
+    """Generate posts statistics and reports"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get filter parameters
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    post_type_filter = request.args.get('post_type', '')
+    section_filter = request.args.get('section', '')
+    
+    # Overall statistics
+    cursor.execute("""
+        SELECT 
+            COUNT(*) as total_posts,
+            COUNT(CASE WHEN status = 'Active' THEN 1 END) as active_posts,
+            COUNT(CASE WHEN status = 'Expired' THEN 1 END) as expired_posts,
+            COUNT(CASE WHEN status = 'Draft' THEN 1 END) as draft_posts,
+            COUNT(CASE WHEN post_type = 'Event' THEN 1 END) as events,
+            COUNT(CASE WHEN post_type = 'Announcement' THEN 1 END) as announcements,
+            COUNT(CASE WHEN post_type = 'General Info' THEN 1 END) as general_info,
+            SUM(views_count) as total_views,
+            AVG(views_count) as avg_views
+        FROM posts
+    """)
+    overall_stats = cursor.fetchone()
+    
+    # Posts by type
+    cursor.execute("""
+        SELECT post_type, COUNT(*) as count, SUM(views_count) as total_views
+        FROM posts
+        GROUP BY post_type
+        ORDER BY count DESC
+    """)
+    posts_by_type = cursor.fetchall()
+    
+    # Posts by section
+    cursor.execute("""
+        SELECT 
+            COALESCE(target_section, 'Not Specified') as section,
+            COUNT(*) as count,
+            SUM(views_count) as total_views
+        FROM posts
+        GROUP BY target_section
+        ORDER BY count DESC
+    """)
+    posts_by_section = cursor.fetchall()
+    
+    # Recent posts with details
+    query = """
+        SELECT 
+            p.id, p.post_title, p.post_type, p.target_section,
+            m.medebe_name, p.start_date, p.end_date, p.status,
+            p.views_count, p.created_by, p.created_at
+        FROM posts p
+        LEFT JOIN medebe m ON p.target_medebe_id = m.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if date_from:
+        query += " AND p.created_at >= %s"
+        params.append(date_from)
+    
+    if date_to:
+        query += " AND p.created_at <= %s"
+        params.append(date_to + ' 23:59:59')
+    
+    if post_type_filter:
+        query += " AND p.post_type = %s"
+        params.append(post_type_filter)
+    
+    if section_filter:
+        query += " AND p.target_section = %s"
+        params.append(section_filter)
+    
+    query += " ORDER BY p.created_at DESC LIMIT 100"
+    
+    cursor.execute(query, params)
+    recent_posts = cursor.fetchall()
+    
+    # Get most viewed posts
+    cursor.execute("""
+        SELECT 
+            p.id, p.post_title, p.post_type, p.target_section,
+            p.views_count, p.created_at
+        FROM posts p
+        WHERE p.views_count > 0
+        ORDER BY p.views_count DESC
+        LIMIT 10
+    """)
+    most_viewed = cursor.fetchall()
+    
+    # Get sections for filter
+    cursor.execute("""
+        SELECT DISTINCT target_section 
+        FROM posts 
+        WHERE target_section IS NOT NULL
+        ORDER BY target_section
+    """)
+    sections = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template('posts_report.html',
+                         overall_stats=overall_stats,
+                         posts_by_type=posts_by_type,
+                         posts_by_section=posts_by_section,
+                         recent_posts=recent_posts,
+                         most_viewed=most_viewed,
+                         sections=sections,
+                         date_from=date_from,
+                         date_to=date_to,
+                         post_type_filter=post_type_filter,
+                         section_filter=section_filter)
+
+
+@app.route('/get_posts_for_dashboard')
+@login_required
+def get_posts_for_dashboard():
+    """API endpoint to get posts for dashboard widget"""
+    conn = get_db_connection()
+    cursor = conn.cursor(buffered=True)
+    
+    # Get member's section from session (if available)
+    member_section = session.get('member_section', 'All Sections')
+    
+    cursor.execute("""
+        SELECT 
+            p.id, p.post_title, p.post_type, p.post_content,
+            p.priority, p.created_at, p.attachment_type
+        FROM posts p
+        WHERE p.status = 'Active'
+        AND (
+            p.target_section = 'All Sections'
+            OR p.target_section = %s
+        )
+        AND (
+            p.start_date IS NULL 
+            OR p.start_date <= CURDATE()
+        )
+        AND (
+            p.end_date IS NULL 
+            OR p.end_date >= CURDATE()
+        )
+        ORDER BY p.priority DESC, p.created_at DESC
+        LIMIT 5
+    """, (member_section,))
+    
+    posts = []
+    for row in cursor.fetchall():
+        posts.append({
+            'id': row[0],
+            'title': row[1],
+            'type': row[2],
+            'content': row[3][:150] + '...' if len(row[3]) > 150 else row[3],
+            'priority': row[4],
+            'created_at': row[5].strftime('%Y-%m-%d %H:%M') if row[5] else '',
+            'has_attachment': bool(row[6])
+        })
+    
+    cursor.close()
+    conn.close()
+    
+    return jsonify(posts)
+
 if __name__ == '__main__':
     # Initialize database and tables
     initialize_app()
