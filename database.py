@@ -748,6 +748,217 @@ def initialize_rbac_tables():
         cursor.close()
         conn.close()
 
+def initialize_public_website_tables():
+    """
+    Initialize tables for public website content management.
+    Creates tables for hero slides, services, gallery, announcements, etc.
+    """
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        print(f"⚠ WARNING: Cannot initialize public website tables - {str(e)}")
+        return False
+    
+    cursor = conn.cursor(buffered=True)
+    
+    try:
+        # Hero slides table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_hero_slides (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL COMMENT 'Slide title/ርዕስ',
+                title_amharic VARCHAR(255) COMMENT 'Title in Amharic',
+                description TEXT COMMENT 'Slide description',
+                description_amharic TEXT COMMENT 'Description in Amharic',
+                image_path VARCHAR(500) NOT NULL COMMENT 'Image file path',
+                button_text VARCHAR(100) DEFAULT 'Learn More' COMMENT 'Button text',
+                button_link VARCHAR(255) COMMENT 'Button link URL',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Services table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_services (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                service_name VARCHAR(255) NOT NULL COMMENT 'Service name',
+                service_name_amharic VARCHAR(255) COMMENT 'Service name in Amharic',
+                icon_class VARCHAR(100) COMMENT 'Icon CSS class (e.g., fa-church)',
+                icon_image VARCHAR(500) COMMENT 'Custom icon image path',
+                short_description TEXT COMMENT 'Short description for cards',
+                full_description TEXT COMMENT 'Full description for detail page',
+                description_amharic TEXT COMMENT 'Description in Amharic',
+                image_path VARCHAR(500) COMMENT 'Service image',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Gallery photos table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_gallery (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) COMMENT 'Photo title',
+                title_amharic VARCHAR(255) COMMENT 'Title in Amharic',
+                description TEXT COMMENT 'Photo description',
+                image_path VARCHAR(500) NOT NULL COMMENT 'Image file path',
+                category VARCHAR(100) DEFAULT 'General' COMMENT 'Category (Events, Holidays, Youth, etc.)',
+                category_amharic VARCHAR(100) COMMENT 'Category in Amharic',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_featured TINYINT(1) DEFAULT 0 COMMENT 'Featured on homepage',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_category (category),
+                INDEX idx_featured (is_featured),
+                INDEX idx_active (is_active),
+                INDEX idx_order (display_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # About page content table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_about_content (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                section_name VARCHAR(100) NOT NULL UNIQUE COMMENT 'Section identifier',
+                title VARCHAR(255) COMMENT 'Section title',
+                title_amharic VARCHAR(255) COMMENT 'Title in Amharic',
+                content TEXT COMMENT 'Content text',
+                content_amharic TEXT COMMENT 'Content in Amharic',
+                image_path VARCHAR(500) COMMENT 'Section image',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                updated_by VARCHAR(50),
+                INDEX idx_section (section_name),
+                INDEX idx_order (display_order)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # History timeline table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_history_timeline (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                year INT COMMENT 'Year of event',
+                title VARCHAR(255) NOT NULL COMMENT 'Event title',
+                title_amharic VARCHAR(255) COMMENT 'Title in Amharic',
+                description TEXT COMMENT 'Event description',
+                description_amharic TEXT COMMENT 'Description in Amharic',
+                image_path VARCHAR(500) COMMENT 'Event image',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_year (year),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Donation information table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_donation_info (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                donation_method VARCHAR(100) NOT NULL COMMENT 'Method name (Bank, Telebirr, CBE Birr, etc.)',
+                method_name_amharic VARCHAR(100) COMMENT 'Method name in Amharic',
+                account_name VARCHAR(255) COMMENT 'Account name',
+                account_number VARCHAR(100) COMMENT 'Account number',
+                bank_name VARCHAR(255) COMMENT 'Bank name',
+                qr_code_image VARCHAR(500) COMMENT 'QR code image path',
+                instructions TEXT COMMENT 'Donation instructions',
+                instructions_amharic TEXT COMMENT 'Instructions in Amharic',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_method (donation_method),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Contact information table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_contact_info (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                contact_type VARCHAR(50) NOT NULL COMMENT 'Type (address, phone, email, social)',
+                label VARCHAR(255) COMMENT 'Display label',
+                label_amharic VARCHAR(255) COMMENT 'Label in Amharic',
+                value VARCHAR(500) NOT NULL COMMENT 'Contact value',
+                icon_class VARCHAR(100) COMMENT 'Icon CSS class',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                updated_by VARCHAR(50),
+                INDEX idx_type (contact_type),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Contact form submissions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_contact_submissions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL COMMENT 'Sender name',
+                email VARCHAR(255) COMMENT 'Sender email',
+                phone VARCHAR(50) COMMENT 'Sender phone',
+                subject VARCHAR(255) COMMENT 'Message subject',
+                message TEXT NOT NULL COMMENT 'Message content',
+                status VARCHAR(20) DEFAULT 'New' COMMENT 'Status (New, Read, Replied)',
+                ip_address VARCHAR(50) COMMENT 'IP address',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                read_at TIMESTAMP NULL COMMENT 'When message was read',
+                read_by VARCHAR(50) COMMENT 'Who read the message',
+                INDEX idx_status (status),
+                INDEX idx_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Public announcements (links to posts table)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS public_announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                post_id INT COMMENT 'Reference to posts table',
+                display_on_homepage TINYINT(1) DEFAULT 0 COMMENT 'Show on homepage',
+                display_order INT DEFAULT 0 COMMENT 'Display order',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                INDEX idx_post (post_id),
+                INDEX idx_homepage (display_on_homepage),
+                INDEX idx_order (display_order),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        conn.commit()
+        print("✓ Public website tables initialized successfully")
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"✗ Error initializing public website tables: {str(e)}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
 def initialize_default_roles_and_routes():
     """
     Initialize default roles and routes for the application.

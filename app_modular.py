@@ -34,6 +34,7 @@ from database import (
     get_db_connection, 
     initialize_rbac_tables, 
     initialize_default_roles_and_routes,
+    initialize_public_website_tables,
     test_db_connection
 )
 from auth import (
@@ -47,6 +48,8 @@ from utils import get_last_10_weeks_weekends, get_members
 from translations import get_text, TRANSLATIONS
 from mobile_api import mobile_api
 from admin_api import admin_api, org_api, staff_api
+from public_website import public_website
+from admin_website_management import admin_website
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -56,6 +59,8 @@ app.register_blueprint(mobile_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(org_api)
 app.register_blueprint(staff_api)
+app.register_blueprint(public_website)
+app.register_blueprint(admin_website)
 app.config.from_object(Config)
 
 # ========================================
@@ -118,7 +123,7 @@ def inject_navigation():
 # AUTHENTICATION ROUTES
 # ========================================
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page and authentication"""
     if request.method == 'POST':
@@ -3630,6 +3635,13 @@ def initialize_app():
         print("✓ Default roles and routes setup completed")
     else:
         print("⚠ Default roles and routes setup failed but app will continue")
+    
+    # Initialize public website tables
+    print("\nInitializing public website tables...")
+    if initialize_public_website_tables():
+        print("✓ Public website tables setup completed")
+    else:
+        print("⚠ Public website tables setup failed but app will continue")
     print()
 
 # ========================================

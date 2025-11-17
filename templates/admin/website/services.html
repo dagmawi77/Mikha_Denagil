@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Services Management - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Services Management / አገልግሎቶች አስተዳደር</h4>
+                        <a href="{{ url_for('admin_website.add_service') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add New Service
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Icon/Image</th>
+                                        <th>Service Name</th>
+                                        <th>Short Description</th>
+                                        <th>Order</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if services %}
+                                        {% for service in services %}
+                                        <tr>
+                                            <td>
+                                                {% if service.image_path %}
+                                                <img src="{{ url_for('static', filename=service.image_path) }}" 
+                                                     alt="{{ service.service_name }}" 
+                                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">
+                                                {% elif service.icon_class %}
+                                                <i class="{{ service.icon_class }} fa-2x text-primary"></i>
+                                                {% else %}
+                                                <i class="fas fa-hands-praying fa-2x text-muted"></i>
+                                                {% endif %}
+                                            </td>
+                                            <td><strong>{{ service.service_name_amharic or service.service_name }}</strong></td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    {{ (service.short_description or '')[:60] }}{% if service.short_description and service.short_description|length > 60 %}...{% endif %}
+                                                </small>
+                                            </td>
+                                            <td>{{ service.display_order }}</td>
+                                            <td>
+                                                {% if service.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin_website.edit_service', service_id=service.id) }}" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <form method="POST" action="{{ url_for('admin_website.delete_service', service_id=service.id) }}" 
+                                                      style="display: inline;" 
+                                                      onsubmit="return confirm('Are you sure you want to delete this service?');">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">
+                                                No services found. <a href="{{ url_for('admin_website.add_service') }}">Add your first service</a>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

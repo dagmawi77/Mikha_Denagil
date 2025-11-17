@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}View Contact Submission - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Contact Submission Details / የመገናኛ ጥያቄ ዝርዝሮች</h4>
+                        <a href="{{ url_for('admin_website.manage_contact_submissions') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Contact Information</h5>
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th width="40%">Name:</th>
+                                        <td>{{ submission.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Email:</th>
+                                        <td>{{ submission.email or '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Phone:</th>
+                                        <td>{{ submission.phone or '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Subject:</th>
+                                        <td>{{ submission.subject or '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Date:</th>
+                                        <td>{{ submission.created_at.strftime('%Y-%m-%d %H:%M:%S') if submission.created_at else '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>IP Address:</th>
+                                        <td>{{ submission.ip_address or '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Status:</th>
+                                        <td>
+                                            {% if submission.status == 'New' %}
+                                            <span class="badge bg-warning">New</span>
+                                            {% elif submission.status == 'Read' %}
+                                            <span class="badge bg-info">Read</span>
+                                            {% elif submission.status == 'Replied' %}
+                                            <span class="badge bg-success">Replied</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">{{ submission.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Message</h5>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p style="white-space: pre-wrap;">{{ submission.message }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

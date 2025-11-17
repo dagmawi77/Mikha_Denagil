@@ -1,0 +1,43 @@
+{% extends "public/base.html" %}
+
+{% block title %}{{ service.service_name }} - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">{{ service.service_name_amharic or service.service_name }}</h1>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                {% if service.image_path %}
+                <img src="{{ url_for('static', filename=service.image_path) }}" 
+                     alt="{{ service.service_name }}" class="img-fluid rounded shadow mb-4">
+                {% endif %}
+                
+                <div class="content-text">
+                    {% if service.full_description %}
+                        {{ service.full_description|safe }}
+                    {% elif service.description_amharic %}
+                        {{ service.description_amharic|safe }}
+                    {% elif service.short_description %}
+                        {{ service.short_description|safe }}
+                    {% endif %}
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('public_website.services_page') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Services
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

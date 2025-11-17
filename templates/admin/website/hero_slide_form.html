@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if slide else 'Add' }} Hero Slide - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ 'Edit' if slide else 'Add' }} Hero Slide / {{ 'አስተካክል' if slide else 'ጨምር' }} የመጀመሪያ ስላይድ</h4>
+                        <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Title (English) *</label>
+                                        <input type="text" class="form-control" id="title" name="title" 
+                                               value="{{ slide.title if slide else '' }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="title_amharic" class="form-label">Title (Amharic) / ርዕስ</label>
+                                        <input type="text" class="form-control" id="title_amharic" name="title_amharic" 
+                                               value="{{ slide.title_amharic if slide else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Description (English)</label>
+                                        <textarea class="form-control" id="description" name="description" rows="3">{{ slide.description if slide else '' }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="description_amharic" class="form-label">Description (Amharic) / መግለጫ</label>
+                                        <textarea class="form-control" id="description_amharic" name="description_amharic" rows="3">{{ slide.description_amharic if slide else '' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="image" class="form-label">Image *</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*" 
+                                       {{ 'required' if not slide else '' }}>
+                                {% if slide and slide.image_path %}
+                                <small class="text-muted">Current image:</small><br>
+                                <img src="{{ url_for('static', filename=slide.image_path) }}" 
+                                     alt="Current image" style="max-width: 300px; margin-top: 10px; border-radius: 4px;">
+                                <small class="text-muted d-block mt-1">Leave empty to keep current image</small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="button_text" class="form-label">Button Text</label>
+                                        <input type="text" class="form-control" id="button_text" name="button_text" 
+                                               value="{{ slide.button_text if slide else 'Learn More' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="button_link" class="form-label">Button Link</label>
+                                        <input type="text" class="form-control" id="button_link" name="button_link" 
+                                               value="{{ slide.button_link if slide else '' }}" 
+                                               placeholder="/about or http://example.com">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="display_order" class="form-label">Display Order</label>
+                                        <input type="number" class="form-control" id="display_order" name="display_order" 
+                                               value="{{ slide.display_order if slide else 0 }}" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                                   {{ 'checked' if slide and slide.is_active else 'checked' }}>
+                                            <label class="form-check-label" for="is_active">
+                                                Active / ንቁ
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ 'Update' if slide else 'Save' }} Slide
+                                </button>
+                                <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

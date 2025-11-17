@@ -1,0 +1,75 @@
+{% extends "public/base.html" %}
+
+{% block title %}Gallery - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">Photo Gallery / ፎቶ ማውጫ</h1>
+            <p class="lead">Moments from our community</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        {% if categories %}
+        <div class="mb-4">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('public_website.gallery_page') }}" 
+                   class="btn btn-outline-primary {% if not selected_category %}active{% endif %}">
+                    All Categories
+                </a>
+                {% for cat in categories %}
+                <a href="{{ url_for('public_website.gallery_page', category=cat.category) }}" 
+                   class="btn btn-outline-primary {% if selected_category == cat.category %}active{% endif %}">
+                    {{ cat.category_amharic or cat.category }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if photos %}
+        <div class="gallery-grid">
+            {% for photo in photos %}
+            <div class="gallery-item" data-category="{{ photo.category }}">
+                <img src="{{ url_for('static', filename=photo.image_path) }}" 
+                     alt="{{ photo.title_amharic or photo.title or 'Gallery Photo' }}"
+                     onclick="openLightbox('{{ url_for('static', filename=photo.image_path) }}', '{{ photo.title_amharic or photo.title }}')">
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <i class="fas fa-images fa-4x text-primary mb-4"></i>
+                        <h3>Photo Gallery</h3>
+                        <p class="text-muted">Photos will be displayed here once uploaded by administrators.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Lightbox Modal -->
+<div class="modal fade" id="lightboxModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-white" id="lightboxTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <img id="lightboxImage" src="" alt="" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

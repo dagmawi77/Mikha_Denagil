@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if service else 'Add' }} Service - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ 'Edit' if service else 'Add' }} Service / {{ 'አስተካክል' if service else 'ጨምር' }} አገልግሎት</h4>
+                        <a href="{{ url_for('admin_website.manage_services') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="service_name" class="form-label">Service Name (English) *</label>
+                                        <input type="text" class="form-control" id="service_name" name="service_name" 
+                                               value="{{ service.service_name if service else '' }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="service_name_amharic" class="form-label">Service Name (Amharic) / አገልግሎት ስም</label>
+                                        <input type="text" class="form-control" id="service_name_amharic" name="service_name_amharic" 
+                                               value="{{ service.service_name_amharic if service else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="icon_class" class="form-label">Icon Class (Font Awesome)</label>
+                                        <input type="text" class="form-control" id="icon_class" name="icon_class" 
+                                               value="{{ service.icon_class if service else '' }}" 
+                                               placeholder="e.g., fas fa-church">
+                                        <small class="text-muted">Use Font Awesome icon classes (e.g., fas fa-church, fas fa-hands-praying)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="display_order" class="form-label">Display Order</label>
+                                        <input type="number" class="form-control" id="display_order" name="display_order" 
+                                               value="{{ service.display_order if service else 0 }}" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="short_description" class="form-label">Short Description (for cards)</label>
+                                <textarea class="form-control" id="short_description" name="short_description" rows="2">{{ service.short_description if service else '' }}</textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="full_description" class="form-label">Full Description (for detail page)</label>
+                                <textarea class="form-control" id="full_description" name="full_description" rows="5">{{ service.full_description if service else '' }}</textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description_amharic" class="form-label">Description (Amharic) / መግለጫ</label>
+                                <textarea class="form-control" id="description_amharic" name="description_amharic" rows="3">{{ service.description_amharic if service else '' }}</textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="image" class="form-label">Service Image</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                {% if service and service.image_path %}
+                                <small class="text-muted">Current image:</small><br>
+                                <img src="{{ url_for('static', filename=service.image_path) }}" 
+                                     alt="Current image" style="max-width: 300px; margin-top: 10px; border-radius: 4px;">
+                                <small class="text-muted d-block mt-1">Leave empty to keep current image</small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                           {{ 'checked' if service and service.is_active else 'checked' }}>
+                                    <label class="form-check-label" for="is_active">
+                                        Active / ንቁ
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ 'Update' if service else 'Save' }} Service
+                                </button>
+                                <a href="{{ url_for('admin_website.manage_services') }}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

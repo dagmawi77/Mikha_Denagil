@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if contact else 'Add' }} Contact Info - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ 'Edit' if contact else 'Add' }} Contact Information / {{ 'አስተካክል' if contact else 'ጨምር' }} የመገናኛ መረጃ</h4>
+                        <a href="{{ url_for('admin_website.manage_contact_info') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label for="contact_type" class="form-label">Contact Type *</label>
+                                <select class="form-control" id="contact_type" name="contact_type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="address" {{ 'selected' if contact and contact.contact_type == 'address' else '' }}>Address</option>
+                                    <option value="phone" {{ 'selected' if contact and contact.contact_type == 'phone' else '' }}>Phone</option>
+                                    <option value="email" {{ 'selected' if contact and contact.contact_type == 'email' else '' }}>Email</option>
+                                    <option value="social" {{ 'selected' if contact and contact.contact_type == 'social' else '' }}>Social Media</option>
+                                </select>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="label" class="form-label">Label (English)</label>
+                                        <input type="text" class="form-control" id="label" name="label" 
+                                               value="{{ contact.label if contact else '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="label_amharic" class="form-label">Label (Amharic) / መለያ</label>
+                                        <input type="text" class="form-control" id="label_amharic" name="label_amharic" 
+                                               value="{{ contact.label_amharic if contact else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="value" class="form-label">Value *</label>
+                                <input type="text" class="form-control" id="value" name="value" 
+                                       value="{{ contact.value if contact else '' }}" required
+                                       placeholder="e.g., +251 911 234 567 or info@example.com">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="icon_class" class="form-label">Icon Class (Font Awesome)</label>
+                                <input type="text" class="form-control" id="icon_class" name="icon_class" 
+                                       value="{{ contact.icon_class if contact else '' }}" 
+                                       placeholder="e.g., fas fa-phone, fas fa-envelope, fas fa-map-marker-alt">
+                                <small class="text-muted">Use Font Awesome icon classes</small>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="display_order" class="form-label">Display Order</label>
+                                        <input type="number" class="form-control" id="display_order" name="display_order" 
+                                               value="{{ contact.display_order if contact else 0 }}" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                                   {{ 'checked' if contact and contact.is_active else 'checked' }}>
+                                            <label class="form-check-label" for="is_active">
+                                                Active / ንቁ
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ 'Update' if contact else 'Save' }} Contact Info
+                                </button>
+                                <a href="{{ url_for('admin_website.manage_contact_info') }}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

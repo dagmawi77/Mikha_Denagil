@@ -1,0 +1,60 @@
+{% extends "public/base.html" %}
+
+{% block title %}Announcements - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">Announcements / ማስታወቂያዎች</h1>
+            <p class="lead">Latest news and updates</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        {% if announcements %}
+        <div class="row">
+            {% for announcement in announcements %}
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm h-100">
+                    {% if announcement.attachment_path %}
+                    <img src="{{ url_for('static', filename=announcement.attachment_path) }}" 
+                         alt="{{ announcement.post_title }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ announcement.post_title }}</h5>
+                        <p class="card-text text-muted">
+                            {{ announcement.post_content[:200] }}{% if announcement.post_content|length > 200 %}...{% endif %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="far fa-calendar me-1"></i>{{ announcement.created_at.strftime('%B %d, %Y') }}
+                            </small>
+                            {% if announcement.post_type %}
+                            <span class="badge bg-primary">{{ announcement.post_type }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <i class="fas fa-bullhorn fa-4x text-primary mb-4"></i>
+                        <h3>Announcements</h3>
+                        <p class="text-muted">No announcements available at this time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,76 @@
+{% extends "public/base.html" %}
+
+{% block title %}About Us - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">About Us / ስለ እኛ</h1>
+            <p class="lead">Our Mission, Vision, and Community</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        {% if about_sections %}
+            {% for section in about_sections %}
+            <div class="row mb-5 align-items-center {% if loop.index % 2 == 0 %}flex-row-reverse{% endif %}">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    {% if section.image_path %}
+                    <img src="{{ url_for('static', filename=section.image_path) }}" 
+                         alt="{{ section.title }}" class="img-fluid rounded shadow">
+                    {% endif %}
+                </div>
+                <div class="col-lg-6">
+                    <h2 class="mb-3">{{ section.title_amharic or section.title }}</h2>
+                    <div class="content-text">
+                        {{ (section.content_amharic or section.content)|safe }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="row">
+                <div class="col-lg-8 mx-auto">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-5">
+                            <h2 class="mb-4">Welcome to Mikha Denagil Spiritual Society</h2>
+                            <p class="lead">Our mission is to serve the spiritual needs of our community and foster fellowship among members.</p>
+                            <p>Content will be displayed here once configured by administrators.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+{% if leadership %}
+<section class="section-padding bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-4 mb-3">Leadership / አመራር</h2>
+        </div>
+        <div class="row g-4">
+            {% for leader in leadership %}
+            <div class="col-md-4">
+                <div class="card shadow-sm text-center">
+                    {% if leader.image_path %}
+                    <img src="{{ url_for('static', filename=leader.image_path) }}" 
+                         alt="{{ leader.title }}" class="card-img-top" style="height: 250px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ leader.title_amharic or leader.title }}</h5>
+                        <p class="card-text text-muted">{{ leader.content_amharic or leader.content }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

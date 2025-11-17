@@ -1,0 +1,97 @@
+{% extends "public/base.html" %}
+
+{% block title %}Contact Us - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">Contact Us / አግኙን</h1>
+            <p class="lead">Get in touch with us</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="mb-4">Contact Information</h2>
+                {% if contact_info %}
+                <div class="contact-info">
+                    {% for contact in contact_info %}
+                    <div class="mb-3 d-flex align-items-start">
+                        {% if contact.icon_class %}
+                        <i class="{{ contact.icon_class }} fa-2x text-primary me-3 mt-1"></i>
+                        {% endif %}
+                        <div>
+                            <h5>{{ contact.label_amharic or contact.label or contact.contact_type }}</h5>
+                            <p class="mb-0">{{ contact.value }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <p class="text-muted">Contact information will be displayed here once configured.</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Google Map Embed (if address is available) -->
+                {% if contact_info %}
+                    {% for contact in contact_info %}
+                        {% if contact.contact_type == 'address' %}
+                        <div class="mt-4">
+                            <iframe 
+                                src="https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q={{ contact.value|urlencode }}" 
+                                width="100%" 
+                                height="300" 
+                                style="border:0; border-radius: 8px;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="mb-4">Send Us a Message</h3>
+                        <form method="POST" action="{{ url_for('public_website.contact_page') }}" id="contactForm">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name / ስም <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone / ስልክ</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                            <div class="mb-3">
+                                <label for="subject" class="form-label">Subject / ርዕስ</label>
+                                <input type="text" class="form-control" id="subject" name="subject">
+                            </div>
+                            <div class="mb-3">
+                                <label for="message" class="form-label">Message / መልዕክት <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-paper-plane me-2"></i>Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

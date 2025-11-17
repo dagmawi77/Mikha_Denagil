@@ -1,0 +1,115 @@
+{% extends "public/base.html" %}
+
+{% block title %}Donation - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block extra_css %}
+<style>
+    .donation-card {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    .donation-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: var(--shadow-lg);
+    }
+    .donation-card .qr-code {
+        max-width: 200px;
+        margin: 1rem auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">Donation / በጎ አድራጎት</h1>
+            <p class="lead">Support Our Mission and Community</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        {% if donation_message %}
+        <div class="row mb-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h3 class="mb-3">{{ donation_message.title_amharic or donation_message.title }}</h3>
+                        <div class="content-text">
+                            {{ donation_message.content_amharic or donation_message.content|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if donation_methods %}
+        <div class="row g-4">
+            {% for method in donation_methods %}
+            <div class="col-md-6 col-lg-4">
+                <div class="donation-card">
+                    <h4 class="mb-3">{{ method.method_name_amharic or method.donation_method }}</h4>
+                    
+                    {% if method.account_name %}
+                    <p class="mb-2"><strong>Account Name:</strong> {{ method.account_name }}</p>
+                    {% endif %}
+                    
+                    {% if method.account_number %}
+                    <p class="mb-2"><strong>Account Number:</strong> {{ method.account_number }}</p>
+                    {% endif %}
+                    
+                    {% if method.bank_name %}
+                    <p class="mb-3"><strong>Bank:</strong> {{ method.bank_name }}</p>
+                    {% endif %}
+                    
+                    {% if method.qr_code_image %}
+                    <div class="qr-code">
+                        <img src="{{ url_for('static', filename=method.qr_code_image) }}" 
+                             alt="QR Code" class="img-fluid">
+                    </div>
+                    {% endif %}
+                    
+                    {% if method.instructions or method.instructions_amharic %}
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            {{ method.instructions_amharic or method.instructions }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <i class="fas fa-heart fa-4x text-primary mb-4"></i>
+                        <h3>Donation Information</h3>
+                        <p class="text-muted">Donation methods will be displayed here once configured by administrators.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="row mt-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle me-2"></i>Thank You for Your Support</h5>
+                    <p class="mb-0">Your generous donations help us continue our spiritual work and serve the community. May God bless you abundantly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

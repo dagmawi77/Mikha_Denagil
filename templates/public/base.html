@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="am" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mikha Denagil Spiritual Society - ሚካ ደናግል መንፈሳዊ ማህበር">
+    <title>{% block title %}Mikha Denagil Spiritual Society{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/public-website.css') }}">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('public_website.homepage') }}">
+                <i class="fas fa-church me-2"></i>
+                <span class="brand-text">Mikha Denagil</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.homepage') }}">Home / መነሻ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.about_page') }}">About / ስለ እኛ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.history_page') }}">History / ታሪክ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.services_page') }}">Services / አገልግሎቶች</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.gallery_page') }}">Gallery / ፎቶ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.donation_page') }}">Donation / በጎ አድራጎት</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('public_website.contact_page') }}">Contact / አግኙን</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-light text-primary ms-2" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer bg-dark text-light py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5 class="mb-3">Mikha Denagil Spiritual Society</h5>
+                    <p class="text-muted">ሚካ ደናግል መንፈሳዊ ማህበር</p>
+                    <p class="text-muted">A spiritual community dedicated to faith, service, and fellowship.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5 class="mb-3">Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('public_website.about_page') }}" class="text-muted">About Us</a></li>
+                        <li><a href="{{ url_for('public_website.services_page') }}" class="text-muted">Services</a></li>
+                        <li><a href="{{ url_for('public_website.gallery_page') }}" class="text-muted">Gallery</a></li>
+                        <li><a href="{{ url_for('public_website.donation_page') }}" class="text-muted">Donation</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5 class="mb-3">Contact</h5>
+                    <ul class="list-unstyled text-muted">
+                        <li><i class="fas fa-map-marker-alt me-2"></i> Addis Ababa, Ethiopia</li>
+                        <li><i class="fas fa-phone me-2"></i> +251 XXX XXX XXXX</li>
+                        <li><i class="fas fa-envelope me-2"></i> info@mikhadenagil.org</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4 bg-secondary">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <p class="text-muted mb-0">&copy; 2024 Mikha Denagil Spiritual Society. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/public-website.js') }}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

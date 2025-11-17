@@ -1,0 +1,61 @@
+{% extends "public/base.html" %}
+
+{% block title %}Services - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<section class="section-padding bg-primary text-white">
+    <div class="container">
+        <div class="text-center">
+            <h1 class="display-3 mb-3">Our Services / አገልግሎቶቻችን</h1>
+            <p class="lead">Spiritual services and activities for all members</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding">
+    <div class="container">
+        {% if services %}
+        <div class="row g-4">
+            {% for service in services %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card service-card h-100 shadow-sm">
+                    {% if service.image_path %}
+                    <img src="{{ url_for('static', filename=service.image_path) }}" 
+                         alt="{{ service.service_name }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        {% if service.icon_class and not service.image_path %}
+                        <div class="text-center mb-3">
+                            <i class="{{ service.icon_class }} fa-3x text-primary"></i>
+                        </div>
+                        {% endif %}
+                        <h4 class="card-title">{{ service.service_name_amharic or service.service_name }}</h4>
+                        <p class="card-text text-muted">
+                            {{ service.short_description or service.full_description[:150] }}{% if service.full_description and service.full_description|length > 150 %}...{% endif %}
+                        </p>
+                        <a href="{{ url_for('public_website.service_detail', service_id=service.id) }}" 
+                           class="btn btn-outline-primary">
+                            Learn More / የበለጠ ይወቁ
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm">
+                    <div class="card-body p-5 text-center">
+                        <i class="fas fa-hands-praying fa-4x text-primary mb-4"></i>
+                        <h3>Our Services</h3>
+                        <p class="text-muted">Services will be displayed here once configured by administrators.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

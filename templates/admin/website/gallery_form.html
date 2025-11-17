@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if photo else 'Add' }} Gallery Photo - Website Management{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ 'Edit' if photo else 'Add' }} Gallery Photo / {{ 'አስተካክል' if photo else 'ጨምር' }} ፎቶ</h4>
+                        <a href="{{ url_for('admin_website.manage_gallery') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Gallery
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Title (English)</label>
+                                        <input type="text" class="form-control" id="title" name="title" 
+                                               value="{{ photo.title if photo else '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="title_amharic" class="form-label">Title (Amharic) / ርዕስ</label>
+                                        <input type="text" class="form-control" id="title_amharic" name="title_amharic" 
+                                               value="{{ photo.title_amharic if photo else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3">{{ photo.description if photo else '' }}</textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="category" class="form-label">Category</label>
+                                        <input type="text" class="form-control" id="category" name="category" 
+                                               value="{{ photo.category if photo else 'General' }}" 
+                                               placeholder="e.g., Events, Holidays, Youth">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="category_amharic" class="form-label">Category (Amharic) / ምድብ</label>
+                                        <input type="text" class="form-control" id="category_amharic" name="category_amharic" 
+                                               value="{{ photo.category_amharic if photo else '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="display_order" class="form-label">Display Order</label>
+                                        <input type="number" class="form-control" id="display_order" name="display_order" 
+                                               value="{{ photo.display_order if photo else 0 }}" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="image" class="form-label">Photo *</label>
+                                <input type="file" class="form-control" id="image" name="image" accept="image/*" 
+                                       {{ 'required' if not photo else '' }}>
+                                {% if photo and photo.image_path %}
+                                <small class="text-muted">Current photo:</small><br>
+                                <img src="{{ url_for('static', filename=photo.image_path) }}" 
+                                     alt="Current photo" style="max-width: 400px; margin-top: 10px; border-radius: 4px;">
+                                <small class="text-muted d-block mt-1">Leave empty to keep current photo</small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_featured" name="is_featured" 
+                                                   {{ 'checked' if photo and photo.is_featured else '' }}>
+                                            <label class="form-check-label" for="is_featured">
+                                                Featured on Homepage / በመነሻ ገጽ ላይ አሳይ
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                                   {{ 'checked' if photo and photo.is_active else 'checked' }}>
+                                            <label class="form-check-label" for="is_active">
+                                                Active / ንቁ
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ 'Update' if photo else 'Save' }} Photo
+                                </button>
+                                <a href="{{ url_for('admin_website.manage_gallery') }}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
