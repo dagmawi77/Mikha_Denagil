@@ -666,7 +666,7 @@
                             
                             <div class="col-md-12">
                                 <label>Attachment / አባሪ (Optional)</label>
-                                <input type="file" class="form-control" name="attachment" 
+                                <input type="file" class="form-control" name="attachment" id="attachmentInput"
                                        accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4,.doc,.docx,.avi,.mov,.m4a,.wav">
                                 <small class="form-text">
                                     <i class="fa fa-file text-success"></i> <strong>Supported Files:</strong>
@@ -675,6 +675,9 @@
                                     <span class="badge badge-warning">Audio (MP3)</span>
                                     <span class="badge badge-danger">Video (MP4)</span>
                                     <span class="badge badge-secondary">Documents</span>
+                                    <br>
+                                    <i class="fa fa-info-circle text-info"></i> <strong>Max file size: 100 MB</strong> | 
+                                    For large videos, consider using YouTube/Vimeo links instead.
                                 </small>
                             </div>
                         </div>
@@ -786,6 +789,18 @@ $('form').on('submit', function(e) {
         const html = quillEditor.root.innerHTML;
         $('#content_body_create').val(html);
         console.log('📝 Saving content, length:', html.length);
+        
+        // Check if content is too large (warn if > 5 MB of HTML)
+        const contentSize = html.length;
+        if (contentSize > 5 * 1024 * 1024) {
+            const confirmSubmit = confirm('⚠️ Warning: Very large content!\n\nYour study content is ' + 
+                                         (contentSize / (1024 * 1024)).toFixed(2) + ' MB.\n\n' +
+                                         'This may take time to upload. Continue?');
+            if (!confirmSubmit) {
+                e.preventDefault();
+                return false;
+            }
+        }
     } else {
         // Use plain textarea value
         console.log('⚠️ No editor, using plain text');
@@ -1027,6 +1042,23 @@ function deleteStudy(id, title) {
         form.submit();
     }
 }
+
+// File size validation (100 MB max)
+$('#attachmentInput').on('change', function() {
+    const maxSize = 100 * 1024 * 1024; // 100 MB in bytes
+    const file = this.files[0];
+    
+    if (file && file.size > maxSize) {
+        alert('⚠️ File too large!\n\nየፋይል መጠን በጣም ትልቅ ነው!\n\n' +
+              'Maximum file size: 100 MB\n' +
+              'Your file size: ' + (file.size / (1024 * 1024)).toFixed(2) + ' MB\n\n' +
+              'Please choose a smaller file.');
+        $(this).val(''); // Clear the selection
+    } else if (file) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        console.log('✅ File selected: ' + file.name + ' (' + sizeMB + ' MB)');
+    }
+});
 
 // Auto-dismiss alerts
 setTimeout(() => $('.alert').alert('close'), 5000);

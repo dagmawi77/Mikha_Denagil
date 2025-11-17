@@ -46,12 +46,16 @@ from auth import (
 from utils import get_last_10_weeks_weekends, get_members
 from translations import get_text, TRANSLATIONS
 from mobile_api import mobile_api
+from admin_api import admin_api, org_api, staff_api
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Register Mobile API Blueprint
+# Register API Blueprints
 app.register_blueprint(mobile_api)
+app.register_blueprint(admin_api)
+app.register_blueprint(org_api)
+app.register_blueprint(staff_api)
 app.config.from_object(Config)
 
 # ========================================

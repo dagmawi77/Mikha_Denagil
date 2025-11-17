@@ -1,7 +1,7 @@
 /// API Configuration for Mikha Denagil Mobile App
 class ApiConfig {
   // Base URL - Change this to your server URL
-  static const String baseUrl = 'http://192.168.1.10:5001'; // Your server IP
+  static const String baseUrl = 'http://192.168.137.170:5001'; // Your server IP
   static const String apiVersion = '/api/v1';
   
   // Full API base URL
