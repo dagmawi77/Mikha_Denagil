@@ -1,0 +1,108 @@
+{% extends "public/base.html" %}
+
+{% block title %}Study Materials - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header bg-primary text-white py-5">
+    <div class="container">
+        <h1 class="display-4">Study Materials / የጥናት ቁሳቁሶች</h1>
+        <p class="lead">Spiritual teachings, Bible studies, and educational resources</p>
+    </div>
+</section>
+
+<!-- Studies List -->
+<section class="section-padding">
+    <div class="container">
+        <!-- Category Filter -->
+        {% if categories %}
+        <div class="mb-4">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('public_website.studies_page') }}" 
+                   class="btn btn-outline-primary {% if not selected_category %}active{% endif %}">
+                    All Categories
+                </a>
+                {% for category in categories %}
+                <a href="{{ url_for('public_website.studies_page', category=category.id) }}" 
+                   class="btn btn-outline-primary {% if selected_category == category.id|string %}active{% endif %}">
+                    {{ category.category_name_amharic or category.category_name }}
+                    <span class="badge bg-secondary ms-1">{{ category.study_count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if studies %}
+        <div class="row">
+            {% for study in studies %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    {% if study.attachment_type == 'image' and study.attachment_path %}
+                    <img src="{{ url_for('static', filename=study.attachment_path) }}" 
+                         class="card-img-top" 
+                         alt="{{ study.study_title }}" 
+                         style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-gradient-primary text-white d-flex align-items-center justify-content-center" 
+                         style="height: 200px; background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
+                        <i class="fas fa-book-open fa-4x"></i>
+                    </div>
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-2">
+                            {% if study.is_featured %}
+                            <span class="badge bg-warning text-dark">Featured</span>
+                            {% endif %}
+                            {% if study.category_name_amharic %}
+                            <span class="badge bg-secondary">{{ study.category_name_amharic }}</span>
+                            {% endif %}
+                        </div>
+                        <h5 class="card-title">
+                            <a href="{{ url_for('public_website.study_detail', study_id=study.id) }}" 
+                               class="text-decoration-none text-dark">
+                                {{ study.study_title }}
+                            </a>
+                        </h5>
+                        {% if study.summary %}
+                        <p class="card-text text-muted flex-grow-1">
+                            {{ study.summary[:120] }}{% if study.summary|length > 120 %}...{% endif %}
+                        </p>
+                        {% endif %}
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <small class="text-muted">
+                                    {% if study.author %}
+                                    <i class="fas fa-user me-1"></i>{{ study.author }}
+                                    {% endif %}
+                                    {% if study.publish_date %}
+                                    <br><i class="far fa-calendar me-1"></i>{{ study.publish_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </small>
+                                {% if study.views_count %}
+                                <small class="text-muted">
+                                    <i class="far fa-eye me-1"></i>{{ study.views_count }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            <a href="{{ url_for('public_website.study_detail', study_id=study.id) }}" 
+                               class="btn btn-primary w-100">
+                                Read More / ይንብቡ <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-book fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted">No study materials available</h3>
+            <p class="text-muted">Check back later for new content.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

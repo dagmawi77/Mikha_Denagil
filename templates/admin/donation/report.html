@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Donation Report - Reports{% endblock %}
+
+{% block content %}
+<style>
+    /* Prevent infinite scroll */
+    html, body {
+        overflow-x: hidden;
+        height: auto !important;
+        max-height: none !important;
+    }
+    
+    .content-body {
+        overflow-y: auto;
+        overflow-x: hidden;
+        height: auto;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border-left: 4px solid #14860C;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #14860C;
+        margin: 1rem 0;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .chart-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Fix chart canvas height to prevent infinite scroll */
+    .chart-card canvas {
+        max-height: 400px !important;
+        height: 400px !important;
+        width: 100% !important;
+    }
+    
+    .chart-card .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+    
+    .chart-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-chart-line me-2"></i>Donation Report / የለግስና ሪፖርት</h2>
+                <p>Comprehensive donation analytics and statistics</p>
+            </div>
+            <div>
+                <a href="{{ url_for('donation_report.export_excel', month=selected_month, year=selected_year, status=status_filter) }}" 
+                   class="btn btn-modern btn-modern-secondary me-2">
+                    <i class="fas fa-file-excel me-2"></i>Export Excel
+                </a>
+                <a href="{{ url_for('donation_report.export_pdf', month=selected_month, year=selected_year, status=status_filter) }}" 
+                   class="btn btn-modern btn-modern-secondary">
+                    <i class="fas fa-file-pdf me-2"></i>Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Month</label>
+                <select class="form-control" name="month">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {{ 'selected' if selected_month == m|string else '' }}>
+                        {{ ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][m-1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Year</label>
+                <input type="number" class="form-control" name="year" value="{{ selected_year }}" min="2020" max="2100">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select class="form-control" name="status">
+                    <option value="">All Status</option>
+                    <option value="Paid" {{ 'selected' if status_filter == 'Paid' else '' }}>Paid</option>
+                    <option value="Completed" {{ 'selected' if status_filter == 'Completed' else '' }}>Completed</option>
+                    <option value="Failed" {{ 'selected' if status_filter == 'Failed' else '' }}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-modern btn-modern-primary w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Total Collected</div>
+                <div class="stat-value">{{ "%.2f"|format(total_stats.total_amount or 0) }}</div>
+                <div class="text-muted">ETB</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Total Donations</div>
+                <div class="stat-value">{{ total_stats.total_count or 0 }}</div>
+                <div class="text-muted">Transactions</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Average Amount</div>
+                <div class="stat-value">
+                    {{ "%.2f"|format((total_stats.total_amount / total_stats.total_count) if total_stats.total_count > 0 else 0) }}
+                </div>
+                <div class="text-muted">ETB per donation</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="stat-card">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-value">
+                    {% set paid_count = by_status|selectattr('payment_status', 'equalto', 'Paid')|list|length %}
+                    {% set total_count = by_status|sum(attribute='count') %}
+                    {{ "%.1f"|format((paid_count / total_count * 100) if total_count > 0 else 0) }}%
+                </div>
+                <div class="text-muted">Paid vs Total</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Monthly Trend Chart -->
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-chart-line me-2"></i>Monthly Trend (Last 12 Months)
+                </div>
+                <div class="chart-container">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Donations by Type Pie Chart -->
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie me-2"></i>Donations by Type
+                </div>
+                <div class="chart-container">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Donations by Status -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-chart-bar me-2"></i>Donations by Status
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Donations by Type Table -->
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-table me-2"></i>Summary by Type
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Count</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in by_type %}
+                            <tr>
+                                <td>{{ item.name_amharic or item.name }}</td>
+                                <td>{{ item.count }}</td>
+                                <td><strong>{{ "%.2f"|format(item.total_amount) }} ETB</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Donations -->
+    <div class="chart-card">
+        <div class="chart-title">
+            <i class="fas fa-list me-2"></i>Recent Donations
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Donor</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_donations %}
+                        {% for donation in recent_donations %}
+                        <tr>
+                            <td>{{ donation.created_at.strftime('%Y-%m-%d %H:%M') if donation.created_at else '-' }}</td>
+                            <td>
+                                {{ donation.donor_name or 'Anonymous' }}
+                                {% if donation.christian_name %}
+                                <br><small class="text-primary"><i class="fas fa-cross me-1"></i>{{ donation.christian_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ donation.donation_type_name_amharic or donation.donation_type_name or '-' }}</td>
+                            <td><strong>{{ "%.2f"|format(donation.amount) }} {{ donation.currency }}</strong></td>
+                            <td>
+                                {% if donation.payment_status == 'Paid' %}
+                                <span class="badge bg-success">Paid</span>
+                                {% elif donation.payment_status == 'Completed' %}
+                                <span class="badge bg-info">Completed</span>
+                                {% elif donation.payment_status == 'Failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                                {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ donation.tx_ref or donation.chapa_reference or '-' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">No donations found for selected period.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Store chart instances to prevent infinite loops
+    let monthlyChart = null;
+    let typeChart = null;
+    let statusChart = null;
+    let chartsInitialized = false; // Flag to prevent multiple initializations
+    
+    // Destroy existing charts if they exist
+    function destroyCharts() {
+        if (monthlyChart) {
+            monthlyChart.destroy();
+            monthlyChart = null;
+        }
+        if (typeChart) {
+            typeChart.destroy();
+            typeChart = null;
+        }
+        if (statusChart) {
+            statusChart.destroy();
+            statusChart = null;
+        }
+    }
+    
+    // Initialize charts only once
+    function initCharts() {
+        // Prevent multiple initializations
+        if (chartsInitialized) {
+            return;
+        }
+        
+        // Destroy any existing charts first
+        destroyCharts();
+        
+        // Monthly Trend Chart
+        const monthlyData = {{ monthly_trend|tojson }};
+        const monthlyCtx = document.getElementById('monthlyTrendChart');
+        if (monthlyCtx) {
+            monthlyChart = new Chart(monthlyCtx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: monthlyData.map(d => d.month),
+                    datasets: [{
+                        label: 'Amount (ETB)',
+                        data: monthlyData.map(d => parseFloat(d.total_amount)),
+                        borderColor: '#14860C',
+                        backgroundColor: 'rgba(20, 134, 12, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    },
+                    resizeDelay: 0
+                }
+            });
+        }
+        
+        // Type Pie Chart
+        const typeData = {{ by_type|tojson }};
+        const typeCtx = document.getElementById('typeChart');
+        if (typeCtx) {
+            typeChart = new Chart(typeCtx.getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: typeData.map(d => d.name_amharic || d.name),
+                    datasets: [{
+                        data: typeData.map(d => parseFloat(d.total_amount)),
+                        backgroundColor: [
+                            '#14860C', '#18a210', '#106b09', '#1db817', '#0d5a07',
+                            '#22c01a', '#0a4a05', '#28d01d', '#073903', '#2ee020'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    aspectRatio: 1.5,
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    },
+                    resizeDelay: 0
+                }
+            });
+        }
+        
+        // Status Bar Chart
+        const statusData = {{ by_status|tojson }};
+        const statusCtx = document.getElementById('statusChart');
+        if (statusCtx) {
+            statusChart = new Chart(statusCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: statusData.map(d => d.payment_status),
+                    datasets: [{
+                        label: 'Amount (ETB)',
+                        data: statusData.map(d => parseFloat(d.total_amount)),
+                        backgroundColor: statusData.map(d => {
+                            if (d.payment_status === 'Paid') return '#28a745';
+                            if (d.payment_status === 'Completed') return '#17a2b8';
+                            if (d.payment_status === 'Pending') return '#ffc107';
+                            if (d.payment_status === 'Failed') return '#dc3545';
+                            return '#6c757d';
+                        })
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    aspectRatio: 2,
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Mark as initialized
+        chartsInitialized = true;
+    }
+    
+    // Initialize charts only once when DOM is ready
+    (function() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                initCharts();
+            }, { once: true }); // Use once: true to prevent multiple calls
+        } else {
+            initCharts();
+        }
+    })();
+    
+    // Prevent window resize from causing infinite loops
+    let resizeTimeout;
+    let isResizing = false;
+    window.addEventListener('resize', function() {
+        if (isResizing) return;
+        isResizing = true;
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            isResizing = false;
+            // Charts will auto-resize, but prevent infinite loops
+        }, 250);
+    }, { passive: true });
+</script>
+{% endblock %}
+

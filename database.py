@@ -948,6 +948,157 @@ def initialize_public_website_tables():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """)
         
+        # Donation types table (matching exact specification)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS donation_types (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL COMMENT 'Donation type name',
+                name_amharic VARCHAR(255) COMMENT 'Name in Amharic',
+                description TEXT COMMENT 'Type description',
+                description_amharic TEXT COMMENT 'Description in Amharic',
+                status VARCHAR(20) DEFAULT 'active' COMMENT 'Status: active, inactive',
+                is_active TINYINT(1) DEFAULT 1 COMMENT 'Active status (for backward compatibility)',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_by VARCHAR(50),
+                INDEX idx_status (status),
+                INDEX idx_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Add status column if it doesn't exist (for existing installations)
+        try:
+            cursor.execute("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'donation_types' 
+                AND COLUMN_NAME = 'status'
+            """, (Config.DB_NAME,))
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("ALTER TABLE donation_types ADD COLUMN status VARCHAR(20) DEFAULT 'active' AFTER description_amharic")
+                cursor.execute("UPDATE donation_types SET status = 'active' WHERE is_active = 1")
+                cursor.execute("UPDATE donation_types SET status = 'inactive' WHERE is_active = 0")
+        except:
+            pass
+        
+        # Donation settings table (matching exact specification: key, value)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS donation_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) NOT NULL UNIQUE COMMENT 'Setting key',
+                setting_value TEXT COMMENT 'Setting value',
+                description VARCHAR(255) COMMENT 'Setting description',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                updated_by VARCHAR(50),
+                INDEX idx_key (setting_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Donations table (matching exact specification)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS donations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                donor_name VARCHAR(255) COMMENT 'Donor name (or Anonymous)',
+                christian_name VARCHAR(255) COMMENT 'የክርስትና ስም / Christian/Baptismal name',
+                donor_email VARCHAR(255) COMMENT 'Donor email',
+                donor_phone VARCHAR(50) COMMENT 'Donor phone',
+                donation_type_id INT COMMENT 'Donation type',
+                amount DECIMAL(15, 2) NOT NULL COMMENT 'Donation amount',
+                tx_ref VARCHAR(255) COMMENT 'Chapa transaction reference',
+                chapa_response JSON COMMENT 'Full Chapa API response',
+                payment_status VARCHAR(20) DEFAULT 'Pending' COMMENT 'Status: Pending, Paid, Failed, Completed',
+                payment_method VARCHAR(50) DEFAULT 'Chapa' COMMENT 'Payment method',
+                transaction_id VARCHAR(255) COMMENT 'Chapa transaction ID',
+                chapa_reference VARCHAR(255) COMMENT 'Chapa transaction reference (alias for tx_ref)',
+                is_anonymous TINYINT(1) DEFAULT 0 COMMENT 'Anonymous donation flag',
+                currency VARCHAR(10) DEFAULT 'ETB' COMMENT 'Currency code',
+                ip_address VARCHAR(50) COMMENT 'Donor IP address',
+                user_agent TEXT COMMENT 'User agent string',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                paid_at TIMESTAMP NULL COMMENT 'Payment completion time',
+                FOREIGN KEY (donation_type_id) REFERENCES donation_types(id) ON DELETE SET NULL,
+                INDEX idx_type (donation_type_id),
+                INDEX idx_status (payment_status),
+                INDEX idx_transaction (transaction_id),
+                INDEX idx_reference (tx_ref),
+                INDEX idx_chapa_ref (chapa_reference),
+                INDEX idx_created (created_at),
+                INDEX idx_donor_email (donor_email)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """)
+        
+        # Add christian_name column if it doesn't exist (for existing installations)
+        try:
+            cursor.execute("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'donations' 
+                AND COLUMN_NAME = 'christian_name'
+            """, (Config.DB_NAME,))
+            if cursor.fetchone()[0] == 0:
+                cursor.execute("ALTER TABLE donations ADD COLUMN christian_name VARCHAR(255) COMMENT 'የክርስትና ስም / Christian/Baptismal name' AFTER donor_name")
+                print("✓ Added christian_name column to donations table")
+        except Exception as e:
+            print(f"⚠ Warning: Could not add christian_name column: {e}")
+        
+        # Create donation_records as alias/view for backward compatibility
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS donation_records LIKE donations
+        """)
+        
+        # Copy data from donation_records to donations if donation_records exists and donations is empty
+        try:
+            cursor.execute("SELECT COUNT(*) FROM donations")
+            donations_count = cursor.fetchone()[0]
+            if donations_count == 0:
+                cursor.execute("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'donation_records'", (Config.DB_NAME,))
+                if cursor.fetchone()[0] > 0:
+                    cursor.execute("INSERT INTO donations SELECT * FROM donation_records")
+        except:
+            pass
+        
+        # Insert default donation settings if not exists
+        # Note: For production, update these via admin dashboard or environment variables
+        default_settings = [
+            ('chapa_public_key', 'CHAPUBK_TEST-L0hqsaiWfP8JXJMXBqFyRSRbyJHp2quS', 'Chapa Public Key (Test)'),
+            ('chapa_secret_key', 'CHASECK_TEST-Gm6uD4CijZ2RSUrYPWEyV2i56gHU1nQp', 'Chapa Secret Key (Test)'),
+            ('chapa_encrypted_key', 'uFZFepcrugS4sGA7ofC6sX77', 'Chapa Encrypted Key (for webhook verification)'),
+            ('default_currency', 'ETB', 'Default Currency'),
+            ('allow_any_amount', '1', 'Allow user to donate any amount'),
+            ('min_donation_amount', '10', 'Minimum donation amount'),
+            ('max_donation_amount', '1000000', 'Maximum donation amount'),
+            ('donation_module_enabled', '1', 'Enable/Disable donation module'),
+            ('thank_you_message', 'Thank you for your generous donation! Your contribution helps us continue our mission.', 'Thank you message after donation'),
+            ('thank_you_message_amharic', 'ለቸር ለግስናዎ እናመሰግናለን! እርዳታዎ ተልእኮችን ለመቀጠል ይረዳናል።', 'Thank you message in Amharic'),
+            ('redirect_url_after_payment', '/donation/thank-you', 'Redirect URL after payment'),
+            ('callback_url', '', 'Chapa callback URL')
+        ]
+        
+        for key, value, desc in default_settings:
+            cursor.execute("""
+                INSERT IGNORE INTO donation_settings (setting_key, setting_value, description)
+                VALUES (%s, %s, %s)
+            """, (key, value, desc))
+        
+        # Insert default donation types if not exists
+        cursor.execute("SELECT COUNT(*) FROM donation_types")
+        type_count = cursor.fetchone()[0]
+        
+        if type_count == 0:
+            default_types = [
+                ('General Donation', 'አጠቃላይ ለግስና', 'General purpose donations', 'አጠቃላይ ዓላማ ለግስና', 'ADMIN001'),
+                ('Building Project', 'የግንባታ ፕሮጀክት', 'Donations for building projects', 'ለግንባታ ፕሮጀክቶች ለግስና', 'ADMIN001'),
+                ('Education Support', 'የትምህርት ድጋፍ', 'Support for education programs', 'ለትምህርት ፕሮግራሞች ድጋፍ', 'ADMIN001'),
+                ('Monthly Contribution', 'ወራዊ አስተዋፅኦ', 'Regular monthly contributions', 'ወራዊ መደበኛ አስተዋፅኦ', 'ADMIN001'),
+                ('Youth Programs', 'የወጣቶች ፕሮግራሞች', 'Support for youth activities', 'ለወጣቶች እንቅስቃሴዎች ድጋፍ', 'ADMIN001'),
+                ('Charity Work', 'የጻድቃን ሥራ', 'Support for charity and outreach', 'ለጻድቃን ሥራ እና ማስተዋል ድጋፍ', 'ADMIN001')
+            ]
+            
+            for name, name_am, desc, desc_am, created_by in default_types:
+                cursor.execute("""
+                    INSERT INTO donation_types (name, name_amharic, description, description_amharic, created_by)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (name, name_am, desc, desc_am, created_by))
+        
         conn.commit()
         print("✓ Public website tables initialized successfully")
         return True

@@ -3,100 +3,287 @@
 {% block title %}Hero Slider Management - Website Management{% endblock %}
 
 {% block content %}
-<div class="content-body">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Hero Slider Management / የመጀመሪያ ስላይድ አስተዳደር</h4>
-                        <a href="{{ url_for('admin_website.add_hero_slide') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> Add New Slide
-                        </a>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .slide-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .slide-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .slide-image-container {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    }
+    
+    .slide-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .slide-card:hover .slide-image-container img {
+        transform: scale(1.05);
+    }
+    
+    .slide-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%);
+        display: flex;
+        align-items: flex-end;
+        padding: 1rem;
+        color: white;
+    }
+    
+    .slide-info {
+        padding: 1.5rem;
+    }
+    
+    .slide-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .slide-description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+    
+    .slide-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .slide-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .order-badge {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #14860C;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .btn-modern-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-modern-danger:hover {
+        background: #c82333;
+        color: white;
+    }
+    
+    .status-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+<div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-images me-2"></i>Hero Slider Management</h2>
+                    <p>የመጀመሪያ ስላይድ አስተዳደር - Manage homepage slider images and content</p>
+                </div>
+                <a href="{{ url_for('admin_website.add_hero_slide') }}" class="btn btn-modern btn-modern-primary">
+                    <i class="fas fa-plus me-2"></i>Add New Slide
+                </a>
+            </div>
+        </div>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    <div class="card-body">
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                            {% if messages %}
-                                {% for category, message in messages %}
-                                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
-                                        {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        {% endwith %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Slides Grid -->
+        {% if slides %}
+        <div class="row">
+            {% for slide in slides %}
+            <div class="col-md-6 col-lg-4">
+                <div class="slide-card">
+                    <!-- Image -->
+                    <div class="slide-image-container">
+                        {% if slide.image_path %}
+                        <img src="{{ url_for('static', filename=slide.image_path) }}" 
+                             alt="{{ slide.title }}"
+                             onerror="this.onerror=null; this.src='/uploads/{{ slide.image_path }}'; this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                            <i class="fas fa-image fa-3x"></i>
+                        </div>
+                        {% endif %}
+                        <div class="slide-overlay">
+                            <div>
+                                <span class="order-badge">
+                                    <i class="fas fa-sort-numeric-up me-1"></i>Order: {{ slide.display_order }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Info -->
+                    <div class="slide-info">
+                        <div class="slide-title">
+                            {{ slide.title_amharic or slide.title or 'Untitled Slide' }}
+                        </div>
+                        {% if slide.description or slide.description_amharic %}
+                        <div class="slide-description">
+                            {{ (slide.description_amharic or slide.description or '')[:80] }}{% if (slide.description_amharic or slide.description or '')|length > 80 %}...{% endif %}
+                        </div>
+                        {% endif %}
                         
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Image</th>
-                                        <th>Title</th>
-                                        <th>Description</th>
-                                        <th>Button Text</th>
-                                        <th>Order</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% if slides %}
-                                        {% for slide in slides %}
-                                        <tr>
-                                            <td>
-                                                {% if slide.image_path %}
-                                                <img src="{{ url_for('static', filename=slide.image_path) }}" 
-                                                     alt="{{ slide.title }}" 
-                                                     style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px;">
-                                                {% else %}
-                                                <span class="text-muted">No image</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ slide.title_amharic or slide.title }}</td>
-                                            <td>
-                                                <small class="text-muted">
-                                                    {{ (slide.description_amharic or slide.description or '')[:50] }}{% if (slide.description_amharic or slide.description or '')|length > 50 %}...{% endif %}
-                                                </small>
-                                            </td>
-                                            <td>{{ slide.button_text or '-' }}</td>
-                                            <td>{{ slide.display_order }}</td>
-                                            <td>
-                                                {% if slide.is_active %}
-                                                <span class="badge bg-success">Active</span>
-                                                {% else %}
-                                                <span class="badge bg-secondary">Inactive</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <a href="{{ url_for('admin_website.edit_hero_slide', slide_id=slide.id) }}" 
-                                                   class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </a>
-                                                <form method="POST" action="{{ url_for('admin_website.delete_hero_slide', slide_id=slide.id) }}" 
-                                                      style="display: inline;" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this slide?');">
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        <i class="fas fa-trash"></i> Delete
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted">
-                                                No slides found. <a href="{{ url_for('admin_website.add_hero_slide') }}">Add your first slide</a>
-                                            </td>
-                                        </tr>
-                                    {% endif %}
-                                </tbody>
-                            </table>
+                        <div class="slide-meta">
+                            <div>
+                                {% if slide.is_active %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Active
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-pause-circle me-1"></i>Inactive
+                                </span>
+                                {% endif %}
+                                {% if slide.button_text %}
+                                <span class="badge bg-info ms-2">
+                                    <i class="fas fa-link me-1"></i>{{ slide.button_text }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="slide-actions">
+                                <a href="{{ url_for('admin_website.edit_hero_slide', slide_id=slide.id) }}" 
+                                   class="btn btn-sm btn-modern-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('admin_website.delete_hero_slide', slide_id=slide.id) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('Are you sure you want to delete this slide?');">
+                                    <button type="submit" class="btn btn-sm btn-modern-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-images"></i>
+            </div>
+            <h3 class="mb-3">No Slides Found</h3>
+            <p class="text-muted mb-4">Get started by adding your first hero slide to showcase on the homepage.</p>
+            <a href="{{ url_for('admin_website.add_hero_slide') }}" class="btn btn-modern btn-modern-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Add Your First Slide
+            </a>
+        </div>
+        {% endif %}
     </div>
-</div>
 {% endblock %}
 

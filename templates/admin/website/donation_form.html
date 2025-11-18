@@ -3,117 +3,291 @@
 {% block title %}{{ 'Edit' if method else 'Add' }} Donation Method - Website Management{% endblock %}
 
 {% block content %}
-<div class="content-body">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">{{ 'Edit' if method else 'Add' }} Donation Method / {{ 'አስተካክል' if method else 'ጨምር' }} የለግስና ዘዴ</h4>
-                        <a href="{{ url_for('admin_website.manage_donation_info') }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #14860C;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .image-preview-container {
+        margin-top: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 2px dashed #dee2e6;
+        text-align: center;
+    }
+    
+    .image-preview-container img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .form-check-input:checked {
+        background-color: #14860C;
+        border-color: #14860C;
+    }
+    
+    .help-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="fas fa-{{ 'edit' if method else 'plus-circle' }} me-2"></i>
+                    {{ 'Edit' if method else 'Add' }} Donation Method
+                </h2>
+                <p>{{ 'አስተካክል' if method else 'ጨምር' }} የለግስና ዘዴ - {{ 'Update' if method else 'Create' }} donation method information</p>
+            </div>
+            <a href="{{ url_for('admin_website.manage_donation_info') }}" class="btn btn-modern btn-modern-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+    
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="POST" enctype="multipart/form-data" id="donationForm">
+            <!-- Method Information Section -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Method Information
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="donation_method" class="form-label">
+                                Method Name (English) <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="donation_method" name="donation_method" 
+                                   value="{{ method.donation_method if method else '' }}" required
+                                   placeholder="e.g., Bank Transfer, Telebirr, CBE Birr">
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="donation_method" class="form-label">Method Name (English) *</label>
-                                        <input type="text" class="form-control" id="donation_method" name="donation_method" 
-                                               value="{{ method.donation_method if method else '' }}" required
-                                               placeholder="e.g., Bank Transfer, Telebirr, CBE Birr">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="method_name_amharic" class="form-label">Method Name (Amharic) / ዘዴ ስም</label>
-                                        <input type="text" class="form-control" id="method_name_amharic" name="method_name_amharic" 
-                                               value="{{ method.method_name_amharic if method else '' }}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="account_name" class="form-label">Account Name</label>
-                                        <input type="text" class="form-control" id="account_name" name="account_name" 
-                                               value="{{ method.account_name if method else '' }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="account_number" class="form-label">Account Number</label>
-                                        <input type="text" class="form-control" id="account_number" name="account_number" 
-                                               value="{{ method.account_number if method else '' }}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="bank_name" class="form-label">Bank Name</label>
-                                <input type="text" class="form-control" id="bank_name" name="bank_name" 
-                                       value="{{ method.bank_name if method else '' }}" 
-                                       placeholder="e.g., Commercial Bank of Ethiopia">
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="qr_code_image" class="form-label">QR Code Image</label>
-                                <input type="file" class="form-control" id="qr_code_image" name="qr_code_image" accept="image/*">
-                                {% if method and method.qr_code_image %}
-                                <small class="text-muted">Current QR code:</small><br>
-                                <img src="{{ url_for('static', filename=method.qr_code_image) }}" 
-                                     alt="QR Code" style="max-width: 200px; margin-top: 10px; border-radius: 4px;">
-                                <small class="text-muted d-block mt-1">Leave empty to keep current QR code</small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="instructions" class="form-label">Instructions (English)</label>
-                                <textarea class="form-control" id="instructions" name="instructions" rows="3">{{ method.instructions if method else '' }}</textarea>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="instructions_amharic" class="form-label">Instructions (Amharic) / መመሪያዎች</label>
-                                <textarea class="form-control" id="instructions_amharic" name="instructions_amharic" rows="3">{{ method.instructions_amharic if method else '' }}</textarea>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="display_order" class="form-label">Display Order</label>
-                                        <input type="number" class="form-control" id="display_order" name="display_order" 
-                                               value="{{ method.display_order if method else 0 }}" min="0">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <div class="form-check mt-4">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
-                                                   {{ 'checked' if method and method.is_active else 'checked' }}>
-                                            <label class="form-check-label" for="is_active">
-                                                Active / ንቁ
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> {{ 'Update' if method else 'Save' }} Method
-                                </button>
-                                <a href="{{ url_for('admin_website.manage_donation_info') }}" class="btn btn-secondary">
-                                    Cancel
-                                </a>
-                            </div>
-                        </form>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="method_name_amharic" class="form-label">Method Name (Amharic) / ዘዴ ስም</label>
+                            <input type="text" class="form-control" id="method_name_amharic" name="method_name_amharic" 
+                                   value="{{ method.method_name_amharic if method else '' }}"
+                                   placeholder="የለግስና ዘዴ ስም">
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            
+            <!-- Account Details Section -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-university"></i>
+                    Account Details
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="account_name" class="form-label">Account Name</label>
+                            <input type="text" class="form-control" id="account_name" name="account_name" 
+                                   value="{{ method.account_name if method else '' }}"
+                                   placeholder="Account holder name">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="account_number" class="form-label">Account Number</label>
+                            <input type="text" class="form-control" id="account_number" name="account_number" 
+                                   value="{{ method.account_number if method else '' }}"
+                                   placeholder="Account number">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="bank_name" class="form-label">Bank Name</label>
+                    <input type="text" class="form-control" id="bank_name" name="bank_name" 
+                           value="{{ method.bank_name if method else '' }}" 
+                           placeholder="e.g., Commercial Bank of Ethiopia">
+                    <div class="help-text">Name of the bank or payment provider</div>
+                </div>
+            </div>
+            
+            <!-- QR Code Section -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-qrcode"></i>
+                    QR Code Image
+                </div>
+                <div class="mb-3">
+                    <label for="qr_code_image" class="form-label">QR Code Image</label>
+                    <input type="file" class="form-control" id="qr_code_image" name="qr_code_image" accept="image/*">
+                    {% if method and method.qr_code_image %}
+                    <div class="image-preview-container mt-2">
+                        <p class="mb-2"><strong>Current QR Code:</strong></p>
+                        <img src="{{ url_for('static', filename=method.qr_code_image) }}" 
+                             alt="QR Code" id="currentQRPreview"
+                             onerror="this.onerror=null; this.src='{{ url_for('uploaded_file', filename=method.qr_code_image) }}';">
+                        <p class="text-muted mt-2 mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Leave empty to keep current QR code
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Instructions Section -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-book"></i>
+                    Instructions
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">Instructions (English)</label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="4"
+                                      placeholder="Step-by-step instructions for donors">{{ method.instructions if method else '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="instructions_amharic" class="form-label">Instructions (Amharic) / መመሪያዎች</label>
+                            <textarea class="form-control" id="instructions_amharic" name="instructions_amharic" rows="4"
+                                      placeholder="ለለግሳኞች የደረጃ በደረጃ መመሪያዎች">{{ method.instructions_amharic if method else '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Display Settings -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-cog"></i>
+                    Display Settings
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="display_order" class="form-label">Display Order</label>
+                            <input type="number" class="form-control" id="display_order" name="display_order" 
+                                   value="{{ method.display_order if method else 0 }}" min="0">
+                            <div class="help-text">Lower numbers appear first</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                       {{ 'checked' if method and method.is_active else 'checked' }}
+                                       style="width: 3rem; height: 1.5rem;">
+                                <label class="form-check-label ms-3" for="is_active">
+                                    <strong>Active / ንቁ</strong>
+                                    <div class="help-text">Show this donation method on the website</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                <a href="{{ url_for('admin_website.manage_donation_info') }}" class="btn btn-modern btn-modern-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-modern btn-modern-primary">
+                    <i class="fas fa-save me-2"></i>{{ 'Update' if method else 'Save' }} Method
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
-

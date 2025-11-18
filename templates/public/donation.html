@@ -4,73 +4,629 @@
 
 {% block extra_css %}
 <style>
-    .donation-card {
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
+    /* Remove body padding-top for donation page */
+    body:has(.donation-page-wrapper) {
+        padding-top: 0 !important;
+    }
+    
+    /* Ensure donation page wrapper starts at top */
+    .donation-page-wrapper {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+    
+    /* First section should start right under header */
+    .donation-page-wrapper > section:first-of-type {
+        margin-top: 76px !important; /* Account for fixed navbar */
+        padding-top: 2rem !important;
+    }
+    
+    /* Donation Form Card */
+    .donation-form-card {
+        background: white;
+        border-radius: 25px;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+        padding: 3rem;
+        margin-top: 0;
+        position: relative;
+        z-index: 10;
+        animation: slideUp 0.8s ease;
+    }
+    
+    /* Fix spacing for donation page */
+    .donation-page-wrapper {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Override main-content padding for donation page */
+    body:has(.donation-page-wrapper) .main-content {
+        padding-top: 0 !important;
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Donation Type Cards */
+    .donation-type-card {
+        border: 3px solid #e9ecef;
+        border-radius: 20px;
         padding: 2rem;
-        text-align: center;
-        transition: all 0.3s ease;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         height: 100%;
+        text-align: center;
+        background: white;
+        position: relative;
+        overflow: hidden;
     }
-    .donation-card:hover {
-        border-color: var(--primary-color);
-        box-shadow: var(--shadow-lg);
+    
+    .donation-type-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(20, 134, 12, 0.1), transparent);
+        transition: left 0.5s ease;
     }
-    .donation-card .qr-code {
+    
+    .donation-type-card:hover::before {
+        left: 100%;
+    }
+    
+    .donation-type-card:hover {
+        border-color: #14860C;
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 15px 40px rgba(20, 134, 12, 0.2);
+    }
+    
+    .donation-type-card.selected {
+        border-color: #14860C;
+        background: linear-gradient(135deg, #f0f9f0 0%, #e8f5e8 100%);
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.25);
+    }
+    
+    .donation-type-card input[type="radio"] {
+        display: none;
+    }
+    
+    .donation-type-icon {
+        font-size: 3rem;
+        color: #14860C;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .donation-type-card:hover .donation-type-icon {
+        transform: scale(1.2) rotate(5deg);
+    }
+    
+    .donation-type-card.selected .donation-type-icon {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    /* Amount Presets */
+    .amount-presets-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .amount-preset {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 2rem;
+        border: 3px solid #e9ecef;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        font-weight: 700;
+        font-size: 1.1rem;
+        min-width: 120px;
+        background: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .amount-preset::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(20, 134, 12, 0.1);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+    }
+    
+    .amount-preset:hover {
+        border-color: #14860C;
+        background: #f0f9f0;
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 8px 20px rgba(20, 134, 12, 0.2);
+    }
+    
+    .amount-preset:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .amount-preset.selected {
+        border-color: #14860C;
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 10px 25px rgba(20, 134, 12, 0.4);
+    }
+    
+    .amount-preset.selected::before {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Custom Amount Input */
+    .amount-input-wrapper {
+        position: relative;
+        margin-top: 1.5rem;
+    }
+    
+    .amount-input-wrapper .input-group-text {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+    }
+    
+    .amount-input-wrapper .form-control {
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-align: center;
+        border: 3px solid #e9ecef;
+        padding: 1.25rem;
+    }
+    
+    .amount-input-wrapper .form-control:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.3rem rgba(20, 134, 12, 0.25);
+    }
+    
+    /* Form Controls */
+    .form-control, .form-select {
+        border-radius: 12px;
+        border: 2px solid #e9ecef;
+        padding: 0.875rem 1.25rem;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.25rem rgba(20, 134, 12, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
+    }
+    
+    /* Donate Button */
+    .btn-donate {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 1.25rem 3rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .btn-donate::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s ease, height 0.6s ease;
+    }
+    
+    .btn-donate:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 15px 40px rgba(20, 134, 12, 0.4);
+        color: white;
+    }
+    
+    .btn-donate:hover::before {
+        width: 400px;
+        height: 400px;
+    }
+    
+    .btn-donate:active {
+        transform: translateY(-2px) scale(0.98);
+    }
+    
+    /* Section Spacing - Reduced top padding for donation page */
+    .donation-page-wrapper .section-padding {
+        padding-top: 1.5rem !important; /* Reduced from 4rem */
+        padding-bottom: 4rem;
+    }
+    
+    /* First section after hero should have minimal top padding */
+    .donation-page-wrapper > section.section-padding:first-of-type {
+        padding-top: 0.5rem !important;
+    }
+    
+    /* Fix body spacing for donation page */
+    .donation-page-wrapper {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Override main-content padding for donation page */
+    body:has(.donation-page-wrapper) .main-content,
+    .donation-page-wrapper ~ .main-content {
+        padding-top: 0 !important;
+    }
+    
+    /* Donation Methods Section */
+    .donation-methods-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 4rem 0;
+        margin-top: 3rem;
+    }
+    
+    .method-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2.5rem;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        height: 100%;
+        transition: all 0.4s ease;
+        border-top: 4px solid #14860C;
+    }
+    
+    .method-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .method-card .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        color: white;
+        font-size: 2rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .method-card:hover .icon-circle {
+        transform: rotate(360deg) scale(1.1);
+    }
+    
+    .qr-code-img {
         max-width: 200px;
-        margin: 1rem auto;
+        margin: 1.5rem auto;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .method-card:hover .qr-code-img {
+        transform: scale(1.05);
+    }
+    
+    /* Loading Animation */
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid rgba(255,255,255,0.3);
+        border-top-color: #14860C;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-content h1 {
+            font-size: 2rem;
+        }
+        .hero-content p {
+            font-size: 1rem;
+        }
+        .donation-form-card {
+            padding: 2rem 1.5rem;
+        }
+        .amount-presets-container {
+            gap: 0.5rem;
+        }
+        .amount-preset {
+            padding: 0.75rem 1.5rem;
+            min-width: 100px;
+            font-size: 0.95rem;
+        }
+    }
+    
+    /* Smooth Scroll */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Fade In Animation for Cards */
+    .fade-in {
+        animation: fadeIn 0.6s ease forwards;
+        opacity: 0;
+    }
+    
+    .fade-in:nth-child(1) { animation-delay: 0.1s; }
+    .fade-in:nth-child(2) { animation-delay: 0.2s; }
+    .fade-in:nth-child(3) { animation-delay: 0.3s; }
+    .fade-in:nth-child(4) { animation-delay: 0.4s; }
+    
+    @keyframes fadeIn {
+        to {
+            opacity: 1;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="section-padding bg-primary text-white">
+<div class="donation-page-wrapper">
+<!-- Donation Form Section -->
+<section class="section-padding" style="padding-top: 2rem !important; margin-top: 76px !important;">
     <div class="container">
-        <div class="text-center">
-            <h1 class="display-3 mb-3">Donation / በጎ አድራጎት</h1>
-            <p class="lead">Support Our Mission and Community</p>
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <div class="donation-form-card">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else 'info' }} alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'info-circle' }} me-2"></i>
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('public_website.process_donation') }}" id="donationForm">
+                        <div class="text-center mb-4">
+                            <h2 class="display-5 mb-2">
+                                <i class="fas fa-heart text-danger me-2"></i>
+                                Make a Donation
+                            </h2>
+                            <p class="text-muted">Your generosity makes a difference</p>
+                        </div>
+                        
+                        <!-- Donation Type Selection -->
+                        {% if donation_types %}
+                        <div class="mb-5">
+                            <label class="form-label mb-3 d-block text-center">
+                                <i class="fas fa-tags me-2"></i>
+                                <strong>Select Donation Type / የለግስና ዓይነት</strong>
+                            </label>
+                            <div class="row g-4">
+                                {% for type in donation_types %}
+                                <div class="col-md-6 col-lg-4 fade-in">
+                                    <label class="donation-type-card">
+                                        <input type="radio" name="donation_type_id" value="{{ type.id }}" 
+                                               {{ 'checked' if loop.first else '' }} required>
+                                        <div class="donation-type-icon">
+                                            <i class="fas fa-hand-holding-heart"></i>
+                                        </div>
+                                        <h5 class="mb-2 fw-bold">{{ type.name_amharic or type.name }}</h5>
+                                        {% if type.description or type.description_amharic %}
+                                        <p class="text-muted small mb-0">
+                                            {{ (type.description_amharic or type.description)[:60] }}{% if (type.description_amharic or type.description)|length > 60 %}...{% endif %}
+                                        </p>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Amount Selection -->
+                        <div class="mb-5">
+                            <label class="form-label mb-3 d-block text-center">
+                                <i class="fas fa-money-bill-wave me-2"></i>
+                                <strong>Donation Amount / የለግስና መጠን</strong>
+                            </label>
+                            
+                            {% if allow_any_amount %}
+                            <!-- Preset Amounts -->
+                            <div class="amount-presets-container">
+                                <div class="amount-preset" data-amount="50">
+                                    <span>50 {{ currency }}</span>
+                                </div>
+                                <div class="amount-preset" data-amount="100">
+                                    <span>100 {{ currency }}</span>
+                                </div>
+                                <div class="amount-preset" data-amount="200">
+                                    <span>200 {{ currency }}</span>
+                                </div>
+                                <div class="amount-preset" data-amount="500">
+                                    <span>500 {{ currency }}</span>
+                                </div>
+                                <div class="amount-preset" data-amount="1000">
+                                    <span>1,000 {{ currency }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Custom Amount Input -->
+                            <div class="amount-input-wrapper">
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-coins"></i>
+                                    </span>
+                                    <input type="number" class="form-control" id="amount" name="amount" 
+                                           min="{{ min_amount }}" max="{{ max_amount }}" 
+                                           step="0.01" required
+                                           placeholder="Enter custom amount">
+                                    <span class="input-group-text">{{ currency }}</span>
+                                </div>
+                                <div class="form-text text-center mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Minimum: {{ min_amount }} {{ currency }} | Maximum: {{ max_amount }} {{ currency }}
+                                </div>
+                            </div>
+                            {% else %}
+                            <select class="form-select form-select-lg" id="amount" name="amount" required>
+                                <option value="">Select Amount</option>
+                                <option value="50">50 {{ currency }}</option>
+                                <option value="100">100 {{ currency }}</option>
+                                <option value="200">200 {{ currency }}</option>
+                                <option value="500">500 {{ currency }}</option>
+                                <option value="1000">1,000 {{ currency }}</option>
+                            </select>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Donor Information -->
+                        <div class="mb-5">
+                            <h5 class="mb-4 text-center">
+                                <i class="fas fa-user me-2"></i>
+                                Your Information / የእርስዎ መረጃ
+                            </h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name / ሙሉ ስም <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="donor_name" 
+                                           placeholder="Enter your name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Christian Name / የክርስትና ስም</label>
+                                    <input type="text" class="form-control" name="christian_name" 
+                                           placeholder="የክርስትና ስምዎን ያስገቡ">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email / ኢሜይል <small class="text-muted">(Optional)</small></label>
+                                    <input type="email" class="form-control" name="donor_email" 
+                                           placeholder="your@email.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone / ስልክ</label>
+                                    <input type="tel" class="form-control" name="donor_phone" 
+                                           placeholder="+251 9XX XXX XXXX">
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="form-check mt-3">
+                                        <input class="form-check-input" type="checkbox" id="is_anonymous" name="is_anonymous" style="width: 1.25rem; height: 1.25rem;">
+                                        <label class="form-check-label ms-3" for="is_anonymous">
+                                            <strong>Donate Anonymously / በስም ሳይጠቀሱ ለግስና</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-donate">
+                            <i class="fas fa-credit-card me-2"></i>
+                            Donate Now / አሁን ለግስና
+                        </button>
+                        
+                        <p class="text-center text-muted mt-4 small">
+                            <i class="fas fa-lock me-1"></i>
+                            Secure payment powered by Chapa
+                        </p>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
-<section class="section-padding">
+<!-- Alternative Donation Methods -->
+{% if donation_methods %}
+<section class="donation-methods-section">
     <div class="container">
-        {% if donation_message %}
-        <div class="row mb-5">
-            <div class="col-lg-8 mx-auto">
-                <div class="card shadow-sm">
-                    <div class="card-body p-4">
-                        <h3 class="mb-3">{{ donation_message.title_amharic or donation_message.title }}</h3>
-                        <div class="content-text">
-                            {{ donation_message.content_amharic or donation_message.content|safe }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        {% if donation_methods %}
+        <h2 class="text-center mb-5">
+            <i class="fas fa-university me-2"></i>
+            Alternative Donation Methods / ሌሎች የለግስና ዘዴዎች
+        </h2>
         <div class="row g-4">
             {% for method in donation_methods %}
-            <div class="col-md-6 col-lg-4">
-                <div class="donation-card">
+            <div class="col-md-6 col-lg-4 fade-in">
+                <div class="method-card">
+                    <div class="icon-circle">
+                        <i class="fas fa-university"></i>
+                    </div>
                     <h4 class="mb-3">{{ method.method_name_amharic or method.donation_method }}</h4>
                     
                     {% if method.account_name %}
-                    <p class="mb-2"><strong>Account Name:</strong> {{ method.account_name }}</p>
+                    <p class="mb-2"><strong>Account Name:</strong><br>{{ method.account_name }}</p>
                     {% endif %}
                     
                     {% if method.account_number %}
-                    <p class="mb-2"><strong>Account Number:</strong> {{ method.account_number }}</p>
+                    <p class="mb-2"><strong>Account Number:</strong><br><code class="bg-light p-2 rounded">{{ method.account_number }}</code></p>
                     {% endif %}
                     
                     {% if method.bank_name %}
-                    <p class="mb-3"><strong>Bank:</strong> {{ method.bank_name }}</p>
+                    <p class="mb-3"><strong>Bank:</strong><br>{{ method.bank_name }}</p>
                     {% endif %}
                     
                     {% if method.qr_code_image %}
-                    <div class="qr-code">
+                    <div class="qr-code-img">
                         <img src="{{ url_for('static', filename=method.qr_code_image) }}" 
                              alt="QR Code" class="img-fluid">
                     </div>
@@ -87,29 +643,117 @@
             </div>
             {% endfor %}
         </div>
-        {% else %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Donation Message -->
+{% if donation_message %}
+<section class="section-padding">
+    <div class="container">
         <div class="row">
             <div class="col-lg-8 mx-auto">
-                <div class="card shadow-sm">
-                    <div class="card-body p-5 text-center">
-                        <i class="fas fa-heart fa-4x text-primary mb-4"></i>
-                        <h3>Donation Information</h3>
-                        <p class="text-muted">Donation methods will be displayed here once configured by administrators.</p>
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <h3 class="mb-4 text-center">{{ donation_message.title_amharic or donation_message.title }}</h3>
+                        <div class="content-text">
+                            {{ donation_message.content_amharic or donation_message.content|safe }}
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        
-        <div class="row mt-5">
-            <div class="col-lg-8 mx-auto">
-                <div class="alert alert-info">
-                    <h5><i class="fas fa-info-circle me-2"></i>Thank You for Your Support</h5>
-                    <p class="mb-0">Your generous donations help us continue our spiritual work and serve the community. May God bless you abundantly.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
+{% endif %}
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="text-center text-white">
+        <div class="loading-spinner mb-3"></div>
+        <p class="h5">Processing your donation...</p>
+    </div>
+</div>
+</div>
+<!-- End donation-page-wrapper -->
 {% endblock %}
 
+{% block extra_js %}
+<script>
+    // Amount preset selection
+    document.querySelectorAll('.amount-preset').forEach(preset => {
+        preset.addEventListener('click', function() {
+            document.querySelectorAll('.amount-preset').forEach(p => p.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('amount').value = this.dataset.amount;
+            document.getElementById('amount').focus();
+        });
+    });
+    
+    // Donation type card selection
+    document.querySelectorAll('.donation-type-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.donation-type-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            this.querySelector('input[type="radio"]').checked = true;
+        });
+    });
+    
+    // Form validation and submission
+    document.getElementById('donationForm').addEventListener('submit', function(e) {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const minAmount = {{ min_amount }};
+        const maxAmount = {{ max_amount }};
+        
+        if (amount < minAmount) {
+            e.preventDefault();
+            alert(`Minimum donation amount is ${minAmount} {{ currency }}`);
+            return false;
+        }
+        
+        if (amount > maxAmount) {
+            e.preventDefault();
+            alert(`Maximum donation amount is ${maxAmount} {{ currency }}`);
+            return false;
+        }
+        
+        // Show loading overlay
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    });
+    
+    // Animate cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+            }
+        });
+    }, observerOptions);
+    
+    document.querySelectorAll('.fade-in').forEach(el => {
+        observer.observe(el);
+    });
+    
+    // Smooth number input animation
+    const amountInput = document.getElementById('amount');
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            // Remove selection from presets when typing custom amount
+            document.querySelectorAll('.amount-preset').forEach(p => p.classList.remove('selected'));
+        });
+        
+        amountInput.addEventListener('focus', function() {
+            this.style.transform = 'scale(1.02)';
+        });
+        
+        amountInput.addEventListener('blur', function() {
+            this.style.transform = 'scale(1)';
+        });
+    }
+</script>
+{% endblock %}

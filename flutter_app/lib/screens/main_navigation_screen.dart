@@ -4,6 +4,8 @@ import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'studies_list_screen.dart';
 import 'login_screen.dart';
+import 'donations_list_screen.dart';
+import 'mewaco_list_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({Key? key}) : super(key: key);
@@ -18,6 +20,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const StudiesListScreen(),
+    const DonationsListScreen(),
+    const MewacoListScreen(),
     const ProfileScreen(),
   ];
 
@@ -43,6 +47,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
             label: 'Studies',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Donations',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet),
+            label: 'MEWACO',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

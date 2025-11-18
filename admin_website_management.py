@@ -25,10 +25,12 @@ def save_uploaded_file(file, subfolder='website'):
         filename = secure_filename(file.filename)
         timestamp = str(int(datetime.now().timestamp()))
         filename = f"{timestamp}_{filename}"
-        upload_path = os.path.join(Config.UPLOAD_FOLDER, subfolder)
+        # Save to static/uploads/ subfolder so it can be served via url_for('static')
+        upload_path = os.path.join('static', 'uploads', subfolder)
         os.makedirs(upload_path, exist_ok=True)
         filepath = os.path.join(upload_path, filename)
         file.save(filepath)
+        # Return path relative to static folder for url_for('static', filename=...)
         return os.path.join('uploads', subfolder, filename).replace('\\', '/')
     return None
 

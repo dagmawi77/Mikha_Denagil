@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Donation Record Details - Donation Management{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .detail-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .detail-section:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-size: 1rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-block;
+    }
+    
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-paid { background: #d4edda; color: #155724; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border: none;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-eye me-2"></i>Donation Record Details</h2>
+                <p>የለግስና መዝገብ ዝርዝሮች - View complete donation transaction information</p>
+            </div>
+            <a href="{{ url_for('donation_management.donation_records') }}" class="btn btn-modern-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Records
+            </a>
+        </div>
+    </div>
+    
+    <!-- Donor Information -->
+    <div class="detail-card">
+        <h4 class="mb-3"><i class="fas fa-user me-2"></i>Donor Information</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Donor Name / ሙሉ ስም</div>
+                    <div class="detail-value">
+                        {% if record.is_anonymous %}
+                        <span class="text-muted">Anonymous</span>
+                        {% else %}
+                        {{ record.donor_name or 'Not provided' }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Christian Name / የክርስትና ስም</div>
+                    <div class="detail-value">
+                        {% if record.christian_name %}
+                        <span class="text-primary"><i class="fas fa-cross me-1"></i>{{ record.christian_name }}</span>
+                        {% else %}
+                        <span class="text-muted">Not provided</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Email</div>
+                    <div class="detail-value">{{ record.donor_email or 'Not provided' }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value">{{ record.donor_phone or 'Not provided' }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Anonymous Donation</div>
+                    <div class="detail-value">
+                        {% if record.is_anonymous %}
+                        <span class="badge bg-info">Yes</span>
+                        {% else %}
+                        <span class="badge bg-secondary">No</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Donation Details -->
+    <div class="detail-card">
+        <h4 class="mb-3"><i class="fas fa-donate me-2"></i>Donation Details</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Donation Type</div>
+                    <div class="detail-value">{{ record.donation_type_name_amharic or record.donation_type_name or 'General' }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Amount</div>
+                    <div class="detail-value">
+                        <strong style="font-size: 1.5rem; color: #14860C;">
+                            {{ "%.2f"|format(record.amount) }} {{ record.currency }}
+                        </strong>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Payment Status</div>
+                    <div class="detail-value">
+                        {% if record.payment_status == 'Paid' %}
+                        <span class="status-badge status-paid">
+                            <i class="fas fa-check-circle me-1"></i>Paid
+                        </span>
+                        {% elif record.payment_status == 'Completed' %}
+                        <span class="status-badge" style="background: #17a2b8; color: white; padding: 0.5rem 1rem; border-radius: 20px;">
+                            <i class="fas fa-check-double me-1"></i>Completed
+                        </span>
+                        {% elif record.payment_status == 'Failed' %}
+                        <span class="status-badge status-failed">
+                            <i class="fas fa-times-circle me-1"></i>Failed
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-pending">
+                            <i class="fas fa-clock me-1"></i>Pending
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Payment Method</div>
+                    <div class="detail-value">{{ record.payment_method or 'Chapa' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transaction Information -->
+    <div class="detail-card">
+        <h4 class="mb-3"><i class="fas fa-receipt me-2"></i>Transaction Information</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Transaction ID</div>
+                    <div class="detail-value">
+                        <code>{{ record.transaction_id or 'N/A' }}</code>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Chapa Reference</div>
+                    <div class="detail-value">
+                        <code>{{ record.chapa_reference or 'N/A' }}</code>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Created At</div>
+                    <div class="detail-value">{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">Paid At</div>
+                    <div class="detail-value">{{ record.paid_at.strftime('%Y-%m-%d %H:%M:%S') if record.paid_at else '-' }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-section">
+                    <div class="detail-label">IP Address</div>
+                    <div class="detail-value">{{ record.ip_address or 'N/A' }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chapa Response (if available) -->
+    {% if record.chapa_response %}
+    <div class="detail-card">
+        <h4 class="mb-3"><i class="fas fa-code me-2"></i>Chapa API Response</h4>
+        <pre style="background: #f8f9fa; padding: 1rem; border-radius: 8px; overflow-x: auto;">{{ record.chapa_response|tojson(indent=2) if record.chapa_response else 'No response data' }}</pre>
+    </div>
+    {% endif %}
+    
+    <!-- Actions -->
+    {% if record.payment_status == 'Paid' %}
+    <div class="detail-card">
+        <h4 class="mb-3"><i class="fas fa-tasks me-2"></i>Actions</h4>
+        <form method="POST" action="{{ url_for('donation_management.mark_donation_completed', record_id=record.id) }}" 
+              onsubmit="return confirm('Mark this donation as completed?');">
+            <button type="submit" class="btn btn-modern-secondary">
+                <i class="fas fa-check-double me-2"></i>Mark as Completed
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

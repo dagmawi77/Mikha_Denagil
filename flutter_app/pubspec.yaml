@@ -32,6 +32,7 @@ dependencies:
   
   # Utils
   url_launcher: ^6.1.11
+  webview_flutter: ^4.4.2
 
 dev_dependencies:
   flutter_test:

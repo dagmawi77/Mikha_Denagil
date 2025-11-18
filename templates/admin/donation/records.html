@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Donation Records - Donation Management{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .records-table-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+    
+    .table thead th {
+        background: #f8f9fa;
+        color: #2c3e50;
+        font-weight: 700;
+        border: none;
+        padding: 1rem;
+    }
+    
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-paid { background: #d4edda; color: #155724; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        font-size: 0.85rem;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-list me-2"></i>Donation Records</h2>
+                <p>የለግስና መዝገቦች - View and manage all donation transactions</p>
+            </div>
+            <div>
+                <a href="?format=excel" class="btn btn-modern btn-modern-secondary me-2">
+                    <i class="fas fa-file-excel me-2"></i>Export Excel
+                </a>
+                <a href="?format=pdf" class="btn btn-modern btn-modern-secondary">
+                    <i class="fas fa-file-pdf me-2"></i>Export PDF
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select class="form-control" name="status">
+                    <option value="">All Status</option>
+                    <option value="Pending" {{ 'selected' if status_filter == 'Pending' else '' }}>Pending</option>
+                    <option value="Paid" {{ 'selected' if status_filter == 'Paid' else '' }}>Paid</option>
+                    <option value="Completed" {{ 'selected' if status_filter == 'Completed' else '' }}>Completed</option>
+                    <option value="Failed" {{ 'selected' if status_filter == 'Failed' else '' }}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Donation Type</label>
+                <select class="form-control" name="type">
+                    <option value="">All Types</option>
+                    {% for dt in donation_types %}
+                    <option value="{{ dt.id }}" {{ 'selected' if type_filter == dt.id|string else '' }}>
+                        {{ dt.name_amharic or dt.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date From</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date To</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-modern btn-modern-primary w-100">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Records Table -->
+    <div class="records-table-card">
+        <div class="table-header">
+            <h4 class="mb-0"><i class="fas fa-table me-2"></i>Donation Transactions</h4>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Donor</th>
+                        <th>Donation Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Transaction ID</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if records %}
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else '-' }}</td>
+                            <td>
+                                {% if record.is_anonymous %}
+                                <span class="text-muted">Anonymous</span>
+                                {% else %}
+                                <strong>{{ record.donor_name or '-' }}</strong>
+                                {% if record.christian_name %}
+                                <br><small class="text-primary"><i class="fas fa-cross me-1"></i>{{ record.christian_name }}</small>
+                                {% endif %}
+                                <br><small class="text-muted">{{ record.donor_email or '' }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ record.donation_type_name_amharic or record.donation_type_name or '-' }}</td>
+                            <td><strong>{{ "%.2f"|format(record.amount) }} {{ record.currency }}</strong></td>
+                            <td>
+                                {% if record.payment_status == 'Paid' %}
+                                <span class="status-badge status-paid">
+                                    <i class="fas fa-check-circle me-1"></i>Paid
+                                </span>
+                                {% elif record.payment_status == 'Completed' %}
+                                <span class="status-badge" style="background: #17a2b8; color: white;">
+                                    <i class="fas fa-check-double me-1"></i>Completed
+                                </span>
+                                {% elif record.payment_status == 'Failed' %}
+                                <span class="status-badge status-failed">
+                                    <i class="fas fa-times-circle me-1"></i>Failed
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-pending">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ record.transaction_id or record.chapa_reference or '-' }}</small>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('donation_management.view_donation_record', record_id=record.id) }}" 
+                                       class="btn btn-sm btn-modern-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    {% if record.payment_status == 'Paid' %}
+                                    <form method="POST" action="{{ url_for('donation_management.mark_donation_completed', record_id=record.id) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Mark this donation as completed?');">
+                                        <button type="submit" class="btn btn-sm" style="background: #17a2b8; color: white;">
+                                            <i class="fas fa-check-double"></i> Complete
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                No donation records found.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

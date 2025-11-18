@@ -2,6 +2,7 @@
 Configuration settings for the application
 """
 from datetime import timedelta
+import os
 
 class Config:
     """Base configuration"""
@@ -39,4 +40,8 @@ class Config:
     
     # Session timeout (minutes)
     SESSION_TIMEOUT_MINUTES = 30
+    
+    # Chapa Payment Gateway (can be overridden by environment variables)
+    CHAPA_PUBLIC_KEY = os.environ.get('CHAPA_PUBLIC_KEY', '')
+    CHAPA_SECRET_KEY = os.environ.get('CHAPA_SECRET_KEY', '')
 

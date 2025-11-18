@@ -354,6 +354,9 @@
                             <span class="badge {% if post[13] == 'Active' %}bg-success{% elif post[13] == 'Expired' %}bg-secondary{% else %}bg-warning{% endif %}">
                                 {{ post[13] }}
                             </span>
+                            {% if post[17] == 1 %}
+                            <span class="badge bg-info">Public / ይፋዊ</span>
+                            {% endif %}
                         </div>
                     </div>
                     
@@ -383,7 +386,7 @@
                         
                         <div class="post-actions">
                             <button class="btn btn-sm btn-primary btn-action" 
-                                    onclick="editPost({{ post[0] }}, '{{ post[1] }}', '{{ post[2] }}', '{{ post[3] }}', '{{ post[4] }}', {{ post[5] or 'null' }}, '{{ post[7] }}', '{{ post[8] }}', '{{ post[9] }}', '{{ post[10] }}', '{{ post[11] }}', '{{ post[12] }}', '{{ post[13] }}')">
+                                    onclick="editPost({{ post[0] }}, '{{ post[1]|replace("'", "\\'")|replace('"', '\\"') }}', '{{ post[2]|replace("'", "\\'")|replace('"', '\\"')|replace('\n', '\\n')|replace('\r', '') }}', '{{ post[3] }}', '{{ post[4] or "" }}', {{ post[5] or 'null' }}, '{{ post[7] or "" }}', '{{ post[8] or "" }}', '{{ post[9] or "" }}', '{{ post[10] or "" }}', '{{ post[11] or "" }}', '{{ post[12] }}', '{{ post[13] }}', {{ post[17] or 0 }})">
                                 <i class="fa fa-edit"></i> Edit
                             </button>
                             <button class="btn btn-sm btn-danger btn-action" 
@@ -482,6 +485,16 @@
                             <input type="file" class="form-control" name="attachment" 
                                    accept="image/*,.pdf,.doc,.docx">
                             <small class="text-muted">Supported: Images, PDF, Word documents</small>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_public" id="createIsPublic">
+                                <label class="form-check-label" for="createIsPublic">
+                                    <strong>Show on Public Website / በይፋዊ ድር ጣቢያ ላይ አሳይ</strong>
+                                    <br><small class="text-muted">Check this to display this post on the public website</small>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -587,6 +600,19 @@
                             <input type="file" class="form-control" name="attachment" 
                                    accept="image/*,.pdf,.doc,.docx">
                             <small class="text-muted" id="currentAttachment"></small>
+                            <input type="hidden" name="existing_attachment_path" id="existingAttachmentPath">
+                            <input type="hidden" name="existing_attachment_name" id="existingAttachmentName">
+                            <input type="hidden" name="existing_attachment_type" id="existingAttachmentType">
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_public" id="editIsPublic">
+                                <label class="form-check-label" for="editIsPublic">
+                                    <strong>Show on Public Website / በይፋዊ ድር ጣቢያ ላይ አሳይ</strong>
+                                    <br><small class="text-muted">Check this to display this post on the public website</small>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -631,7 +657,7 @@
 </div>
 
 <script>
-function editPost(id, title, content, type, section, medebeId, startDate, endDate, attachPath, attachName, attachType, priority, status) {
+function editPost(id, title, content, type, section, medebeId, startDate, endDate, attachPath, attachName, attachType, priority, status, isPublic) {
     document.getElementById('editPostId').value = id;
     document.getElementById('editPostTitle').value = title;
     document.getElementById('editPostContent').value = content;
@@ -642,6 +668,7 @@ function editPost(id, title, content, type, section, medebeId, startDate, endDat
     document.getElementById('editEndDate').value = endDate || '';
     document.getElementById('editPriority').value = priority;
     document.getElementById('editStatus').value = status;
+    document.getElementById('editIsPublic').checked = isPublic == 1 || isPublic === '1' || isPublic === true;
     
     document.getElementById('existingAttachmentPath').value = attachPath || '';
     document.getElementById('existingAttachmentName').value = attachName || '';

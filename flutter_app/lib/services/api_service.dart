@@ -5,6 +5,10 @@ import '../config/api_config.dart';
 import '../models/member.dart';
 import '../models/post.dart';
 import '../models/study.dart';
+import '../models/donation_type.dart';
+import '../models/donation.dart';
+import '../models/mewaco_type.dart';
+import '../models/mewaco_contribution.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -311,6 +315,262 @@ class ApiService {
       return {};
     } catch (e) {
       return {};
+    }
+  }
+
+  // ====================
+  // Donations
+  // ====================
+
+  /// Get all active donation types
+  Future<List<DonationType>> getDonationTypes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.donationTypesEndpoint}'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return (data['data'] as List)
+              .map((json) => DonationType.fromJson(json))
+              .toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load donation types');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  /// Initiate a donation payment
+  Future<Map<String, dynamic>> initiateDonation({
+    required int donationTypeId,
+    required double amount,
+    String? donorName,
+    String? christianName,
+    String? donorEmail,
+    String? donorPhone,
+    bool isAnonymous = false,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.donationInitiateEndpoint}'),
+        headers: await _getHeaders(),
+        body: jsonEncode({
+          'donation_type_id': donationTypeId,
+          'amount': amount,
+          if (donorName != null && donorName.isNotEmpty) 'donor_name': donorName,
+          if (christianName != null && christianName.isNotEmpty) 'christian_name': christianName,
+          if (donorEmail != null && donorEmail.isNotEmpty) 'donor_email': donorEmail,
+          if (donorPhone != null && donorPhone.isNotEmpty) 'donor_phone': donorPhone,
+          'is_anonymous': isAnonymous,
+        }),
+      ).timeout(ApiConfig.connectTimeout);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to initiate donation');
+      }
+    } catch (e) {
+      throw Exception('Donation error: $e');
+    }
+  }
+
+  /// Verify donation payment status
+  Future<Map<String, dynamic>> verifyDonation(String txRef) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.donationVerifyEndpoint}/$txRef'),
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.connectTimeout);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to verify donation');
+      }
+    } catch (e) {
+      throw Exception('Verification error: $e');
+    }
+  }
+
+  /// Get donation history for logged-in member
+  Future<List<Donation>> getDonationHistory({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    try {
+      final queryParams = {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+
+      final uri = Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.donationHistoryEndpoint}')
+          .replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return (data['data'] as List)
+              .map((json) => Donation.fromJson(json))
+              .toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load donation history');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  /// Get specific donation details
+  Future<Donation> getDonationDetails(int donationId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.donationDetailsEndpoint}/$donationId'),
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return Donation.fromJson(data['data']);
+        }
+        throw Exception('Donation not found');
+      } else {
+        throw Exception('Failed to load donation details');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  // ====================
+  // MEWACO Contributions
+  // ====================
+
+  /// Get all active MEWACO types
+  Future<List<MewacoType>> getMewacoTypes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.mewacoTypesEndpoint}'),
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return (data['data'] as List)
+              .map((json) => MewacoType.fromJson(json))
+              .toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load MEWACO types');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  /// Initiate a MEWACO contribution payment
+  Future<Map<String, dynamic>> initiateMewacoPayment({
+    required int mewacoTypeId,
+    required double amount,
+    String? contributionDate,
+    String? notes,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.mewacoInitiateEndpoint}'),
+        headers: await _getHeaders(),
+        body: jsonEncode({
+          'mewaco_type_id': mewacoTypeId,
+          'amount': amount,
+          if (contributionDate != null && contributionDate.isNotEmpty) 'contribution_date': contributionDate,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        }),
+      ).timeout(ApiConfig.connectTimeout);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to initiate MEWACO payment');
+      }
+    } catch (e) {
+      throw Exception('MEWACO payment error: $e');
+    }
+  }
+
+  /// Verify MEWACO payment status
+  Future<Map<String, dynamic>> verifyMewacoPayment(String txRef) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.mewacoVerifyEndpoint}/$txRef'),
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.connectTimeout);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return data;
+      } else {
+        throw Exception(data['error'] ?? 'Failed to verify MEWACO payment');
+      }
+    } catch (e) {
+      throw Exception('Verification error: $e');
+    }
+  }
+
+  /// Get MEWACO contribution history for logged-in member
+  Future<List<MewacoContribution>> getMewacoContributions({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    try {
+      final queryParams = {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      };
+
+      final uri = Uri.parse('${ApiConfig.apiBaseUrl}${ApiConfig.mewacoContributionsEndpoint}')
+          .replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(ApiConfig.receiveTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          return (data['data'] as List)
+              .map((json) => MewacoContribution.fromJson(json))
+              .toList();
+        }
+        return [];
+      } else {
+        throw Exception('Failed to load MEWACO contributions');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
     }
   }
 }

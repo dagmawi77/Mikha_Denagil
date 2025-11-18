@@ -1,0 +1,196 @@
+{% extends "public/base.html" %}
+
+{% block title %}Thank You - Mikha Denagil Spiritual Society{% endblock %}
+
+{% block extra_css %}
+<style>
+    .thank-you-hero {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 4rem 0;
+        text-align: center;
+    }
+    
+    .thank-you-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        padding: 3rem;
+        margin-top: -3rem;
+        position: relative;
+        z-index: 10;
+        text-align: center;
+    }
+    
+    .success-icon {
+        font-size: 5rem;
+        color: #14860C;
+        margin-bottom: 1.5rem;
+    }
+    
+    .donation-summary {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+    
+    .summary-label {
+        color: #6c757d;
+        font-weight: 600;
+    }
+    
+    .summary-value {
+        color: #2c3e50;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    
+    .amount-value {
+        color: #14860C;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="thank-you-hero">
+    <div class="container">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h1 class="display-3 mb-3">Thank You! / እናመሰግናለን!</h1>
+        <p class="lead">Your donation has been received</p>
+    </div>
+</section>
+
+<!-- Thank You Card -->
+<section class="section-padding">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="thank-you-card">
+                    <h2 class="mb-4">{{ thank_you_message }}</h2>
+                    <p class="lead text-muted mb-4">{{ thank_you_message_amharic }}</p>
+                    
+                    {% if donation %}
+                    <div class="donation-summary">
+                        <h4 class="mb-4">
+                            <i class="fas fa-receipt me-2"></i>
+                            Donation Summary / የለግስና ማጠቃለያ
+                        </h4>
+                        
+                        {% if donation.donation_type_name or donation.donation_type_name_amharic %}
+                        <div class="summary-item">
+                            <span class="summary-label">Donation Type / የለግስና ዓይነት:</span>
+                            <span class="summary-value">
+                                {{ donation.donation_type_name_amharic or donation.donation_type_name }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if donation.christian_name %}
+                        <div class="summary-item">
+                            <span class="summary-label">Christian Name / የክርስትና ስም:</span>
+                            <span class="summary-value">
+                                <span class="text-primary"><i class="fas fa-cross me-1"></i>{{ donation.christian_name }}</span>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="summary-item">
+                            <span class="summary-label">Amount / መጠን:</span>
+                            <span class="summary-value amount-value">
+                                {{ "%.2f"|format(donation.amount) }} {{ donation.currency }}
+                            </span>
+                        </div>
+                        
+                        {% if donation.chapa_reference %}
+                        <div class="summary-item">
+                            <span class="summary-label">Transaction Reference:</span>
+                            <span class="summary-value">
+                                <code>{{ donation.chapa_reference }}</code>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if donation.transaction_id %}
+                        <div class="summary-item">
+                            <span class="summary-label">Transaction ID:</span>
+                            <span class="summary-value">
+                                <code>{{ donation.transaction_id }}</code>
+                            </span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="summary-item">
+                            <span class="summary-label">Status / ሁኔታ:</span>
+                            <span class="summary-value">
+                                {% if donation.payment_status == 'Paid' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Paid
+                                </span>
+                                {% elif donation.payment_status == 'Completed' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-check-double me-1"></i>Completed
+                                </span>
+                                {% elif donation.payment_status == 'Pending' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle me-1"></i>Failed
+                                </span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        {% if donation.created_at %}
+                        <div class="summary-item">
+                            <span class="summary-label">Date / ቀን:</span>
+                            <span class="summary-value">
+                                {{ donation.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('public_website.homepage') }}" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-home me-2"></i>Return Home
+                        </a>
+                        <a href="{{ url_for('public_website.donation_page') }}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-heart me-2"></i>Make Another Donation
+                        </a>
+                    </div>
+                    
+                    <div class="mt-5 pt-4 border-top">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            A confirmation email has been sent to your email address.
+                            {% if donation and donation.payment_status == 'Pending' %}
+                            Your payment is being processed. You will receive a notification once it's confirmed.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

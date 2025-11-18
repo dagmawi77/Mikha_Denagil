@@ -1,0 +1,118 @@
+{% extends "public/base.html" %}
+
+{% block title %}{{ study.study_title }} - Mikha Denagil{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="page-header bg-primary text-white py-4">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('public_website.homepage') }}" class="text-white">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('public_website.studies_page') }}" class="text-white">Studies</a></li>
+                <li class="breadcrumb-item active text-white-50">{{ study.study_title[:30] }}...</li>
+            </ol>
+        </nav>
+    </div>
+</section>
+
+<!-- Study Detail -->
+<section class="section-padding">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <article class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            {% if study.is_featured %}
+                            <span class="badge bg-warning text-dark me-2">Featured</span>
+                            {% endif %}
+                            {% if study.category_name_amharic %}
+                            <span class="badge bg-secondary">{{ study.category_name_amharic }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <h1 class="display-5 mb-4">{{ study.study_title }}</h1>
+                        
+                        <div class="d-flex flex-wrap gap-3 mb-4 text-muted">
+                            {% if study.author %}
+                            <div>
+                                <i class="fas fa-user me-1"></i>Author: {{ study.author }}
+                            </div>
+                            {% endif %}
+                            {% if study.publish_date %}
+                            <div>
+                                <i class="far fa-calendar me-1"></i>Published: {{ study.publish_date.strftime('%B %d, %Y') }}
+                            </div>
+                            {% endif %}
+                            {% if study.views_count %}
+                            <div>
+                                <i class="far fa-eye me-1"></i>{{ study.views_count }} views
+                            </div>
+                            {% endif %}
+                            {% if study.downloads_count %}
+                            <div>
+                                <i class="fas fa-download me-1"></i>{{ study.downloads_count }} downloads
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if study.summary %}
+                        <div class="alert alert-info mb-4">
+                            <h5 class="alert-heading">Summary / አጭር መግለጫ</h5>
+                            <p class="mb-0">{{ study.summary }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="content-body mb-4">
+                            {{ study.content_body|safe }}
+                        </div>
+                        
+                        {% if study.attachment_path %}
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h5 class="mb-3">
+                                <i class="fas fa-paperclip me-2"></i>Attachment / ተያያዥ ፋይል
+                            </h5>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-{{ 'pdf' if study.attachment_type == 'pdf' else 'image' if study.attachment_type == 'image' else 'file' }} fa-2x text-primary me-3"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">{{ study.attachment_name or 'Download File' }}</div>
+                                    <small class="text-muted">{{ study.attachment_type|upper }} file</small>
+                                </div>
+                                <a href="{{ url_for('static', filename=study.attachment_path) }}" 
+                                   class="btn btn-primary"
+                                   target="_blank"
+                                   download>
+                                    <i class="fas fa-download me-2"></i>Download
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if study.tags %}
+                        <div class="mt-4">
+                            <h6>Tags:</h6>
+                            {% for tag in study.tags.split(',') %}
+                            <span class="badge bg-secondary me-1">{{ tag.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <hr class="my-4">
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('public_website.studies_page') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Studies
+                            </a>
+                            <a href="{{ url_for('public_website.homepage') }}" class="btn btn-primary">
+                                <i class="fas fa-home me-2"></i>Home
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

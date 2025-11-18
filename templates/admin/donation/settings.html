@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Donation Settings - Donation Management{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #14860C;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .help-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .form-check-input:checked {
+        background-color: #14860C;
+        border-color: #14860C;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h2><i class="fas fa-cog me-2"></i>Donation Settings</h2>
+            <p>የለግስና ቅንብሮች - Configure Chapa payment gateway and donation settings</p>
+        </div>
+    </div>
+    
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="POST" id="settingsForm">
+            <!-- Chapa API Settings -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-key"></i>
+                    Chapa Payment Gateway Settings
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="chapa_public_key" class="form-label">Chapa Public Key</label>
+                            <input type="text" class="form-control" id="chapa_public_key" name="chapa_public_key" 
+                                   value="{{ settings.get('chapa_public_key', '') }}"
+                                   placeholder="CHAPUBK_TEST-... or CHAPUBK-...">
+                            <div class="help-text">
+                                Get your public key from Chapa dashboard<br>
+                                <small class="text-muted">Test Key: CHAPUBK_TEST-L0hqsaiWfP8JXJMXBqFyRSRbyJHp2quS</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="chapa_secret_key" class="form-label">Chapa Secret Key</label>
+                            <input type="password" class="form-control" id="chapa_secret_key" name="chapa_secret_key" 
+                                   value="{{ settings.get('chapa_secret_key', '') }}"
+                                   placeholder="CHASECK_TEST-... or CHASECK-...">
+                            <div class="help-text">
+                                Keep this secret! Get from Chapa dashboard<br>
+                                <small class="text-muted">Test Key: CHASECK_TEST-Gm6uD4CijZ2RSUrYPWEyV2i56gHU1nQp</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="callback_url" class="form-label">Callback URL</label>
+                            <input type="text" class="form-control" id="callback_url" name="callback_url" 
+                                   value="{{ settings.get('callback_url', '') }}"
+                                   placeholder="https://yoursite.com/donation/callback">
+                            <div class="help-text">URL where Chapa will send payment notifications</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="redirect_url_after_payment" class="form-label">Redirect URL After Payment</label>
+                            <input type="text" class="form-control" id="redirect_url_after_payment" name="redirect_url_after_payment" 
+                                   value="{{ settings.get('redirect_url_after_payment', '/donation/thank-you') }}"
+                                   placeholder="/donation/thank-you">
+                            <div class="help-text">Where to redirect users after payment</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- General Settings -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-sliders-h"></i>
+                    General Donation Settings
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="default_currency" class="form-label">Default Currency</label>
+                            <select class="form-control" id="default_currency" name="default_currency">
+                                <option value="ETB" {{ 'selected' if settings.get('default_currency', 'ETB') == 'ETB' else '' }}>ETB - Ethiopian Birr</option>
+                                <option value="USD" {{ 'selected' if settings.get('default_currency', 'ETB') == 'USD' else '' }}>USD - US Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Module Status</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="donation_module_enabled" name="donation_module_enabled" 
+                                       {{ 'checked' if settings.get('donation_module_enabled', '1') == '1' else '' }}
+                                       style="width: 3rem; height: 1.5rem;">
+                                <label class="form-check-label ms-3" for="donation_module_enabled">
+                                    <strong>Enable Donation Module</strong>
+                                    <div class="help-text">Enable/disable the entire donation module</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Allow Any Amount</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="allow_any_amount" name="allow_any_amount" 
+                                       {{ 'checked' if settings.get('allow_any_amount', '1') == '1' else '' }}
+                                       style="width: 3rem; height: 1.5rem;">
+                                <label class="form-check-label ms-3" for="allow_any_amount">
+                                    <strong>Yes</strong>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="min_donation_amount" class="form-label">Minimum Amount</label>
+                            <input type="number" class="form-control" id="min_donation_amount" name="min_donation_amount" 
+                                   value="{{ settings.get('min_donation_amount', '10') }}" min="0" step="0.01">
+                            <div class="help-text">Minimum donation amount</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="max_donation_amount" class="form-label">Maximum Amount</label>
+                            <input type="number" class="form-control" id="max_donation_amount" name="max_donation_amount" 
+                                   value="{{ settings.get('max_donation_amount', '1000000') }}" min="0" step="0.01">
+                            <div class="help-text">Maximum donation amount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Thank You Messages -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-heart"></i>
+                    Thank You Messages
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="thank_you_message" class="form-label">Thank You Message (English)</label>
+                            <textarea class="form-control" id="thank_you_message" name="thank_you_message" rows="4"
+                                      placeholder="Message shown after successful donation">{{ settings.get('thank_you_message', '') }}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="thank_you_message_amharic" class="form-label">Thank You Message (Amharic) / አመሰግናችሁ</label>
+                            <textarea class="form-control" id="thank_you_message_amharic" name="thank_you_message_amharic" rows="4"
+                                      placeholder="የሚታየው መልዕክት">{{ settings.get('thank_you_message_amharic', '') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-end pt-3 border-top">
+                <button type="submit" class="btn btn-modern btn-modern-primary">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

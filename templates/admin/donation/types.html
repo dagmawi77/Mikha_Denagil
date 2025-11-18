@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Donation Types Management - Donation Management{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .type-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        border-left: 4px solid #14860C;
+    }
+    
+    .type-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .type-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+    }
+    
+    .type-description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+    
+    .type-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .type-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #14860C;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-modern-danger:hover {
+        background: #c82333;
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-tags me-2"></i>Donation Types Management</h2>
+                <p>የለግስና ዓይነቶች አስተዳደር - Manage donation categories and types</p>
+            </div>
+            <a href="{{ url_for('donation_management.add_donation_type') }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-plus me-2"></i>Add Donation Type
+            </a>
+        </div>
+    </div>
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' }} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Donation Types List -->
+    {% if types %}
+    <div class="row">
+        {% for type in types %}
+        <div class="col-md-6 col-lg-4">
+            <div class="type-card">
+                <div class="type-name">
+                    {{ type.name_amharic or type.name or 'Untitled Type' }}
+                </div>
+                {% if type.description or type.description_amharic %}
+                <div class="type-description">
+                    {{ (type.description_amharic or type.description or '')[:100] }}{% if (type.description_amharic or type.description or '')|length > 100 %}...{% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="type-meta">
+                    <div>
+                        {% if type.is_active %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check-circle me-1"></i>Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-pause-circle me-1"></i>Inactive
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="type-actions">
+                        <a href="{{ url_for('donation_management.edit_donation_type', type_id=type.id) }}" 
+                           class="btn btn-sm btn-modern-primary">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('donation_management.toggle_donation_type', type_id=type.id) }}" 
+                              style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-modern-secondary" title="Toggle Status">
+                                <i class="fas fa-toggle-{{ 'on' if type.is_active else 'off' }}"></i>
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('donation_management.delete_donation_type', type_id=type.id) }}" 
+                              style="display: inline;" 
+                              onsubmit="return confirm('Are you sure you want to delete this donation type?');">
+                            <button type="submit" class="btn btn-sm btn-modern-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-tags"></i>
+        </div>
+        <h3 class="mb-3">No Donation Types Found</h3>
+        <p class="text-muted mb-4">Get started by adding your first donation type.</p>
+        <a href="{{ url_for('donation_management.add_donation_type') }}" class="btn btn-modern btn-modern-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>Add Donation Type
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

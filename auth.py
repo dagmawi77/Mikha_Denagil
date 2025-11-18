@@ -15,7 +15,8 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'payroll_number' not in session:
             flash('Please login to access this page', 'warning')
-            return redirect(url_for('login'))
+            # Redirect to login page with GET method
+            return redirect(url_for('login'), code=302)
         return f(*args, **kwargs)
     return decorated_function
 

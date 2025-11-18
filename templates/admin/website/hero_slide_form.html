@@ -3,116 +3,350 @@
 {% block title %}{{ 'Edit' if slide else 'Add' }} Hero Slide - Website Management{% endblock %}
 
 {% block content %}
-<div class="content-body">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">{{ 'Edit' if slide else 'Add' }} Hero Slide / {{ 'አስተካክል' if slide else 'ጨምር' }} የመጀመሪያ ስላይድ</h4>
-                        <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="title" class="form-label">Title (English) *</label>
-                                        <input type="text" class="form-control" id="title" name="title" 
-                                               value="{{ slide.title if slide else '' }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="title_amharic" class="form-label">Title (Amharic) / ርዕስ</label>
-                                        <input type="text" class="form-control" id="title_amharic" name="title_amharic" 
-                                               value="{{ slide.title_amharic if slide else '' }}">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="description" class="form-label">Description (English)</label>
-                                        <textarea class="form-control" id="description" name="description" rows="3">{{ slide.description if slide else '' }}</textarea>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="description_amharic" class="form-label">Description (Amharic) / መግለጫ</label>
-                                        <textarea class="form-control" id="description_amharic" name="description_amharic" rows="3">{{ slide.description_amharic if slide else '' }}</textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="image" class="form-label">Image *</label>
-                                <input type="file" class="form-control" id="image" name="image" accept="image/*" 
-                                       {{ 'required' if not slide else '' }}>
-                                {% if slide and slide.image_path %}
-                                <small class="text-muted">Current image:</small><br>
-                                <img src="{{ url_for('static', filename=slide.image_path) }}" 
-                                     alt="Current image" style="max-width: 300px; margin-top: 10px; border-radius: 4px;">
-                                <small class="text-muted d-block mt-1">Leave empty to keep current image</small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="button_text" class="form-label">Button Text</label>
-                                        <input type="text" class="form-control" id="button_text" name="button_text" 
-                                               value="{{ slide.button_text if slide else 'Learn More' }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="button_link" class="form-label">Button Link</label>
-                                        <input type="text" class="form-control" id="button_link" name="button_link" 
-                                               value="{{ slide.button_link if slide else '' }}" 
-                                               placeholder="/about or http://example.com">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="display_order" class="form-label">Display Order</label>
-                                        <input type="number" class="form-control" id="display_order" name="display_order" 
-                                               value="{{ slide.display_order if slide else 0 }}" min="0">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <div class="form-check mt-4">
-                                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
-                                                   {{ 'checked' if slide and slide.is_active else 'checked' }}>
-                                            <label class="form-check-label" for="is_active">
-                                                Active / ንቁ
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> {{ 'Update' if slide else 'Save' }} Slide
-                                </button>
-                                <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-secondary">
-                                    Cancel
-                                </a>
-                            </div>
-                        </form>
-                    </div>
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #14860C;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .image-preview-container {
+        margin-top: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 2px dashed #dee2e6;
+        text-align: center;
+    }
+    
+    .image-preview-container img {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .file-upload-area {
+        border: 2px dashed #14860C;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .file-upload-area:hover {
+        background: #e9ecef;
+        border-color: #106b09;
+    }
+    
+    .file-upload-area.dragover {
+        background: #e8f5e9;
+        border-color: #14860C;
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .form-check-input:checked {
+        background-color: #14860C;
+        border-color: #14860C;
+    }
+    
+    .help-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+</style>
+<div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="fas fa-{{ 'edit' if slide else 'plus-circle' }} me-2"></i>
+                        {{ 'Edit' if slide else 'Add' }} Hero Slide
+                    </h2>
+                    <p>{{ 'አስተካክል' if slide else 'ጨምር' }} የመጀመሪያ ስላይድ - {{ 'Update' if slide else 'Create' }} homepage slider content</p>
                 </div>
+                <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-modern btn-modern-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to List
+                </a>
             </div>
         </div>
+        
+        <!-- Form Card -->
+        <div class="form-card">
+            <form method="POST" enctype="multipart/form-data" id="slideForm">
+                <!-- Basic Information Section -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fas fa-info-circle"></i>
+                        Basic Information
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">
+                                    Title (English) <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ slide.title if slide else '' }}" required
+                                       placeholder="Enter slide title">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="title_amharic" class="form-label">
+                                    Title (Amharic) / ርዕስ
+                                </label>
+                                <input type="text" class="form-control" id="title_amharic" name="title_amharic" 
+                                       value="{{ slide.title_amharic if slide else '' }}"
+                                       placeholder="የስላይድ ርዕስ ያስገቡ">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description (English)</label>
+                                <textarea class="form-control" id="description" name="description" rows="4"
+                                          placeholder="Enter slide description">{{ slide.description if slide else '' }}</textarea>
+                                <div class="help-text">This text will appear on the slide overlay</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="description_amharic" class="form-label">Description (Amharic) / መግለጫ</label>
+                                <textarea class="form-control" id="description_amharic" name="description_amharic" rows="4"
+                                          placeholder="የስላይድ መግለጫ ያስገቡ">{{ slide.description_amharic if slide else '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Image Section -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fas fa-image"></i>
+                        Slide Image
+                    </div>
+                    <div class="mb-3">
+                        <label for="image" class="form-label">
+                            Image <span class="text-danger">*</span>
+                        </label>
+                        <div class="file-upload-area" onclick="document.getElementById('image').click()">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #14860C;"></i>
+                            <p class="mb-2"><strong>Click to upload or drag and drop</strong></p>
+                            <p class="text-muted mb-0">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                        <input type="file" class="form-control d-none" id="image" name="image" accept="image/*" 
+                               {{ 'required' if not slide else '' }}
+                               onchange="previewImage(this)">
+                        {% if slide and slide.image_path %}
+                        <div class="image-preview-container">
+                            <p class="mb-2"><strong>Current Image:</strong></p>
+                            <img src="{{ url_for('static', filename=slide.image_path) }}" 
+                                 alt="Current image" id="currentImagePreview"
+                                 onerror="this.onerror=null; this.src='{{ url_for('uploaded_file', filename=slide.image_path) }}';">
+                            <p class="text-muted mt-2 mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Leave file field empty to keep current image
+                            </p>
+                        </div>
+                        {% endif %}
+                        <div id="newImagePreview" class="image-preview-container" style="display: none;">
+                            <p class="mb-2"><strong>New Image Preview:</strong></p>
+                            <img id="previewImg" src="" alt="Preview">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Button Configuration -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fas fa-mouse-pointer"></i>
+                        Button Configuration
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="button_text" class="form-label">Button Text</label>
+                                <input type="text" class="form-control" id="button_text" name="button_text" 
+                                       value="{{ slide.button_text if slide else 'Learn More' }}"
+                                       placeholder="e.g., Learn More, Read More">
+                                <div class="help-text">Text displayed on the call-to-action button</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="button_link" class="form-label">Button Link</label>
+                                <input type="text" class="form-control" id="button_link" name="button_link" 
+                                       value="{{ slide.button_link if slide else '' }}" 
+                                       placeholder="/about or http://example.com">
+                                <div class="help-text">URL where the button should link to</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Display Settings -->
+                <div class="form-section">
+                    <div class="form-section-title">
+                        <i class="fas fa-cog"></i>
+                        Display Settings
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="display_order" class="form-label">Display Order</label>
+                                <input type="number" class="form-control" id="display_order" name="display_order" 
+                                       value="{{ slide.display_order if slide else 0 }}" min="0">
+                                <div class="help-text">Lower numbers appear first (0 = first slide)</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                           {{ 'checked' if slide and slide.is_active else 'checked' }}
+                                           style="width: 3rem; height: 1.5rem;">
+                                    <label class="form-check-label ms-3" for="is_active">
+                                        <strong>Active / ንቁ</strong>
+                                        <div class="help-text">Show this slide on the homepage</div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a href="{{ url_for('admin_website.manage_hero_slides') }}" class="btn btn-modern btn-modern-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-modern btn-modern-primary">
+                        <i class="fas fa-save me-2"></i>{{ 'Update' if slide else 'Save' }} Slide
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+
+<script>
+function previewImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('newImagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Drag and drop functionality
+const uploadArea = document.querySelector('.file-upload-area');
+const fileInput = document.getElementById('image');
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        previewImage(fileInput);
+    }
+});
+</script>
 {% endblock %}
 

@@ -223,7 +223,7 @@
             {% endif %}
         {% endwith %}
         
-        <form method="POST" action="/">
+        <form method="POST" action="{{ url_for('login') }}">
             <label for="payroll_number">Payroll Number</label>
             <input type="text" id="payroll_number" name="payroll_number" placeholder="Enter your payroll number" required autofocus>
             <label for="password">Password</label>

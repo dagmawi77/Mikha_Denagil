@@ -15,6 +15,26 @@ document.addEventListener('DOMContentLoaded', function() {
 // Hero Slider Functionality
 function initHeroSlider() {
     const slides = document.querySelectorAll('.hero-slide');
+    
+    // Fix image paths for hero slides - check if images exist and use fallback if needed
+    slides.forEach(function(slide) {
+        const bgImage = slide.style.backgroundImage;
+        const fallback = slide.getAttribute('data-bg-fallback');
+        
+        if (bgImage && bgImage.includes('url(') && fallback) {
+            const img = new Image();
+            const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+            
+            if (urlMatch) {
+                img.onerror = function() {
+                    // If main image fails, try fallback
+                    slide.style.backgroundImage = `url('${fallback}')`;
+                };
+                img.src = urlMatch[1];
+            }
+        }
+    });
+    
     if (slides.length <= 1) return;
     
     let currentSlide = 0;

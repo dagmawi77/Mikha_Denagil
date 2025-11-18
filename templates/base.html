@@ -14,6 +14,41 @@
     
     <!-- CUSTOM GREEN THEME - MUST BE LAST TO OVERRIDE ALL OTHER STYLES -->
     <style>
+        /* Content body spacing - account for sidebar */
+        .content-body {
+            margin-left: 15.1875rem !important;
+            padding-left: 30px !important;
+            padding-right: 30px !important;
+            padding-top: 30px !important;
+            padding-bottom: 30px !important;
+            transition: margin-left 0.3s ease !important;
+        }
+        
+        /* When sidebar is collapsed/minimized */
+        body.sidebar-mini .content-body,
+        .menu-toggle .content-body,
+        [data-sidebar-style="full"][data-layout="vertical"] .menu-toggle .content-body {
+            margin-left: 3.75rem !important;
+            padding-left: 30px !important;
+            padding-right: 30px !important;
+        }
+        
+        /* Responsive - mobile */
+        @media (max-width: 991px) {
+            .content-body {
+                margin-left: 0 !important;
+                padding-left: 15px !important;
+                padding-right: 15px !important;
+            }
+        }
+        
+        /* Medium screens */
+        @media only screen and (min-width: 1200px) and (max-width: 1350px) {
+            .content-body {
+                margin-left: 14.375rem !important;
+            }
+        }
+        
         /* FORCE GREEN SIDEBAR BACKGROUND - Override all other styles */
         .nk-sidebar,
         .nk-sidebar * {
@@ -266,6 +301,7 @@
                                 <i class="icon-note menu-icon"></i><span class="nav-text">{{ t('reports') }}</span>
                             </a>
                             <ul aria-expanded="false">
+                                <li><a href="{{url_for('donation_report.donation_report_page')}}">Donation Report / የለግስና ሪፖርት</a></li>
                                 <li><a href="{{url_for('attendance_report')}}">{{ t('attendance_report') }}</a></li>
                             </ul>
                         </li>
@@ -382,14 +418,8 @@
                         </li>
                         
                         <li>
-                            <a href="{{url_for('member_accounts')}}">
-                                <i class="icon-lock menu-icon"></i><span class="nav-text">Member Accounts / የአባላት መለያዎች</span>
-                            </a>
-                        </li>
-                        
-                        <li>
                             <a class="has-arrow" href="javascript:void()" aria-expanded="false">
-                                <i class="icon-globe menu-icon"></i><span class="nav-text">Website Management / የድህረገጽ አስተዳደር</span>
+                                <i class="icon-screen-desktop menu-icon"></i><span class="nav-text">Website Management / የድህረገጽ አስተዳደር</span>
                             </a>
                             <ul aria-expanded="false">
                                 <li><a href="{{url_for('admin_website.manage_hero_slides')}}">Hero Slider / የመጀመሪያ ስላይድ</a></li>
@@ -400,6 +430,23 @@
                                 <li><a href="{{url_for('admin_website.manage_contact_submissions')}}">Contact Submissions / የመገናኛ ጥያቄዎች</a></li>
                                 <li><a href="{{url_for('public_website.homepage')}}" target="_blank">View Public Website / የድህረገጽ አሳይ</a></li>
                             </ul>
+                        </li>
+                        
+                        <li>
+                            <a class="has-arrow" href="javascript:void()" aria-expanded="false">
+                                <i class="icon-heart menu-icon"></i><span class="nav-text">Donation Management / የለግስና አስተዳደር</span>
+                            </a>
+                            <ul aria-expanded="false">
+                                <li><a href="{{url_for('donation_management.manage_donation_types')}}">Donation Types / የለግስና ዓይነቶች</a></li>
+                                <li><a href="{{url_for('donation_management.donation_settings')}}">Settings / ቅንብሮች</a></li>
+                                <li><a href="{{url_for('donation_management.donation_records')}}">Records / መዝገቦች</a></li>
+                            </ul>
+                        </li>
+                        
+                        <li>
+                            <a href="{{url_for('member_accounts')}}">
+                                <i class="icon-lock menu-icon"></i><span class="nav-text">Member Accounts / የአባላት መለያዎች</span>
+                            </a>
                         </li>
                         
                         

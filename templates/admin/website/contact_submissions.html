@@ -3,71 +3,234 @@
 {% block title %}Contact Submissions - Website Management{% endblock %}
 
 {% block content %}
-<div class="content-body">
-    <div class="container-fluid">
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .submission-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        border-left: 4px solid #14860C;
+    }
+    
+    .submission-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .submission-card.new {
+        border-left-color: #ffc107;
+        background: linear-gradient(to right, #fffbf0 0%, #ffffff 10%);
+    }
+    
+    .submission-card.read {
+        border-left-color: #17a2b8;
+    }
+    
+    .submission-card.replied {
+        border-left-color: #28a745;
+    }
+    
+    .submission-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .submission-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+    }
+    
+    .submission-date {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    .submission-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .info-item i {
+        color: #14860C;
+    }
+    
+    .submission-subject {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .submission-message {
+        color: #6c757d;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        max-height: 3em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .submission-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #14860C;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+</style>
+
+<div class="container-fluid">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h2><i class="fas fa-inbox me-2"></i>Contact Form Submissions</h2>
+                <p>የመገናኛ ጥያቄዎች - View and manage contact form submissions from the public website</p>
+            </div>
+        </div>
+        
+        <!-- Submissions List -->
+        {% if submissions %}
         <div class="row">
+            {% for submission in submissions %}
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Contact Form Submissions / የመገናኛ ጥያቄዎች</h4>
+                <div class="submission-card {{ submission.status.lower() if submission.status else 'new' }}">
+                    <div class="submission-header">
+                        <div>
+                            <div class="submission-name">
+                                {{ submission.name }}
+                            </div>
+                            <div class="submission-date">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ submission.created_at.strftime('%B %d, %Y at %I:%M %p') if submission.created_at else 'Date not available' }}
+                            </div>
+                        </div>
+                        <div>
+                            {% if submission.status == 'New' %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-circle me-1"></i>New
+                            </span>
+                            {% elif submission.status == 'Read' %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-eye me-1"></i>Read
+                            </span>
+                            {% elif submission.status == 'Replied' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-reply me-1"></i>Replied
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ submission.status }}</span>
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Phone</th>
-                                        <th>Subject</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% if submissions %}
-                                        {% for submission in submissions %}
-                                        <tr>
-                                            <td>{{ submission.created_at.strftime('%Y-%m-%d %H:%M') if submission.created_at else '-' }}</td>
-                                            <td><strong>{{ submission.name }}</strong></td>
-                                            <td>{{ submission.email or '-' }}</td>
-                                            <td>{{ submission.phone or '-' }}</td>
-                                            <td>{{ submission.subject or '-' }}</td>
-                                            <td>
-                                                {% if submission.status == 'New' %}
-                                                <span class="badge bg-warning">New</span>
-                                                {% elif submission.status == 'Read' %}
-                                                <span class="badge bg-info">Read</span>
-                                                {% elif submission.status == 'Replied' %}
-                                                <span class="badge bg-success">Replied</span>
-                                                {% else %}
-                                                <span class="badge bg-secondary">{{ submission.status }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <a href="{{ url_for('admin_website.view_contact_submission', submission_id=submission.id) }}" 
-                                                   class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-eye"></i> View
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted">
-                                                No submissions found.
-                                            </td>
-                                        </tr>
-                                    {% endif %}
-                                </tbody>
-                            </table>
+                    
+                    <div class="submission-info">
+                        {% if submission.email %}
+                        <div class="info-item">
+                            <i class="fas fa-envelope"></i>
+                            <span>{{ submission.email }}</span>
+                        </div>
+                        {% endif %}
+                        {% if submission.phone %}
+                        <div class="info-item">
+                            <i class="fas fa-phone"></i>
+                            <span>{{ submission.phone }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if submission.subject %}
+                    <div class="submission-subject">
+                        <i class="fas fa-tag me-1"></i>{{ submission.subject }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if submission.message %}
+                    <div class="submission-message">
+                        {{ submission.message[:150] }}{% if submission.message|length > 150 %}...{% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="submission-footer">
+                        <div>
+                            <a href="{{ url_for('admin_website.view_contact_submission', submission_id=submission.id) }}" 
+                               class="btn btn-modern btn-modern-primary">
+                                <i class="fas fa-eye me-2"></i>View Details
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-inbox"></i>
+            </div>
+            <h3 class="mb-3">No Submissions Found</h3>
+            <p class="text-muted mb-4">Contact form submissions from the public website will appear here.</p>
+        </div>
+        {% endif %}
     </div>
-</div>
 {% endblock %}
-

@@ -858,6 +858,455 @@ def download_study_attachment_mobile(user_id, member_id, study_id):
         conn.close()
 
 #  =====================
+#  Donation Endpoints (Flutter Mobile App)
+#  =====================
+
+@mobile_api.route('/donations/types', methods=['GET'])
+def get_donation_types():
+    """Get all active donation types"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        cursor.execute("""
+            SELECT id, name, name_amharic, description, description_amharic, status
+            FROM donation_types 
+            WHERE status = 'active' OR is_active = 1
+            ORDER BY name ASC
+        """)
+        types = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': types
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/donations/initiate', methods=['POST'])
+@token_required
+def initiate_donation(current_user_id, current_member_id):
+    """Initiate a donation payment via Chapa"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields (email is optional for mobile)
+        required_fields = ['donation_type_id', 'amount']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        donation_type_id = data.get('donation_type_id')
+        amount = float(data.get('amount', 0))
+        donor_name = data.get('donor_name', '')
+        christian_name = data.get('christian_name', '')
+        donor_email = data.get('donor_email', '')  # Optional for mobile
+        donor_phone = data.get('donor_phone', '')
+        is_anonymous = data.get('is_anonymous', False)
+        
+        # Validate amount first
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        # Get member info if available
+        cursor.execute("SELECT full_name, email, phone FROM member_registration WHERE id = %s", (current_member_id,))
+        member = cursor.fetchone()
+        
+        # Use member info as defaults if not provided
+        if not donor_name and member:
+            donor_name = member.get('full_name', '')
+        if not donor_email and member:
+            donor_email = member.get('email', '')
+        if not donor_phone and member:
+            donor_phone = member.get('phone', '')
+        
+        # Email is optional, but if provided, validate format
+        if donor_email and '@' not in donor_email:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Invalid email format'
+            }), 400
+        
+        # Get settings
+        cursor.execute("SELECT setting_key, setting_value FROM donation_settings WHERE setting_key IN ('min_donation_amount', 'max_donation_amount', 'chapa_secret_key', 'default_currency')")
+        settings = {row['setting_key']: row['setting_value'] for row in cursor.fetchall()}
+        
+        min_amount = float(settings.get('min_donation_amount', 10))
+        max_amount = float(settings.get('max_donation_amount', 1000000))
+        currency = settings.get('default_currency', 'ETB')
+        chapa_secret_key = settings.get('chapa_secret_key', '')
+        
+        if amount < min_amount or amount > max_amount:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Amount must be between {min_amount} and {max_amount} {currency}'
+            }), 400
+        
+        if not chapa_secret_key:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Payment gateway not configured'
+            }), 500
+        
+        # Generate transaction reference
+        import uuid
+        tx_ref = f"MD_{uuid.uuid4().hex[:16].upper()}"
+        
+        # Create donation record
+        cursor.execute("""
+            INSERT INTO donations 
+            (donation_type_id, donor_name, christian_name, donor_email, donor_phone, is_anonymous, 
+             amount, currency, payment_status, payment_method, tx_ref, chapa_reference,
+             ip_address, user_agent, paid_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Completed', 'Chapa', %s, %s, %s, %s, NOW())
+        """, (donation_type_id, donor_name if not is_anonymous else 'Anonymous', 
+              christian_name if not is_anonymous else '', donor_email, donor_phone, 1 if is_anonymous else 0, 
+              amount, currency, tx_ref, tx_ref,
+              request.remote_addr, request.headers.get('User-Agent', '')))
+        
+        donation_id = cursor.lastrowid
+        
+        # Prepare Chapa request
+        import requests
+        import json
+        
+        name_parts = donor_name.split(' ', 1) if donor_name else ['Donor', '']
+        first_name = name_parts[0] if name_parts else 'Donor'
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        
+        chapa_url = "https://api.chapa.co/v1/transaction/initialize"
+        headers = {
+            "Authorization": f"Bearer {chapa_secret_key}",
+            "Content-Type": "application/json"
+        }
+        
+        callback_url = request.url_root.rstrip('/') + '/donation/callback'
+        return_url = request.url_root.rstrip('/') + '/donation/thank-you'
+        
+        # Chapa requires email, use a default if not provided
+        chapa_email = donor_email if donor_email else f"donor_{donation_id}@mikhadenagil.org"
+        
+        chapa_data = {
+            "amount": str(amount),
+            "currency": currency,
+            "email": chapa_email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone_number": donor_phone or "0900000000",
+            "tx_ref": tx_ref,
+            "callback_url": callback_url,
+            "return_url": return_url,
+            "meta": {
+                "donation_id": donation_id,
+                "donation_type_id": donation_type_id or 0,
+                "member_id": current_member_id,
+                "source": "mobile_app"
+            }
+        }
+        
+        # Make request to Chapa
+        response = requests.post(chapa_url, json=chapa_data, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 'success' and result.get('data', {}).get('checkout_url'):
+                checkout_url = result['data']['checkout_url']
+                transaction_id = result.get('data', {}).get('id', '')
+                
+                # Update donation record
+                if transaction_id:
+                    cursor.execute("""
+                        UPDATE donations 
+                        SET transaction_id = %s, chapa_response = %s
+                        WHERE id = %s
+                    """, (transaction_id, json.dumps(result), donation_id))
+                    conn.commit()
+                
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'donation_id': donation_id,
+                        'checkout_url': checkout_url,
+                        'tx_ref': tx_ref,
+                        'amount': amount,
+                        'currency': currency
+                    }
+                }), 200
+            else:
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment initialization failed'
+                }), 500
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Chapa API error: {response.text}'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/donations/verify/<tx_ref>', methods=['GET'])
+@token_required
+def verify_donation_payment(current_user_id, current_member_id, tx_ref):
+    """Verify donation payment status from Chapa"""
+    try:
+        import requests
+        import json
+        import os
+        from config import Config
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        # Get donation record
+        cursor.execute("""
+            SELECT d.*, dt.name as donation_type_name, dt.name_amharic as donation_type_name_amharic
+            FROM donations d
+            LEFT JOIN donation_types dt ON d.donation_type_id = dt.id
+            WHERE d.tx_ref = %s OR d.chapa_reference = %s
+        """, (tx_ref, tx_ref))
+        
+        donation = cursor.fetchone()
+        
+        if not donation:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Donation not found'
+            }), 404
+        
+        # Get Chapa secret key
+        cursor.execute("SELECT setting_value FROM donation_settings WHERE setting_key = 'chapa_secret_key'")
+        setting = cursor.fetchone()
+        chapa_secret_key = setting['setting_value'] if setting else os.environ.get('CHAPA_SECRET_KEY') or Config.CHAPA_SECRET_KEY
+        
+        if not chapa_secret_key:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Payment gateway not configured'
+            }), 500
+        
+        # Verify with Chapa API
+        chapa_url = f"https://api.chapa.co/v1/transaction/verify/{tx_ref}"
+        headers = {
+            "Authorization": f"Bearer {chapa_secret_key}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(chapa_url, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            
+            # Update donation status based on Chapa response
+            if result.get('status') == 'success':
+                chapa_status = result.get('data', {}).get('status', '')
+                
+                # Map Chapa status to our status (treat pending as completed since auto-deducted)
+                if chapa_status == 'successful':
+                    payment_status = 'Completed'
+                elif chapa_status == 'pending':
+                    payment_status = 'Completed'  # Treat pending as completed since auto-deducted
+                else:
+                    payment_status = 'Failed'
+                
+                cursor.execute("""
+                    UPDATE donations 
+                    SET payment_status = %s,
+                        transaction_id = %s,
+                        chapa_response = %s,
+                        paid_at = CASE WHEN %s = 'Completed' THEN NOW() ELSE paid_at END,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """, (
+                    payment_status,
+                    result.get('data', {}).get('id', ''),
+                    json.dumps(result),
+                    payment_status,
+                    donation['id']
+                ))
+                conn.commit()
+                
+                # Refresh donation data
+                cursor.execute("""
+                    SELECT d.*, dt.name as donation_type_name, dt.name_amharic as donation_type_name_amharic
+                    FROM donations d
+                    LEFT JOIN donation_types dt ON d.donation_type_id = dt.id
+                    WHERE d.id = %s
+                """, (donation['id'],))
+                updated_donation = cursor.fetchone()
+                
+                # Convert datetime to ISO format
+                if updated_donation.get('created_at'):
+                    updated_donation['created_at'] = updated_donation['created_at'].isoformat() if hasattr(updated_donation['created_at'], 'isoformat') else str(updated_donation['created_at'])
+                if updated_donation.get('paid_at'):
+                    updated_donation['paid_at'] = updated_donation['paid_at'].isoformat() if hasattr(updated_donation['paid_at'], 'isoformat') else str(updated_donation['paid_at'])
+                
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'donation': updated_donation,
+                        'chapa_status': chapa_status,
+                        'payment_status': payment_status
+                    }
+                }), 200
+            else:
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment verification failed',
+                    'chapa_response': result
+                }), 400
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Chapa API error: {response.text}'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/donations/my-history', methods=['GET'])
+@token_required
+def get_my_donation_history(current_user_id, current_member_id):
+    """Get donation history for logged-in member"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        # Get member email to match donations
+        cursor.execute("SELECT email FROM aawsa_user WHERE payroll_number = %s", (current_user_id,))
+        user = cursor.fetchone()
+        
+        if not user or not user.get('email'):
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': True,
+                'data': []
+            }), 200
+        
+        # Get donations for this member (by email or member_id from meta)
+        cursor.execute("""
+            SELECT d.id, d.amount, d.currency, d.payment_status, d.payment_method,
+                   d.tx_ref, d.chapa_reference, d.created_at, d.paid_at,
+                   d.donor_name, d.christian_name,
+                   dt.name as donation_type_name, dt.name_amharic as donation_type_name_amharic
+            FROM donations d
+            LEFT JOIN donation_types dt ON d.donation_type_id = dt.id
+            WHERE (d.donor_email = %s OR JSON_EXTRACT(d.chapa_response, '$.meta.member_id') = %s)
+            ORDER BY d.created_at DESC
+            LIMIT 100
+        """, (user['email'] if user else '', current_member_id))
+        
+        donations = cursor.fetchall()
+        
+        # Convert datetime to ISO format
+        for donation in donations:
+            if donation.get('created_at'):
+                donation['created_at'] = donation['created_at'].isoformat() if hasattr(donation['created_at'], 'isoformat') else str(donation['created_at'])
+            if donation.get('paid_at'):
+                donation['paid_at'] = donation['paid_at'].isoformat() if hasattr(donation['paid_at'], 'isoformat') else str(donation['paid_at'])
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': donations
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/donations/<int:donation_id>', methods=['GET'])
+@token_required
+def get_donation_details(current_user_id, current_member_id, donation_id):
+    """Get specific donation details"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        cursor.execute("""
+            SELECT d.*, dt.name as donation_type_name, dt.name_amharic as donation_type_name_amharic
+            FROM donations d
+            LEFT JOIN donation_types dt ON d.donation_type_id = dt.id
+            WHERE d.id = %s
+        """, (donation_id,))
+        
+        donation = cursor.fetchone()
+        
+        if not donation:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Donation not found'
+            }), 404
+        
+        # Convert datetime to ISO format
+        if donation.get('created_at'):
+            donation['created_at'] = donation['created_at'].isoformat() if hasattr(donation['created_at'], 'isoformat') else str(donation['created_at'])
+        if donation.get('paid_at'):
+            donation['paid_at'] = donation['paid_at'].isoformat() if hasattr(donation['paid_at'], 'isoformat') else str(donation['paid_at'])
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': donation
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+#  =====================
 #  Utility Endpoints
 #  =====================
 
@@ -884,9 +1333,419 @@ def version():
             'contributions',
             'posts',
             'announcements',
-            'events'
+            'events',
+            'donations'
         ]
     }), 200
+
+#  =====================
+#  MEWACO Payment Endpoints
+#  =====================
+
+@mobile_api.route('/mewaco/types', methods=['GET'])
+@token_required
+def get_mewaco_types(current_user_id, current_member_id):
+    """Get all active MEWACO contribution types"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        cursor.execute("""
+            SELECT id, type_name, description, default_amount, status
+            FROM mewaco_types 
+            WHERE status = 'Active'
+            ORDER BY type_name ASC
+        """)
+        types = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': types
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/mewaco/initiate', methods=['POST'])
+@token_required
+def initiate_mewaco_payment(current_user_id, current_member_id):
+    """Initiate a MEWACO contribution payment via Chapa"""
+    try:
+        import requests
+        import json
+        import uuid
+        import os
+        from config import Config
+        
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['mewaco_type_id', 'amount']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        mewaco_type_id = data.get('mewaco_type_id')
+        amount = float(data.get('amount', 0))
+        contribution_date = data.get('contribution_date')  # Optional, defaults to today
+        notes = data.get('notes', '')
+        
+        # Validate amount
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        # Get member info
+        cursor.execute("SELECT full_name, email, phone FROM member_registration WHERE id = %s", (current_member_id,))
+        member = cursor.fetchone()
+        
+        if not member:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Member not found'
+            }), 404
+        
+        # Get MEWACO type info
+        cursor.execute("SELECT type_name, default_amount FROM mewaco_types WHERE id = %s AND status = 'Active'", (mewaco_type_id,))
+        mewaco_type = cursor.fetchone()
+        
+        if not mewaco_type:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'MEWACO type not found or inactive'
+            }), 404
+        
+        # Get Chapa settings
+        cursor.execute("SELECT setting_key, setting_value FROM donation_settings WHERE setting_key IN ('min_donation_amount', 'max_donation_amount', 'chapa_secret_key', 'default_currency')")
+        settings = {row['setting_key']: row['setting_value'] for row in cursor.fetchall()}
+        
+        min_amount = float(settings.get('min_donation_amount', 10))
+        max_amount = float(settings.get('max_donation_amount', 1000000))
+        currency = settings.get('default_currency', 'ETB')
+        chapa_secret_key = settings.get('chapa_secret_key') or os.environ.get('CHAPA_SECRET_KEY') or Config.CHAPA_SECRET_KEY
+        
+        if amount < min_amount or amount > max_amount:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Amount must be between {min_amount} and {max_amount} {currency}'
+            }), 400
+        
+        if not chapa_secret_key:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Payment gateway not configured'
+            }), 500
+        
+        # Generate transaction reference
+        tx_ref = f"MEWACO_{uuid.uuid4().hex[:16].upper()}"
+        
+        # Use today's date if not provided
+        from datetime import date
+        if not contribution_date:
+            contribution_date = date.today()
+        else:
+            contribution_date = date.fromisoformat(contribution_date) if isinstance(contribution_date, str) else contribution_date
+        
+        # Create MEWACO contribution record
+        cursor.execute("""
+            INSERT INTO mewaco_contributions 
+            (member_id, mewaco_type_id, contribution_date, amount, payment_method, 
+             payment_status, tx_ref, chapa_reference, ip_address, user_agent, paid_at)
+            VALUES (%s, %s, %s, %s, 'Chapa', 'Completed', %s, %s, %s, %s, NOW())
+        """, (
+            current_member_id, 
+            mewaco_type_id, 
+            contribution_date, 
+            amount, 
+            tx_ref, 
+            tx_ref,
+            request.remote_addr, 
+            request.headers.get('User-Agent', '')
+        ))
+        
+        contribution_id = cursor.lastrowid
+        
+        # Prepare Chapa request
+        name_parts = member['full_name'].split(' ', 1) if member.get('full_name') else ['Member', '']
+        first_name = name_parts[0] if name_parts else 'Member'
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        
+        chapa_url = "https://api.chapa.co/v1/transaction/initialize"
+        headers = {
+            "Authorization": f"Bearer {chapa_secret_key}",
+            "Content-Type": "application/json"
+        }
+        
+        callback_url = request.url_root.rstrip('/') + '/mewaco/callback'
+        return_url = request.url_root.rstrip('/') + '/mewaco/thank-you'
+        
+        # Chapa requires email, use member email or default
+        chapa_email = member.get('email') or f"member_{current_member_id}@mikhadenagil.org"
+        
+        chapa_data = {
+            "amount": str(amount),
+            "currency": currency,
+            "email": chapa_email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone_number": member.get('phone') or "0900000000",
+            "tx_ref": tx_ref,
+            "callback_url": callback_url,
+            "return_url": return_url,
+            "meta": {
+                "contribution_id": contribution_id,
+                "mewaco_type_id": mewaco_type_id,
+                "member_id": current_member_id,
+                "source": "mobile_app",
+                "type": "mewaco"
+            }
+        }
+        
+        # Make request to Chapa
+        response = requests.post(chapa_url, json=chapa_data, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 'success' and result.get('data', {}).get('checkout_url'):
+                checkout_url = result['data']['checkout_url']
+                transaction_id = result.get('data', {}).get('id', '')
+                
+                # Update contribution record
+                if transaction_id:
+                    cursor.execute("""
+                        UPDATE mewaco_contributions 
+                        SET transaction_id = %s, chapa_response = %s
+                        WHERE id = %s
+                    """, (transaction_id, json.dumps(result), contribution_id))
+                    conn.commit()
+                
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'contribution_id': contribution_id,
+                        'checkout_url': checkout_url,
+                        'tx_ref': tx_ref,
+                        'amount': amount,
+                        'currency': currency,
+                        'mewaco_type': mewaco_type['type_name']
+                    }
+                }), 200
+            else:
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment initialization failed'
+                }), 500
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Chapa API error: {response.text}'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/mewaco/verify/<tx_ref>', methods=['GET'])
+@token_required
+def verify_mewaco_payment(current_user_id, current_member_id, tx_ref):
+    """Verify MEWACO payment status from Chapa"""
+    try:
+        import requests
+        import json
+        import os
+        from config import Config
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        # Get contribution record
+        cursor.execute("""
+            SELECT mc.*, mt.type_name
+            FROM mewaco_contributions mc
+            LEFT JOIN mewaco_types mt ON mc.mewaco_type_id = mt.id
+            WHERE mc.tx_ref = %s OR mc.chapa_reference = %s
+        """, (tx_ref, tx_ref))
+        
+        contribution = cursor.fetchone()
+        
+        if not contribution:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Contribution not found'
+            }), 404
+        
+        # Get Chapa secret key
+        cursor.execute("SELECT setting_value FROM donation_settings WHERE setting_key = 'chapa_secret_key'")
+        setting = cursor.fetchone()
+        chapa_secret_key = setting['setting_value'] if setting else os.environ.get('CHAPA_SECRET_KEY') or Config.CHAPA_SECRET_KEY
+        
+        if not chapa_secret_key:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Payment gateway not configured'
+            }), 500
+        
+        # Verify with Chapa API
+        chapa_url = f"https://api.chapa.co/v1/transaction/verify/{tx_ref}"
+        headers = {
+            "Authorization": f"Bearer {chapa_secret_key}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(chapa_url, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            
+            # Update contribution status based on Chapa response
+            if result.get('status') == 'success':
+                chapa_status = result.get('data', {}).get('status', '')
+                
+                # Map Chapa status to our status
+                if chapa_status == 'successful':
+                    payment_status = 'Completed'
+                elif chapa_status == 'pending':
+                    payment_status = 'Completed'  # Treat pending as completed since auto-deducted
+                else:
+                    payment_status = 'Failed'
+                
+                cursor.execute("""
+                    UPDATE mewaco_contributions 
+                    SET payment_status = %s,
+                        transaction_id = %s,
+                        chapa_response = %s,
+                        paid_at = CASE WHEN %s = 'Completed' THEN NOW() ELSE paid_at END,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """, (
+                    payment_status,
+                    result.get('data', {}).get('id', ''),
+                    json.dumps(result),
+                    payment_status,
+                    contribution['id']
+                ))
+                conn.commit()
+                
+                # Refresh contribution data
+                cursor.execute("""
+                    SELECT mc.*, mt.type_name
+                    FROM mewaco_contributions mc
+                    LEFT JOIN mewaco_types mt ON mc.mewaco_type_id = mt.id
+                    WHERE mc.id = %s
+                """, (contribution['id'],))
+                updated_contribution = cursor.fetchone()
+                
+                # Convert datetime to ISO format
+                if updated_contribution.get('contribution_date'):
+                    updated_contribution['contribution_date'] = updated_contribution['contribution_date'].isoformat() if hasattr(updated_contribution['contribution_date'], 'isoformat') else str(updated_contribution['contribution_date'])
+                if updated_contribution.get('paid_at'):
+                    updated_contribution['paid_at'] = updated_contribution['paid_at'].isoformat() if hasattr(updated_contribution['paid_at'], 'isoformat') else str(updated_contribution['paid_at'])
+                
+                cursor.close()
+                conn.close()
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'contribution': updated_contribution,
+                        'chapa_status': chapa_status,
+                        'payment_status': payment_status
+                    }
+                }), 200
+            else:
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'error': 'Payment verification failed',
+                    'chapa_response': result
+                }), 400
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Chapa API error: {response.text}'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@mobile_api.route('/mewaco/my-contributions', methods=['GET'])
+@token_required
+def get_my_mewaco_contributions(current_user_id, current_member_id):
+    """Get MEWACO contribution history for logged-in member"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(buffered=True, dictionary=True)
+        
+        cursor.execute("""
+            SELECT mc.id, mc.contribution_date, mc.amount, mc.payment_status, mc.payment_method,
+                   mc.tx_ref, mc.chapa_reference, mc.created_at, mc.paid_at,
+                   mt.type_name, mt.description
+            FROM mewaco_contributions mc
+            LEFT JOIN mewaco_types mt ON mc.mewaco_type_id = mt.id
+            WHERE mc.member_id = %s
+            ORDER BY mc.contribution_date DESC, mc.created_at DESC
+            LIMIT 100
+        """, (current_member_id,))
+        
+        contributions = cursor.fetchall()
+        
+        # Convert datetime to ISO format
+        for contribution in contributions:
+            if contribution.get('contribution_date'):
+                contribution['contribution_date'] = contribution['contribution_date'].isoformat() if hasattr(contribution['contribution_date'], 'isoformat') else str(contribution['contribution_date'])
+            if contribution.get('created_at'):
+                contribution['created_at'] = contribution['created_at'].isoformat() if hasattr(contribution['created_at'], 'isoformat') else str(contribution['created_at'])
+            if contribution.get('paid_at'):
+                contribution['paid_at'] = contribution['paid_at'].isoformat() if hasattr(contribution['paid_at'], 'isoformat') else str(contribution['paid_at'])
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'data': contributions
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # Export blueprint
 __all__ = ['mobile_api']

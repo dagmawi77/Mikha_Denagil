@@ -50,6 +50,8 @@ from mobile_api import mobile_api
 from admin_api import admin_api, org_api, staff_api
 from public_website import public_website
 from admin_website_management import admin_website
+from donation_management import donation_management
+from donation_report import donation_report
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -59,9 +61,27 @@ app.register_blueprint(mobile_api)
 app.register_blueprint(admin_api)
 app.register_blueprint(org_api)
 app.register_blueprint(staff_api)
-app.register_blueprint(public_website)
 app.register_blueprint(admin_website)
+app.register_blueprint(donation_management)
+app.register_blueprint(donation_report)
+# Register public website last to avoid route conflicts with admin routes
+app.register_blueprint(public_website)
 app.config.from_object(Config)
+
+# Route to serve uploaded files (fallback for old uploads location)
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """Serve uploaded files from the uploads folder"""
+    from flask import send_from_directory
+    import os
+    upload_folder = os.path.join(os.getcwd(), 'uploads')
+    if os.path.exists(os.path.join(upload_folder, filename)):
+        return send_from_directory(upload_folder, filename)
+    # Try static/uploads as fallback
+    static_upload_folder = os.path.join(os.getcwd(), 'static', 'uploads')
+    if os.path.exists(os.path.join(static_upload_folder, filename)):
+        return send_from_directory(static_upload_folder, filename)
+    return "File not found", 404
 
 # ========================================
 # LANGUAGE SUPPORT
@@ -133,26 +153,76 @@ def login():
         conn = get_db_connection()
         cursor = conn.cursor(buffered=True)
         
-        # Get user with hashed password
+        # Get user with hashed password - explicitly select columns to avoid index issues
         cursor.execute("""
-            SELECT u.*, r.role_name 
+            SELECT u.payroll_number, u.username, u.email, u.password_hash, u.role_id, r.role_name 
             FROM aawsa_user u
-            JOIN roles r ON u.role_id = r.role_id
-            WHERE u.payroll_number = %(payroll_number)s
-        """, {"payroll_number": payroll_number})
+            LEFT JOIN roles r ON u.role_id = r.role_id
+            WHERE u.payroll_number = %s
+        """, (payroll_number,))
         
         user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        if user and verify_password(user[4], password):  # user[4] is password_hash
-            session['payroll_number'] = payroll_number
-            session['role'] = user[-1]  # role_name is last column
-            session['last_activity'] = datetime.now().isoformat()
-            flash("Login successful!", "success")
-            return redirect(url_for('navigation'))
+        
+        if user:
+            password_hash = user[3]  # password_hash is 4th column (index 3)
+            role_name = user[5] if user[5] else 'User'  # role_name is last column
+            
+            # Try password verification
+            if password_hash and verify_password(password_hash, password):
+                # Set session variables
+                session['payroll_number'] = payroll_number
+                session['role'] = role_name
+                session['last_activity'] = datetime.now().isoformat()
+                session.permanent = True
+                session.modified = True
+                
+                flash("Login successful!", "success")
+                cursor.close()
+                conn.close()
+                
+                # Ensure session is saved before redirect
+                try:
+                    from flask import session as flask_session
+                    flask_session.modified = True
+                except:
+                    pass
+                
+                # Redirect to navigation dashboard - ensure it's a GET request
+                import flask
+                flask.session.modified = True
+                return redirect('/navigation', code=302)
+            else:
+                # Try plain text comparison as fallback (for old passwords)
+                if password_hash == password:
+                    # Set session variables
+                    session['payroll_number'] = payroll_number
+                    session['role'] = role_name
+                    session['last_activity'] = datetime.now().isoformat()
+                    session.permanent = True
+                    session.modified = True
+                    
+                    flash("Login successful!", "success")
+                    cursor.close()
+                    conn.close()
+                    
+                    # Ensure session is saved before redirect
+                    try:
+                        from flask import session as flask_session
+                        flask_session.modified = True
+                    except:
+                        pass
+                    
+                    # Redirect to navigation dashboard - ensure it's a GET request
+                    import flask
+                    flask.session.modified = True
+                    return redirect('/navigation', code=302)
+                else:
+                    flash("Invalid credentials", "danger")
         else:
             flash("Invalid credentials", "danger")
+        
+        cursor.close()
+        conn.close()
 
     return render_template('login.html')
 
@@ -167,7 +237,7 @@ def logout():
 # DASHBOARD & NAVIGATION
 # ========================================
 
-@app.route('/navigation')
+@app.route('/navigation', methods=['GET'])
 @login_required
 def navigation():
     """Main navigation/dashboard page with real statistics"""
@@ -5497,6 +5567,7 @@ def posts_management():
                     'attachment_type': attachment_type,
                     'priority': request.form.get('priority', 'Normal'),
                     'status': 'Active',
+                    'is_public': 1 if request.form.get('is_public') == 'on' else 0,
                     'created_by': session.get('username', 'Unknown')
                 }
                 
@@ -5504,11 +5575,11 @@ def posts_management():
                     INSERT INTO posts (
                         post_title, post_content, post_type, target_section, target_medebe_id,
                         start_date, end_date, attachment_path, attachment_name, attachment_type,
-                        priority, status, created_by
+                        priority, status, is_public, created_by
                     ) VALUES (
                         %(post_title)s, %(post_content)s, %(post_type)s, %(target_section)s, 
                         %(target_medebe_id)s, %(start_date)s, %(end_date)s, %(attachment_path)s,
-                        %(attachment_name)s, %(attachment_type)s, %(priority)s, %(status)s, %(created_by)s
+                        %(attachment_name)s, %(attachment_type)s, %(priority)s, %(status)s, %(is_public)s, %(created_by)s
                     )
                 """, data)
                 conn.commit()
@@ -5565,7 +5636,8 @@ def posts_management():
                     'attachment_name': attachment_name,
                     'attachment_type': attachment_type,
                     'priority': request.form.get('priority', 'Normal'),
-                    'status': request.form.get('status', 'Active')
+                    'status': request.form.get('status', 'Active'),
+                    'is_public': 1 if request.form.get('is_public') == 'on' else 0
                 }
                 
                 cursor.execute("""
@@ -5581,7 +5653,8 @@ def posts_management():
                         attachment_name = %(attachment_name)s,
                         attachment_type = %(attachment_type)s,
                         priority = %(priority)s,
-                        status = %(status)s
+                        status = %(status)s,
+                        is_public = %(is_public)s
                     WHERE id = %(id)s
                 """, data)
                 conn.commit()

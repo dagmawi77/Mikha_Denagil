@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if donation_type else 'Add' }} Donation Type - Donation Management{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(20, 134, 12, 0.2);
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        padding: 2rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #14860C;
+        box-shadow: 0 0 0 0.2rem rgba(20, 134, 12, 0.25);
+    }
+    
+    .btn-modern {
+        border-radius: 8px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, #14860C 0%, #106b09 100%);
+        color: white;
+    }
+    
+    .btn-modern-primary:hover {
+        background: linear-gradient(135deg, #18a210 0%, #14860C 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(20, 134, 12, 0.3);
+        color: white;
+    }
+    
+    .btn-modern-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-modern-secondary:hover {
+        background: #5a6268;
+        color: white;
+    }
+    
+    .form-check-input:checked {
+        background-color: #14860C;
+        border-color: #14860C;
+    }
+</style>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2>
+                    <i class="fas fa-{{ 'edit' if donation_type else 'plus-circle' }} me-2"></i>
+                    {{ 'Edit' if donation_type else 'Add' }} Donation Type
+                </h2>
+                <p>{{ 'አስተካክል' if donation_type else 'ጨምር' }} የለግስና ዓይነት</p>
+            </div>
+            <a href="{{ url_for('donation_management.manage_donation_types') }}" class="btn btn-modern btn-modern-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+    
+    <!-- Form Card -->
+    <div class="form-card">
+        <form method="POST" id="typeForm">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            Name (English) <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ donation_type.name if donation_type else '' }}" required
+                               placeholder="e.g., General Donation">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="name_amharic" class="form-label">Name (Amharic) / ስም</label>
+                        <input type="text" class="form-control" id="name_amharic" name="name_amharic" 
+                               value="{{ donation_type.name_amharic if donation_type else '' }}"
+                               placeholder="የለግስና ዓይነት">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (English)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Describe this donation type">{{ donation_type.description if donation_type else '' }}</textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="description_amharic" class="form-label">Description (Amharic) / መግለጫ</label>
+                        <textarea class="form-control" id="description_amharic" name="description_amharic" rows="3"
+                                  placeholder="የለግስና ዓይነት መግለጫ">{{ donation_type.description_amharic if donation_type else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                           {{ 'checked' if donation_type and donation_type.is_active else 'checked' }}
+                           style="width: 3rem; height: 1.5rem;">
+                    <label class="form-check-label ms-3" for="is_active">
+                        <strong>Active / ንቁ</strong>
+                        <div class="text-muted small">Show this donation type on the public donation page</div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Form Actions -->
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                <a href="{{ url_for('donation_management.manage_donation_types') }}" class="btn btn-modern btn-modern-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-modern btn-modern-primary">
+                    <i class="fas fa-save me-2"></i>{{ 'Update' if donation_type else 'Save' }} Type
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
