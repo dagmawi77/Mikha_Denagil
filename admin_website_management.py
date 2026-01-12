@@ -84,11 +84,23 @@ def add_hero_slide():
             image_path = None
             if 'image' in request.files:
                 file = request.files['image']
-                if file and file.filename:
+                if file and file.filename and file.filename != '':
                     image_path = save_uploaded_file(file, 'hero_slides')
+                    if not image_path:
+                        flash('Failed to upload image. Please try again.', 'error')
+                        return render_template('admin/website/hero_slide_form.html')
+                    print(f"[Add Hero Slide] Image uploaded successfully: {image_path}")
+                else:
+                    print(f"[Add Hero Slide] No file provided or empty filename")
+            else:
+                print(f"[Add Hero Slide] No 'image' key in request.files")
             
-            if not title or not image_path:
-                flash('Title and image are required', 'error')
+            if not title:
+                flash('Title is required', 'error')
+                return render_template('admin/website/hero_slide_form.html')
+            
+            if not image_path:
+                flash('Image is required. Please upload an image file.', 'error')
                 return render_template('admin/website/hero_slide_form.html')
             
             cursor.execute("""

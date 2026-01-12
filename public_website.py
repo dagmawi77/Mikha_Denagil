@@ -36,8 +36,24 @@ def homepage():
         # Debug: Print slides count and check image_path
         print(f"[Homepage] Loaded {len(hero_slides)} active hero slides")
         for idx, slide in enumerate(hero_slides):
-            has_image = slide.get('image_path') and slide.get('image_path') != ''
-            print(f"  Slide {idx}: ID={slide.get('id')}, image_path={'SET' if has_image else 'MISSING'}, path={slide.get('image_path', 'None')}")
+            # Handle both dict and object access
+            slide_dict = dict(slide) if hasattr(slide, 'keys') else slide
+            image_path = slide_dict.get('image_path') if isinstance(slide_dict, dict) else getattr(slide, 'image_path', None)
+            has_image = image_path and str(image_path) not in ('', 'None', 'none')
+            slide_id = slide_dict.get('id') if isinstance(slide_dict, dict) else getattr(slide, 'id', None)
+            slide_title = slide_dict.get('title', 'N/A') if isinstance(slide_dict, dict) else getattr(slide, 'title', 'N/A')
+            
+            print(f"  Slide {idx}: ID={slide_id}, Title={slide_title}, image_path={'SET' if has_image else 'MISSING'}, path={image_path}")
+            
+            # If image_path exists but is None or empty string, log warning
+            if not has_image:
+                print(f"    ⚠ WARNING: Slide {idx} (ID={slide_id}) has no valid image_path!")
+            else:
+                # Verify file exists
+                import os
+                static_path = os.path.join('static', str(image_path))
+                file_exists = os.path.exists(static_path)
+                print(f"    ✓ Image path: {image_path}, File exists: {file_exists}, Full path: {os.path.abspath(static_path) if file_exists else 'NOT FOUND'}")
         
         # Get active services (limit to 6 for homepage)
         cursor.execute("""
@@ -82,7 +98,7 @@ def homepage():
         cursor.execute("""
             SELECT s.id, s.study_title, s.summary, s.content_body, s.publish_date, s.author,
                    s.attachment_path, s.attachment_name, s.attachment_type,
-                   sc.category_name, sc.category_name_amharic
+                   sc.category_name
             FROM studies s
             LEFT JOIN study_categories sc ON s.category_id = sc.id
             WHERE s.status = 'Published' AND s.is_public = 1
@@ -716,7 +732,7 @@ def studies_page():
             SELECT s.id, s.study_title, s.summary, s.content_body, s.publish_date, s.author,
                    s.attachment_path, s.attachment_name, s.attachment_type,
                    s.views_count, s.downloads_count, s.is_featured,
-                   sc.id as category_id, sc.category_name, sc.category_name_amharic
+                   sc.id as category_id, sc.category_name
             FROM studies s
             LEFT JOIN study_categories sc ON s.category_id = sc.id
             WHERE s.status = 'Published' AND s.is_public = 1
@@ -734,11 +750,11 @@ def studies_page():
         
         # Get categories for filter
         cursor.execute("""
-            SELECT DISTINCT sc.id, sc.category_name, sc.category_name_amharic,
+            SELECT DISTINCT sc.id, sc.category_name,
                    COUNT(s.id) as study_count
             FROM study_categories sc
             LEFT JOIN studies s ON sc.id = s.category_id AND s.is_public = 1 AND s.status = 'Published'
-            GROUP BY sc.id, sc.category_name, sc.category_name_amharic
+            GROUP BY sc.id, sc.category_name
             HAVING study_count > 0
             ORDER BY sc.category_name ASC
         """)
@@ -761,7 +777,7 @@ def study_detail(study_id):
     
     try:
         cursor.execute("""
-            SELECT s.*, sc.category_name, sc.category_name_amharic
+            SELECT s.*, sc.category_name
             FROM studies s
             LEFT JOIN study_categories sc ON s.category_id = sc.id
             WHERE s.id = %s AND s.status = 'Published' AND s.is_public = 1

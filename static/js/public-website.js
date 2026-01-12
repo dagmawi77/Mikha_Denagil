@@ -2,6 +2,9 @@
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize navbar scroll effect
+    initNavbarScroll();
+    
     // Initialize hero slider if exists
     initHeroSlider();
     
@@ -10,27 +13,51 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize animations on scroll
     initScrollAnimations();
+    
+    // Initialize hero slider indicators
+    initHeroIndicators();
 });
 
 // Hero Slider Functionality
 function initHeroSlider() {
     const slides = document.querySelectorAll('.hero-slide');
     
+    if (slides.length === 0) {
+        console.log('[Hero Slider] No slides found');
+        return;
+    }
+    
+    console.log(`[Hero Slider] Found ${slides.length} slides`);
+    
     // Fix image paths for hero slides - check if images exist and use fallback if needed
     slides.forEach(function(slide, index) {
-        const bgImage = slide.style.backgroundImage;
+        // Get computed style to check if background-image is set
+        const computedStyle = window.getComputedStyle(slide);
+        const bgImage = computedStyle.backgroundImage || slide.style.backgroundImage;
         const fallback = slide.getAttribute('data-bg-fallback');
         const imagePath = slide.getAttribute('data-image-path');
         
         console.log(`[Hero Slider] Slide ${index}:`, {
             bgImage: bgImage,
+            inlineStyle: slide.style.backgroundImage,
+            computedStyle: computedStyle.backgroundImage,
             fallback: fallback,
             imagePath: imagePath
         });
         
-        if (bgImage && bgImage.includes('url(')) {
+        // If we have an image path but no background image set, set it
+        if (imagePath && (!bgImage || bgImage === 'none' || bgImage === '')) {
+            const imageUrl = `/static/${imagePath}`;
+            console.log(`[Hero Slider] Setting background image from data-image-path: ${imageUrl}`);
+            slide.style.backgroundImage = `url('${imageUrl}')`;
+        }
+        
+        // Now check if we have a background image to validate
+        const currentBgImage = slide.style.backgroundImage || computedStyle.backgroundImage;
+        
+        if (currentBgImage && currentBgImage !== 'none' && currentBgImage.includes('url(')) {
             const img = new Image();
-            const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
+            const urlMatch = currentBgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
             
             if (urlMatch) {
                 const imageUrl = urlMatch[1];
@@ -56,6 +83,19 @@ function initHeroSlider() {
                             slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
                         };
                         fallbackImg.src = fallback;
+                    } else if (imagePath) {
+                        // Try direct path
+                        const directPath = `/uploads/${imagePath}`;
+                        console.log(`[Hero Slider] Trying direct path: ${directPath}`);
+                        const directImg = new Image();
+                        directImg.onload = function() {
+                            slide.style.backgroundImage = `url('${directPath}')`;
+                            console.log(`[Hero Slider] ✓ Direct path image loaded: ${directPath}`);
+                        };
+                        directImg.onerror = function() {
+                            slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+                        };
+                        directImg.src = directPath;
                     } else {
                         // No fallback, use gradient
                         slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
@@ -65,36 +105,88 @@ function initHeroSlider() {
                 img.src = imageUrl;
             }
         } else {
-            console.warn(`[Hero Slider] Slide ${index} has no background image`);
+            // Slide has no background image - check if it's intentional (gradient) or needs fixing
+            if (imagePath && imagePath !== 'none' && imagePath !== 'None') {
+                // We have an image path but no background - try to set it
+                const tryUrl = `/static/${imagePath}`;
+                console.log(`[Hero Slider] Attempting to set image: ${tryUrl}`);
+                const img = new Image();
+                img.onload = function() {
+                    slide.style.backgroundImage = `url('${tryUrl}')`;
+                    console.log(`[Hero Slider] ✓ Image loaded: ${tryUrl}`);
+                };
+                img.onerror = function() {
+                    console.warn(`[Hero Slider] ✗ Image failed: ${tryUrl}`);
+                    // Try fallback
+                    if (fallback) {
+                        slide.style.backgroundImage = `url('${fallback}')`;
+                    } else {
+                        slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+                    }
+                };
+                img.src = tryUrl;
+            } else {
+                // No image path - slide is using gradient background (intentional)
+                console.log(`[Hero Slider] Slide ${index} using gradient background (no image uploaded)`);
+                // Ensure gradient is set
+                if (!slide.style.backgroundImage || slide.style.backgroundImage === 'none') {
+                    slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+                }
+            }
         }
     });
     
     if (slides.length <= 1) return;
     
     let currentSlide = 0;
+    let sliderInterval = null;
     
     function nextSlide() {
         slides[currentSlide].classList.remove('active');
         currentSlide = (currentSlide + 1) % slides.length;
         slides[currentSlide].classList.add('active');
+        updateIndicators();
     }
     
+    function goToSlide(index) {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = index;
+        slides[currentSlide].classList.add('active');
+        updateIndicators();
+    }
+    
+    function updateIndicators() {
+        const indicators = document.querySelectorAll('.hero-indicator');
+        indicators.forEach((indicator, index) => {
+            if (index === currentSlide) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        });
+    }
+    
+    // Store functions globally for indicator clicks
+    window.heroSliderNext = nextSlide;
+    window.heroSliderGoTo = goToSlide;
+    
     // Auto-play slider
-    setInterval(nextSlide, 5000);
+    sliderInterval = setInterval(nextSlide, 6000);
     
     // Pause on hover
     const slider = document.getElementById('heroSlider');
     if (slider) {
-        let intervalId = setInterval(nextSlide, 5000);
-        
         slider.addEventListener('mouseenter', function() {
-            clearInterval(intervalId);
+            if (sliderInterval) clearInterval(sliderInterval);
         });
         
         slider.addEventListener('mouseleave', function() {
-            intervalId = setInterval(nextSlide, 5000);
+            sliderInterval = setInterval(nextSlide, 6000);
         });
     }
+    
+    // Initialize indicators
+    updateIndicators();
 }
 
 // Smooth Scrolling
@@ -211,20 +303,43 @@ function filterGallery(category) {
 }
 
 // Navbar scroll effect
-let lastScroll = 0;
-const navbar = document.querySelector('.navbar');
-
-window.addEventListener('scroll', function() {
-    const currentScroll = window.pageYOffset;
+function initNavbarScroll() {
+    const navbar = document.getElementById('mainNavbar');
+    if (!navbar) return;
     
-    if (currentScroll > 100) {
+    let lastScroll = 0;
+    
+    window.addEventListener('scroll', function() {
+        const currentScroll = window.pageYOffset;
+        
+        if (currentScroll > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+        
+        lastScroll = currentScroll;
+    }, { passive: true });
+    
+    // Set initial state
+    if (window.pageYOffset > 50) {
         navbar.classList.add('scrolled');
-    } else {
-        navbar.classList.remove('scrolled');
     }
+}
+
+// Hero Slider Indicators
+function initHeroIndicators() {
+    const indicators = document.querySelectorAll('.hero-indicator');
     
-    lastScroll = currentScroll;
-});
+    indicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', function() {
+            const slideIndex = parseInt(this.getAttribute('data-slide'));
+            if (window.heroSliderGoTo) {
+                window.heroSliderGoTo(slideIndex);
+            }
+        });
+    });
+}
 
 // Utility: Debounce function
 function debounce(func, wait) {

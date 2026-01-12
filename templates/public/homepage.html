@@ -4,12 +4,16 @@
 
 {% block extra_css %}
 <style>
+    /* Modern Hero Slider */
     .hero-slider {
-        height: 600px;
+        height: 100vh;
+        min-height: 600px;
+        max-height: 800px;
         position: relative;
         overflow: hidden;
-        margin-top: -76px; /* Offset navbar padding */
+        margin-top: -76px;
     }
+    
     .hero-slide {
         position: absolute;
         top: 0;
@@ -17,23 +21,31 @@
         width: 100%;
         height: 100%;
         opacity: 0;
-        transition: opacity 1s ease-in-out;
+        transition: opacity 1.5s ease-in-out;
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         z-index: 1;
     }
+    
     .hero-slide.active {
         opacity: 1;
         z-index: 2;
+        animation: zoomIn 20s ease-in-out infinite alternate;
     }
+    
+    @keyframes zoomIn {
+        from { transform: scale(1); }
+        to { transform: scale(1.1); }
+    }
+    
     .hero-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6));
+        background: linear-gradient(135deg, rgba(20, 134, 12, 0.7) 0%, rgba(16, 107, 9, 0.8) 50%, rgba(0, 0, 0, 0.6) 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -41,108 +53,362 @@
         text-align: center;
         padding: 2rem;
     }
+    
+    .hero-content {
+        max-width: 800px;
+        padding: 2rem;
+        animation: fadeInUp 1s ease;
+    }
+    
     .hero-content h1 {
+        font-size: clamp(2.5rem, 5vw, 4.5rem);
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        text-shadow: 2px 4px 8px rgba(0,0,0,0.5);
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+    }
+    
+    .hero-content p {
+        font-size: clamp(1.1rem, 2vw, 1.5rem);
+        margin-bottom: 2rem;
+        text-shadow: 1px 2px 4px rgba(0,0,0,0.5);
+        line-height: 1.6;
+        font-weight: 400;
+    }
+    
+    .hero-content .btn {
+        padding: 1rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .hero-content .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+    
+    /* Hero Slider Indicators */
+    .hero-indicators {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .hero-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.8);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .hero-indicator.active {
+        background: var(--white);
+        width: 30px;
+        border-radius: 6px;
+    }
+    
+    /* Modern Sections */
+    .section-padding {
+        padding: 6rem 0;
+    }
+    
+    .section-title {
+        font-size: clamp(2rem, 4vw, 3rem);
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: var(--text-dark);
+        position: relative;
+        display: inline-block;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+        border-radius: 2px;
+    }
+    
+    .section-subtitle {
+        font-size: 1.2rem;
+        color: var(--text-muted);
+        margin-bottom: 3rem;
+    }
+    
+    /* Modern Cards */
+    .service-card {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        height: 100%;
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    .service-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(20, 134, 12, 0.2);
+    }
+    
+    .service-card .card-body {
+        padding: 2.5rem;
+        text-align: center;
+    }
+    
+    .service-card i {
         font-size: 3.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+        display: block;
+    }
+    
+    .service-card h4 {
+        font-size: 1.5rem;
         font-weight: 700;
         margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        color: var(--text-dark);
     }
-    .hero-content p {
-        font-size: 1.25rem;
-        margin-bottom: 2rem;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    }
-    .section-padding {
-        padding: 5rem 0;
-    }
-    .service-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%;
-    }
-    .service-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
+    
+    /* Modern Gallery */
     .gallery-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
     }
+    
     .gallery-item {
         position: relative;
         overflow: hidden;
-        border-radius: 8px;
+        border-radius: 16px;
         aspect-ratio: 1;
+        cursor: pointer;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        transition: all 0.4s ease;
     }
+    
+    .gallery-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    }
+    
     .gallery-item img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.3s ease;
+        transition: transform 0.6s ease;
     }
+    
     .gallery-item:hover img {
-        transform: scale(1.1);
+        transform: scale(1.15);
+    }
+    
+    .gallery-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1;
+    }
+    
+    .gallery-item:hover::before {
+        opacity: 1;
+    }
+    
+    .gallery-item-title {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1.5rem;
+        color: white;
+        font-weight: 600;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 2;
+    }
+    
+    .gallery-item:hover .gallery-item-title {
+        transform: translateY(0);
+    }
+    
+    /* Modern Announcement Cards */
+    .announcement-card {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        height: 100%;
+    }
+    
+    .announcement-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    .announcement-card .card-body {
+        padding: 2rem;
+    }
+    
+    /* Modern Study Cards */
+    .study-card {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        height: 100%;
+    }
+    
+    .study-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(20, 134, 12, 0.2);
+    }
+    
+    /* Stats Section */
+    .stats-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 4rem 0;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .stat-number {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    /* Modern Buttons */
+    .btn-modern {
+        border-radius: 50px;
+        padding: 1rem 2.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-modern-primary {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        box-shadow: 0 8px 20px rgba(20, 134, 12, 0.3);
+    }
+    
+    .btn-modern-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(20, 134, 12, 0.4);
+        color: white;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-slider {
+            height: 70vh;
+            min-height: 500px;
+        }
+        
+        .section-padding {
+            padding: 4rem 0;
+        }
+        
+        .gallery-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Slider Section -->
+<!-- Modern Hero Slider Section -->
 <section class="hero-slider" id="heroSlider">
     {% if hero_slides and hero_slides|length > 0 %}
-        <!-- Debug: {{ hero_slides|length }} slides loaded from server -->
-        {% set has_slides_with_images = false %}
         {% for slide in hero_slides %}
-            {% if slide.image_path and slide.image_path != '' and slide.image_path != None %}
-                {% set has_slides_with_images = true %}
-            {% endif %}
-        {% endfor %}
-        
-        {% if has_slides_with_images %}
-        {% for slide in hero_slides %}
-        {% if slide.image_path and slide.image_path != '' and slide.image_path != None %}
+        {% set image_path = slide['image_path'] if 'image_path' in slide else slide.image_path %}
+        {% set has_image = image_path and image_path|string != 'None' and image_path|string != 'none' and image_path|string != '' %}
+        {% if has_image %}
+        {% set image_url = url_for('static', filename=image_path) %}
+        {% endif %}
         <div class="hero-slide {% if loop.first %}active{% endif %}" 
-             style="background-image: url('{{ url_for('static', filename=slide.image_path) }}');"
-             data-bg-fallback="{{ url_for('uploaded_file', filename=slide.image_path) }}"
-             data-slide-id="{{ slide.id }}"
-             data-image-path="{{ slide.image_path }}">
+             {% if has_image %}
+             style="background-image: url('{{ image_url }}'); background-size: cover; background-position: center; background-repeat: no-repeat;"
+             data-bg-fallback="{{ url_for('uploaded_file', filename=image_path) }}"
+             data-image-path="{{ image_path }}"
+             data-image-url="{{ image_url }}"
+             {% else %}
+             style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);"
+             data-image-path="none"
+             {% endif %}
+             data-slide-id="{{ slide.id }}">
             <div class="hero-overlay">
                 <div class="hero-content">
-                    <h1>{{ slide.title_amharic or slide.title or 'Welcome' }}</h1>
+                    <h1 class="animate-fade-in-up">{{ slide.title_amharic or slide.title or 'Welcome' }}</h1>
                     {% if slide.description or slide.description_amharic %}
-                    <p>{{ slide.description_amharic or slide.description }}</p>
+                    <p class="animate-fade-in-up" style="animation-delay: 0.2s;">{{ slide.description_amharic or slide.description }}</p>
                     {% endif %}
                     {% if slide.button_link %}
-                    <a href="{{ slide.button_link }}" class="btn btn-light btn-lg">
-                        {{ slide.button_text or 'Learn More' }}
+                    <a href="{{ slide.button_link }}" class="btn btn-light btn-lg animate-fade-in-up" style="animation-delay: 0.4s;">
+                        <i class="fas fa-arrow-right me-2"></i>{{ slide.button_text or 'Learn More' }}
                     </a>
                     {% endif %}
                 </div>
             </div>
         </div>
-        {% endif %}
         {% endfor %}
-        {% else %}
-        <!-- No slides with images found -->
-        <div class="hero-slide active" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
-            <div class="hero-overlay">
-                <div class="hero-content">
-                    <h1>Mikha Denagil Spiritual Society</h1>
-                    <p>ሚካ ደናግል መንፈሳዊ ማህበር</p>
-                    <p class="text-warning">No slides with images found. Please check admin panel.</p>
-                </div>
-            </div>
+        <!-- Hero Slider Indicators -->
+        <div class="hero-indicators">
+            {% for slide in hero_slides %}
+            <div class="hero-indicator {% if loop.first %}active{% endif %}" data-slide="{{ loop.index0 }}"></div>
+            {% endfor %}
         </div>
-        {% endif %}
     {% else %}
         <!-- Default slide if no slides configured -->
         <div class="hero-slide active" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%);">
             <div class="hero-overlay">
                 <div class="hero-content">
-                    <h1>Mikha Denagil Spiritual Society</h1>
-                    <p>ሚካ ደናግል መንፈሳዊ ማህበር</p>
-                    <a href="{{ url_for('public_website.about_page') }}" class="btn btn-light btn-lg">
-                        Learn More / የበለጠ ይወቁ
+                    <h1 class="animate-fade-in-up">Mikha Denagil Spiritual Society</h1>
+                    <p class="animate-fade-in-up" style="animation-delay: 0.2s;">ሚካ ደናግል መንፈሳዊ ማህበር</p>
+                    <a href="{{ url_for('public_website.about_page') }}" class="btn btn-light btn-lg animate-fade-in-up" style="animation-delay: 0.4s;">
+                        <i class="fas fa-arrow-right me-2"></i>Learn More / የበለጠ ይወቁ
                     </a>
                 </div>
             </div>
@@ -154,25 +420,33 @@
 <section class="section-padding bg-light">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6 mb-4 mb-lg-0">
-                {% if about_intro %}
-                    <h2 class="display-4 mb-4">{{ about_intro.title_amharic or about_intro.title }}</h2>
-                    <p class="lead">{{ about_intro.content_amharic or about_intro.content }}</p>
-                {% else %}
-                    <h2 class="display-4 mb-4">About Mikha Denagil</h2>
-                    <p class="lead">Welcome to Mikha Denagil Spiritual Society, a community dedicated to spiritual growth, fellowship, and service.</p>
-                {% endif %}
-                <a href="{{ url_for('public_website.about_page') }}" class="btn btn-primary btn-lg mt-3">
-                    Read More / የበለጠ ያንብቡ
-                </a>
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <div class="pe-lg-4">
+                    {% if about_intro %}
+                        <h2 class="section-title">{{ about_intro.title_amharic or about_intro.title }}</h2>
+                        <p class="lead mb-4" style="font-size: 1.15rem; line-height: 1.8; color: #555;">{{ about_intro.content_amharic or about_intro.content }}</p>
+                    {% else %}
+                        <h2 class="section-title">About Mikha Denagil</h2>
+                        <p class="lead mb-4" style="font-size: 1.15rem; line-height: 1.8; color: #555;">Welcome to Mikha Denagil Spiritual Society, a community dedicated to spiritual growth, fellowship, and service. We are committed to nurturing faith, building relationships, and serving our community with love and compassion.</p>
+                    {% endif %}
+                    <a href="{{ url_for('public_website.about_page') }}" class="btn btn-modern btn-modern-primary">
+                        <i class="fas fa-arrow-right me-2"></i>Read More
+                    </a>
+                </div>
             </div>
             <div class="col-lg-6">
                 {% if about_intro and about_intro.image_path %}
-                <img src="{{ url_for('static', filename=about_intro.image_path) }}" 
-                     alt="About Us" class="img-fluid rounded shadow">
+                <div class="position-relative">
+                    <img src="{{ url_for('static', filename=about_intro.image_path) }}" 
+                         alt="About Us" 
+                         class="img-fluid rounded-4 shadow-lg" 
+                         style="border-radius: 20px !important;">
+                    <div class="position-absolute top-0 start-0 w-100 h-100 bg-primary opacity-10 rounded-4" style="border-radius: 20px !important;"></div>
+                </div>
                 {% else %}
-                <div class="bg-primary text-white p-5 rounded shadow text-center" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-church" style="font-size: 5rem;"></i>
+                <div class="bg-primary text-white p-5 rounded-4 shadow-lg text-center d-flex flex-column align-items-center justify-content-center" style="min-height: 400px; border-radius: 20px !important;">
+                    <i class="fas fa-church mb-3" style="font-size: 5rem; opacity: 0.8;"></i>
+                    <h4 class="mb-0">Our Community</h4>
                 </div>
                 {% endif %}
             </div>
@@ -184,44 +458,47 @@
 <section class="section-padding">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="display-4 mb-3">Our Services / አገልግሎቶቻችን</h2>
-            <p class="lead text-muted">Spiritual services and activities for all members</p>
+            <h2 class="section-title mx-auto">Our Services</h2>
+            <p class="section-subtitle">Spiritual services and activities for all members</p>
         </div>
         <div class="row g-4">
             {% if services %}
                 {% for service in services %}
                 <div class="col-md-4">
-                    <div class="card service-card h-100 shadow-sm">
-                        <div class="card-body text-center p-4">
+                    <div class="card service-card h-100">
+                        <div class="card-body text-center">
                             {% if service.icon_class %}
-                            <i class="{{ service.icon_class }} fa-3x text-primary mb-3"></i>
+                            <i class="{{ service.icon_class }} mb-3"></i>
                             {% elif service.image_path %}
                             <img src="{{ url_for('static', filename=service.image_path) }}" 
-                                 alt="{{ service.service_name }}" class="img-fluid mb-3" style="max-height: 80px;">
+                                 alt="{{ service.service_name }}" 
+                                 class="img-fluid mb-3" 
+                                 style="max-height: 80px; border-radius: 12px;">
                             {% else %}
-                            <i class="fas fa-hands-praying fa-3x text-primary mb-3"></i>
+                            <i class="fas fa-hands-praying mb-3"></i>
                             {% endif %}
                             <h4 class="card-title">{{ service.service_name_amharic or service.service_name }}</h4>
-                            <p class="card-text text-muted">
-                                {{ service.short_description[:100] }}{% if service.short_description|length > 100 %}...{% endif %}
+                            <p class="card-text text-muted mb-4" style="line-height: 1.7;">
+                                {{ service.short_description[:120] }}{% if service.short_description|length > 120 %}...{% endif %}
                             </p>
                             <a href="{{ url_for('public_website.service_detail', service_id=service.id) }}" 
-                               class="btn btn-outline-primary">
-                                Learn More
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-arrow-right me-1"></i>Learn More
                             </a>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12 text-center">
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-muted mb-3"></i>
                     <p class="text-muted">Services will be displayed here once configured.</p>
                 </div>
             {% endif %}
         </div>
         <div class="text-center mt-5">
-            <a href="{{ url_for('public_website.services_page') }}" class="btn btn-primary btn-lg">
-                View All Services / ሁሉንም አገልግሎቶች ይመልከቱ
+            <a href="{{ url_for('public_website.services_page') }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-th-large me-2"></i>View All Services
             </a>
         </div>
     </div>
@@ -231,8 +508,8 @@
 <section class="section-padding bg-light">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="display-4 mb-3">Photo Gallery / ፎቶ ማውጫ</h2>
-            <p class="lead text-muted">Moments from our community</p>
+            <h2 class="section-title mx-auto">Photo Gallery</h2>
+            <p class="section-subtitle">Moments from our community</p>
         </div>
         {% if gallery_photos %}
         <div class="gallery-grid">
@@ -241,16 +518,18 @@
                 <img src="{{ url_for('static', filename=photo.image_path) }}" 
                      alt="{{ photo.title_amharic or photo.title or 'Gallery Photo' }}"
                      onclick="openLightbox('{{ url_for('static', filename=photo.image_path) }}', '{{ photo.title_amharic or photo.title }}')">
+                <div class="gallery-item-title">{{ photo.title_amharic or photo.title or 'Gallery Photo' }}</div>
             </div>
             {% endfor %}
         </div>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('public_website.gallery_page') }}" class="btn btn-primary btn-lg">
-                View Full Gallery / ሙሉ ፎቶ ማውጫ ይመልከቱ
+        <div class="text-center mt-5">
+            <a href="{{ url_for('public_website.gallery_page') }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-images me-2"></i>View Full Gallery
             </a>
         </div>
         {% else %}
-        <div class="text-center">
+        <div class="text-center py-5">
+            <i class="fas fa-image fa-3x text-muted mb-3"></i>
             <p class="text-muted">Gallery photos will be displayed here once uploaded.</p>
         </div>
         {% endif %}
@@ -258,14 +537,19 @@
 </section>
 
 <!-- Donation Section -->
-<section class="section-padding bg-primary text-white">
-    <div class="container text-center">
-        <h2 class="display-4 mb-3">Support Our Mission / ተልዕኮችን ድገዱ</h2>
-        <p class="lead mb-4">Your generous donations help us continue our spiritual work and serve the community.</p>
-        <a href="{{ url_for('public_website.donation_page') }}" class="btn btn-light btn-lg">
-            <i class="fas fa-heart me-2"></i>Donate Now / አሁን ይለግሱ
-        </a>
+<section class="section-padding" style="background: linear-gradient(135deg, #14860C 0%, #106b09 100%); color: white; position: relative; overflow: hidden;">
+    <div class="container text-center position-relative" style="z-index: 2;">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="display-4 mb-4" style="font-weight: 800; text-shadow: 2px 4px 8px rgba(0,0,0,0.3);">Support Our Mission</h2>
+                <p class="lead mb-5" style="font-size: 1.3rem; line-height: 1.8; opacity: 0.95;">Your generous donations help us continue our spiritual work and serve the community with love, compassion, and dedication.</p>
+                <a href="{{ url_for('public_website.donation_page') }}" class="btn btn-light btn-lg" style="padding: 1.2rem 3rem; font-size: 1.1rem; font-weight: 600; border-radius: 50px; box-shadow: 0 8px 25px rgba(0,0,0,0.3);">
+                    <i class="fas fa-heart me-2"></i>Donate Now
+                </a>
+            </div>
+        </div>
     </div>
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1; background-image: url('data:image/svg+xml,<svg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"><g fill=\"none\" fill-rule=\"evenodd\"><g fill=\"%23ffffff\" fill-opacity=\"1\"><path d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/></g></g></svg>');"></div>
 </section>
 
 <!-- Announcements Section -->
@@ -273,21 +557,21 @@
 <section class="section-padding">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="display-4 mb-3">Announcements / ማስታወቂያዎች</h2>
-            <p class="lead text-muted">Latest updates and news from our community</p>
+            <h2 class="section-title mx-auto">Latest Announcements</h2>
+            <p class="section-subtitle">Latest updates and news from our community</p>
         </div>
-        <div class="row">
+        <div class="row g-4">
             {% for announcement in announcements %}
-            <div class="col-md-6 mb-4">
-                <div class="card shadow-sm h-100">
+            <div class="col-md-6">
+                <div class="announcement-card card h-100">
                     <div class="card-body">
-                        <span class="badge bg-primary mb-2">{{ announcement.post_type }}</span>
-                        <h5 class="card-title">
+                        <span class="badge bg-primary mb-3" style="font-size: 0.75rem; padding: 0.5rem 1rem; border-radius: 20px;">{{ announcement.post_type }}</span>
+                        <h5 class="card-title mb-3" style="font-weight: 700; font-size: 1.4rem;">
                             <a href="{{ url_for('public_website.announcement_detail', post_id=announcement.id) }}" class="text-decoration-none text-dark">
                                 {{ announcement.post_title }}
                             </a>
                         </h5>
-                        <p class="card-text text-muted">
+                        <p class="card-text text-muted mb-4" style="line-height: 1.7;">
                             {{ announcement.post_content[:150]|striptags }}{% if announcement.post_content|length > 150 %}...{% endif %}
                         </p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -295,7 +579,7 @@
                                 <i class="far fa-calendar me-1"></i>{{ announcement.created_at.strftime('%B %d, %Y') }}
                             </small>
                             <a href="{{ url_for('public_website.announcement_detail', post_id=announcement.id) }}" class="btn btn-sm btn-outline-primary">
-                                Read More
+                                <i class="fas fa-arrow-right me-1"></i>Read More
                             </a>
                         </div>
                     </div>
@@ -303,9 +587,9 @@
             </div>
             {% endfor %}
         </div>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('public_website.announcements_page') }}" class="btn btn-outline-primary btn-lg">
-                View All Announcements / ሁሉንም ማስታወቂያዎች ይመልከቱ
+        <div class="text-center mt-5">
+            <a href="{{ url_for('public_website.announcements_page') }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-bullhorn me-2"></i>View All Announcements
             </a>
         </div>
     </div>
@@ -317,38 +601,46 @@
 <section class="section-padding bg-light">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="display-4 mb-3">Study Materials / የጥናት ቁሳቁሶች</h2>
-            <p class="lead text-muted">Spiritual teachings and resources for your faith journey</p>
+            <h2 class="section-title mx-auto">Study Materials</h2>
+            <p class="section-subtitle">Spiritual teachings and resources for your faith journey</p>
         </div>
-        <div class="row">
+        <div class="row g-4">
             {% for study in public_studies %}
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100">
+            <div class="col-md-4">
+                <div class="study-card card h-100">
                     {% if study.attachment_type == 'image' and study.attachment_path %}
-                    <img src="{{ url_for('static', filename=study.attachment_path) }}" class="card-img-top" alt="{{ study.study_title }}" style="height: 200px; object-fit: cover;">
+                    <img src="{{ url_for('static', filename=study.attachment_path) }}" 
+                         class="card-img-top" 
+                         alt="{{ study.study_title }}" 
+                         style="height: 220px; object-fit: cover; border-radius: 20px 20px 0 0;">
                     {% else %}
-                    <div class="card-img-top bg-primary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
-                        <i class="fas fa-book fa-3x"></i>
+                    <div class="card-img-top bg-primary text-white d-flex align-items-center justify-content-center" 
+                         style="height: 220px; border-radius: 20px 20px 0 0; background: linear-gradient(135deg, #14860C 0%, #106b09 100%) !important;">
+                        <i class="fas fa-book fa-4x" style="opacity: 0.8;"></i>
                     </div>
                     {% endif %}
                     <div class="card-body">
-                        {% if study.is_featured %}
-                        <span class="badge bg-warning text-dark mb-2">Featured</span>
-                        {% endif %}
-                        {% if study.category_name_amharic %}
-                        <span class="badge bg-secondary mb-2">{{ study.category_name_amharic }}</span>
-                        {% endif %}
-                        <h5 class="card-title">
+                        <div class="mb-3">
+                            {% if study.is_featured %}
+                            <span class="badge bg-warning text-dark me-2" style="border-radius: 20px; padding: 0.4rem 0.8rem;">
+                                <i class="fas fa-star me-1"></i>Featured
+                            </span>
+                            {% endif %}
+                            {% if study.category_name %}
+                            <span class="badge bg-secondary" style="border-radius: 20px; padding: 0.4rem 0.8rem;">{{ study.category_name }}</span>
+                            {% endif %}
+                        </div>
+                        <h5 class="card-title mb-3" style="font-weight: 700; font-size: 1.3rem;">
                             <a href="{{ url_for('public_website.study_detail', study_id=study.id) }}" class="text-decoration-none text-dark">
                                 {{ study.study_title }}
                             </a>
                         </h5>
                         {% if study.summary %}
-                        <p class="card-text text-muted">
-                            {{ study.summary[:100] }}{% if study.summary|length > 100 %}...{% endif %}
+                        <p class="card-text text-muted mb-4" style="line-height: 1.7;">
+                            {{ study.summary[:120] }}{% if study.summary|length > 120 %}...{% endif %}
                         </p>
                         {% endif %}
-                        <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
                             <small class="text-muted">
                                 {% if study.author %}
                                 <i class="fas fa-user me-1"></i>{{ study.author }}
@@ -358,19 +650,17 @@
                                 {% endif %}
                             </small>
                         </div>
-                        <div class="mt-3">
-                            <a href="{{ url_for('public_website.study_detail', study_id=study.id) }}" class="btn btn-sm btn-primary w-100">
-                                Read More / ይንብቡ
-                            </a>
-                        </div>
+                        <a href="{{ url_for('public_website.study_detail', study_id=study.id) }}" class="btn btn-primary w-100" style="border-radius: 25px;">
+                            <i class="fas fa-book-open me-2"></i>Read More
+                        </a>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('public_website.studies_page') }}" class="btn btn-outline-primary btn-lg">
-                View All Studies / ሁሉንም ጥናቶች ይመልከቱ
+        <div class="text-center mt-5">
+            <a href="{{ url_for('public_website.studies_page') }}" class="btn btn-modern btn-modern-primary">
+                <i class="fas fa-graduation-cap me-2"></i>View All Studies
             </a>
         </div>
     </div>
