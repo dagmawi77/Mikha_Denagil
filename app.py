@@ -51,6 +51,19 @@ from datetime import date, timedelta
 # Import translations module for bilingual support
 from translations import get_text
 
+# Import donation_report blueprint
+try:
+    from donation_report import donation_report
+    print("✓ Donation report module imported successfully")
+except ImportError as e:
+    donation_report = None
+    print(f"⚠ Warning: donation_report module not found: {e}")
+    print("⚠ Donation report features will be unavailable.")
+except Exception as e:
+    donation_report = None
+    print(f"⚠ Error importing donation_report module: {e}")
+    print("⚠ Donation report features will be unavailable.")
+
 app = Flask(__name__)
 
 
@@ -418,9 +431,10 @@ def inject_navigation():
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            # First check if RBAC tables exist
+            # First check if RBAC tables exist (MySQL syntax)
             cursor.execute("""
-            SELECT COUNT(*) FROM user_tables WHERE table_name = 'ROLES'
+            SELECT COUNT(*) FROM information_schema.tables 
+            WHERE table_schema = DATABASE() AND table_name = 'roles'
             """)
             if cursor.fetchone()[0] == 0:
                 return []
@@ -686,6 +700,16 @@ if initialize_default_roles_and_routes():
 else:
     print("⚠ Default roles and routes setup failed but app will continue")
 print()
+
+# Register blueprints
+if donation_report is not None:
+    try:
+        app.register_blueprint(donation_report)
+        print("✓ Donation report blueprint registered successfully")
+    except Exception as e:
+        print(f"✗ Error registering donation_report blueprint: {e}")
+else:
+    print("⚠ Donation report blueprint not available - skipping registration")
 
 @app.route('/roles/<int:role_id>/routes', methods=['GET', 'POST'])
 @login_required

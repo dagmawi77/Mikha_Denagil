@@ -103,8 +103,9 @@
         {% if slide.image_path and slide.image_path != '' and slide.image_path != None %}
         <div class="hero-slide {% if loop.first %}active{% endif %}" 
              style="background-image: url('{{ url_for('static', filename=slide.image_path) }}');"
-             data-bg-fallback="/uploads/{{ slide.image_path }}"
-             data-slide-id="{{ slide.id }}">
+             data-bg-fallback="{{ url_for('uploaded_file', filename=slide.image_path) }}"
+             data-slide-id="{{ slide.id }}"
+             data-image-path="{{ slide.image_path }}">
             <div class="hero-overlay">
                 <div class="hero-content">
                     <h1>{{ slide.title_amharic or slide.title or 'Welcome' }}</h1>
@@ -402,47 +403,9 @@
         lightboxModal.show();
     }
     
-    // Ensure hero slider is initialized after page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // IMPORTANT: Hero slides are server-rendered by Flask template, NOT fetched from admin URL
-        // Debug: Log hero slides
-        const slides = document.querySelectorAll('.hero-slide');
-        console.log('[Homepage] Found', slides.length, 'hero slides (server-rendered from database)');
-        console.log('[Homepage] NO AJAX/FETCH calls to admin URL - data comes from Flask route');
-        
-        // The hero slider is initialized by public-website.js
-        // This ensures images load correctly
-        slides.forEach(function(slide, index) {
-            const bgImage = slide.style.backgroundImage;
-            const fallback = slide.getAttribute('data-bg-fallback');
-            
-            console.log('Slide', index, 'BG:', bgImage, 'Fallback:', fallback);
-            
-            if (bgImage && bgImage !== 'url(\'\')' && bgImage !== 'url("")') {
-                const img = new Image();
-                const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
-                
-                if (urlMatch) {
-                    const imageUrl = urlMatch[1];
-                    console.log('Loading image:', imageUrl);
-                    
-                    img.onload = function() {
-                        console.log('Image loaded successfully:', imageUrl);
-                    };
-                    
-                    img.onerror = function() {
-                        console.log('Image failed, trying fallback:', fallback);
-                        if (fallback) {
-                            slide.style.backgroundImage = `url('${fallback}')`;
-                        }
-                    };
-                    img.src = imageUrl;
-                }
-            } else {
-                console.log('Slide', index, 'has no background image');
-            }
-        });
-    });
+    // Hero slider is initialized by public-website.js
+    // Images are loaded and validated by initHeroSlider() function
+    // Check browser console for image loading debug information
 </script>
 {% endblock %}
 

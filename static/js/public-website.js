@@ -17,21 +17,55 @@ function initHeroSlider() {
     const slides = document.querySelectorAll('.hero-slide');
     
     // Fix image paths for hero slides - check if images exist and use fallback if needed
-    slides.forEach(function(slide) {
+    slides.forEach(function(slide, index) {
         const bgImage = slide.style.backgroundImage;
         const fallback = slide.getAttribute('data-bg-fallback');
+        const imagePath = slide.getAttribute('data-image-path');
         
-        if (bgImage && bgImage.includes('url(') && fallback) {
+        console.log(`[Hero Slider] Slide ${index}:`, {
+            bgImage: bgImage,
+            fallback: fallback,
+            imagePath: imagePath
+        });
+        
+        if (bgImage && bgImage.includes('url(')) {
             const img = new Image();
             const urlMatch = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/);
             
             if (urlMatch) {
-                img.onerror = function() {
-                    // If main image fails, try fallback
-                    slide.style.backgroundImage = `url('${fallback}')`;
+                const imageUrl = urlMatch[1];
+                console.log(`[Hero Slider] Testing image: ${imageUrl}`);
+                
+                img.onload = function() {
+                    console.log(`[Hero Slider] ✓ Image loaded successfully: ${imageUrl}`);
                 };
-                img.src = urlMatch[1];
+                
+                img.onerror = function() {
+                    console.warn(`[Hero Slider] ✗ Image failed to load: ${imageUrl}`);
+                    // If main image fails, try fallback
+                    if (fallback) {
+                        console.log(`[Hero Slider] Trying fallback: ${fallback}`);
+                        const fallbackImg = new Image();
+                        fallbackImg.onload = function() {
+                            slide.style.backgroundImage = `url('${fallback}')`;
+                            console.log(`[Hero Slider] ✓ Fallback image loaded: ${fallback}`);
+                        };
+                        fallbackImg.onerror = function() {
+                            console.error(`[Hero Slider] ✗ Fallback also failed: ${fallback}`);
+                            // Use gradient fallback
+                            slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+                        };
+                        fallbackImg.src = fallback;
+                    } else {
+                        // No fallback, use gradient
+                        slide.style.backgroundImage = 'linear-gradient(135deg, #14860C 0%, #106b09 100%)';
+                    }
+                };
+                
+                img.src = imageUrl;
             }
+        } else {
+            console.warn(`[Hero Slider] Slide ${index} has no background image`);
         }
     });
     
